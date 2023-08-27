@@ -1,0 +1,32 @@
+{
+  "name": "@enschedule/pg-driver",
+  "version": "0.0.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "jest",
+    "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 dev || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c 'create database dev;'",
+    "seed": "yarn run create-db && ts-node --project ./tsconfig.json -e 'import * as dotenv from \"dotenv\"; dotenv.config(); import { migrate } from \"./app/migrate\"; migrate();'"
+  },
+  "dependencies": {
+    "@types/jest": "^29.5.4",
+    "cron-parser": "^4.6.0",
+    "jest": "^29.6.3",
+    "pg": "^8.8.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.25.5",
+    "ts-jest": "^29.1.1",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@enschedule/types": "workspace:*",
+    "@turbo/gen": "^1.10.12",
+    "@types/node": "^20.5.2",
+    "@types/pg": "^8.6.5",
+    "eslint-config-custom": "workspace:*",
+    "tsconfig": "workspace:*",
+    "prettier-2": "npm:prettier@^2"
+  }
+}

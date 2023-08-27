@@ -1,0 +1,769 @@
+import stream from "node:stream";
+import type {
+  JobDefinition,
+  PublicJobDefinition,
+  PublicJobRun,
+  PublicJobSchedule,
+  ScheduleJobOptions,
+  SerializedRun,
+} from "@enschedule/types";
+import { parseExpression } from "cron-parser";
+import type {
+  Association,
+  CreationOptional,
+  ForeignKey,
+  HasManyAddAssociationMixin,
+  HasManyAddAssociationsMixin,
+  HasManyCountAssociationsMixin,
+  HasManyCreateAssociationMixin,
+  HasManyGetAssociationsMixin,
+  HasManyHasAssociationMixin,
+  HasManyHasAssociationsMixin,
+  HasManyRemoveAssociationMixin,
+  HasManyRemoveAssociationsMixin,
+  HasManySetAssociationsMixin,
+  HasOneCreateAssociationMixin,
+  HasOneGetAssociationMixin,
+  HasOneSetAssociationMixin,
+  InferAttributes,
+  InferCreationAttributes,
+  NonAttribute,
+  WhereOptions,
+} from "sequelize";
+import { DataTypes, Model, Op, Sequelize } from "sequelize";
+import type { z, ZodType } from "zod";
+
+export const createPublicJobDefinition = (
+  jobDef: JobDefinition,
+): PublicJobDefinition => {
+  return {
+    id: jobDef.id,
+    title: jobDef.title,
+    description: jobDef.description,
+    dataSchema: jobDef.dataSchema,
+    example: jobDef.example,
+  };
+};
+
+export const serializeRun = (run: Run): SerializedRun => {
+  return {
+    id: Number(run.id),
+    stdout: run.stdout,
+    stderr: run.stderr,
+    createdAt: run.createdAt,
+    finishedAt: run.finishedAt,
+    startedAt: run.startedAt,
+    scheduledToRunAt: run.scheduledToRunAt,
+    data: run.data,
+  };
+};
+
+export const createPublicJobSchedule = (
+  schedule: Schedule,
+  jobDef: JobDefinition,
+): PublicJobSchedule => {
+  return {
+    id: schedule.id,
+    title: schedule.title,
+    description: schedule.description,
+    runAt: schedule.runAt,
+    cronExpression: schedule.cronExpression,
+    lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
+    target: schedule.target,
+    createdAt: schedule.createdAt,
+    jobDefinition: createPublicJobDefinition(jobDef),
+    numRuns: schedule.numRuns,
+    data: schedule.data,
+  };
+};
+
+export const createPublicJobRun = (
+  run: Run,
+  schedule: Schedule,
+  jobDef: JobDefinition,
+): PublicJobRun => {
+  return {
+    id: Number(run.id),
+    stdout: run.stdout,
+    stderr: run.stderr,
+    createdAt: run.createdAt,
+    finishedAt: run.finishedAt,
+    startedAt: run.startedAt,
+    scheduledToRunAt: run.scheduledToRunAt,
+    jobSchedule: createPublicJobSchedule(schedule, jobDef),
+    data: run.data,
+  };
+};
+
+type ScheduleAttributes = InferAttributes<
+  Schedule,
+  { omit: "runs" | "lastRun" }
+>;
+
+class Schedule extends Model<
+  ScheduleAttributes,
+  InferCreationAttributes<Schedule, { omit: "runs" | "lastRun" }>
+> {
+  declare id: CreationOptional<number>;
+  declare runAt?: CreationOptional<Date>;
+  declare signature: string;
+  declare createdAt: CreationOptional<Date>;
+  declare title: string;
+  declare description: string;
+  /** job definition target */
+  declare target: string;
+  declare cronExpression?: CreationOptional<string>;
+  declare eventId?: CreationOptional<string>;
+  declare claimed: CreationOptional<boolean>;
+  declare data: string;
+  declare numRuns: CreationOptional<number>;
+
+  declare getRuns: HasManyGetAssociationsMixin<Run>; // Note the null assertions!
+  declare addRun: HasManyAddAssociationMixin<Run, number>;
+  declare addRuns: HasManyAddAssociationsMixin<Run, number>;
+  declare setRuns: HasManySetAssociationsMixin<Run, number>;
+  declare removeRun: HasManyRemoveAssociationMixin<Run, number>;
+  declare removeRuns: HasManyRemoveAssociationsMixin<Run, number>;
+  declare hasRun: HasManyHasAssociationMixin<Run, number>;
+  declare hasRuns: HasManyHasAssociationsMixin<Run, number>;
+  declare countRuns: HasManyCountAssociationsMixin;
+  declare createRun: HasManyCreateAssociationMixin<Run, "scheduleId">;
+
+  declare getLastRun: HasOneGetAssociationMixin<Run>; // Note the null assertions!
+  declare setLastRun: HasOneSetAssociationMixin<Run, number>;
+  declare createLastRun: HasOneCreateAssociationMixin<Run>;
+
+  declare lastRun?: NonAttribute<Run>;
+  declare runs?: NonAttribute<Run[]>;
+
+  declare static associations: {
+    runs: Association<Schedule, Run>;
+    lastRun: Association<Schedule, Run>;
+  };
+}
+
+class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
+  declare id: CreationOptional<number>;
+  declare stdout: string;
+  declare stderr: string;
+  declare data: string;
+  declare createdAt: CreationOptional<Date>;
+  declare finishedAt: Date;
+  declare startedAt: Date;
+  declare scheduledToRunAt: Date;
+
+  declare scheduleId: ForeignKey<Schedule["id"]>;
+
+  declare getSchedule: HasOneGetAssociationMixin<Schedule>; // Note the null assertions!
+  declare setSchedule: HasOneSetAssociationMixin<Schedule, number>;
+  declare createSchedule: HasOneCreateAssociationMixin<Schedule>;
+
+  declare schedule: NonAttribute<Schedule>;
+}
+
+export const createJobDefinition = <T extends ZodType = ZodType>(
+  job: JobDefinition<T>,
+) => job;
+
+export interface BackendOptions {
+  pgUser: string;
+  pgPassword: string;
+  pgHost: string;
+  pgPort: string;
+  pgDatabase: string;
+}
+
+export class PrivateBackend {
+  protected maxJobsPerTick = 4;
+  protected tickDuration = 5000;
+  public logJobs = false;
+  protected sequelize: Sequelize;
+  protected Run: typeof Run;
+  protected Schedule: typeof Schedule;
+
+  constructor(backendOptions: BackendOptions) {
+    const { pgUser, pgPassword, pgHost, pgPort, pgDatabase } = backendOptions;
+    const sequelize = new Sequelize(
+      `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`,
+      {
+        logging: false,
+      },
+    );
+    this.sequelize = sequelize;
+
+    Schedule.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        data: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+        },
+        signature: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        eventId: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        title: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        claimed: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+        },
+        runAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        target: {
+          type: DataTypes.STRING(),
+          allowNull: false,
+        },
+        cronExpression: {
+          type: DataTypes.STRING(),
+          allowNull: true,
+        },
+        numRuns: {
+          type: DataTypes.INTEGER(),
+          allowNull: false,
+          defaultValue: 0,
+        },
+      },
+      {
+        sequelize,
+        modelName: "Schedule",
+      },
+    );
+
+    Run.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        stdout: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+          defaultValue: "",
+        },
+        stderr: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+          defaultValue: "",
+        },
+        data: {
+          type: DataTypes.TEXT,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        finishedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        startedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        scheduledToRunAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      },
+      {
+        modelName: "Run",
+        sequelize,
+      },
+    );
+
+    Schedule.hasMany(Run, {
+      foreignKey: {
+        name: "scheduleId",
+        allowNull: false,
+      },
+      as: "runs",
+    });
+    Run.belongsTo(Schedule, {
+      as: "schedule",
+    });
+
+    Schedule.hasOne(Run, {
+      as: "lastRun",
+    });
+
+    this.Run = Run;
+    this.Schedule = Schedule;
+  }
+
+  protected async getDbRuns() {
+    const runs = await Run.findAll();
+    return runs;
+  }
+  protected async getDbSchedules() {
+    const jobs = await Schedule.findAll({
+      include: {
+        model: Run,
+        as: "lastRun",
+      },
+    });
+    return jobs;
+  }
+  private getJobDef(id: string): JobDefinition {
+    const def = this.definedJobs[id];
+    if (!def) {
+      throw new Error("invalid id");
+    }
+    return def;
+  }
+  public async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
+    if (scheduleId === undefined) {
+      const runs = await Run.findAll({
+        include: {
+          model: Schedule,
+          as: "schedule",
+        },
+      });
+      return runs.map((run) => {
+        const jobSchedule = run.schedule;
+        const jobDef = this.getJobDef(jobSchedule.target);
+        return createPublicJobRun(run, jobSchedule, jobDef);
+      });
+    }
+
+    const jobSchedule = await Schedule.findByPk(scheduleId);
+    if (!jobSchedule) {
+      throw new Error("invalid jobScheduleId");
+    }
+    const runs = await jobSchedule.getRuns();
+    const jobDef = this.getJobDef(jobSchedule.target);
+    return runs.map((run) => createPublicJobRun(run, jobSchedule, jobDef));
+  }
+  public async getRun(runId: number): Promise<PublicJobRun> {
+    const run = await Run.findByPk(runId);
+    if (!run) {
+      throw new Error("invalid runId");
+    }
+    const schedule = await run.getSchedule({
+      include: {
+        model: Run,
+        as: "lastRun",
+      },
+    });
+    const definition = this.definedJobs[schedule.target];
+    if (!definition) {
+      throw new Error("invalid target");
+    }
+    return createPublicJobRun(run, schedule, definition);
+  }
+  public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
+    const job = await Schedule.findByPk(id, {
+      include: {
+        model: Run,
+        as: "lastRun",
+      },
+    });
+    if (!job) {
+      return;
+    }
+    const jobDef = this.getJobDef(job.target);
+    return createPublicJobSchedule(job, jobDef);
+  }
+  public getDefinitions(): PublicJobDefinition[] {
+    return Object.values(this.definedJobs)
+      .filter((value): value is JobDefinition => Boolean(value))
+      .map((def) => createPublicJobDefinition(def));
+  }
+  public async getSchedules(definitionId?: string) {
+    const dbSchedules = await this.getDbSchedules();
+    return dbSchedules
+      .filter((schedule) => {
+        if (definitionId) {
+          if (definitionId !== schedule.target) {
+            return false;
+          }
+        }
+        return Boolean(this.definedJobs[schedule.target]);
+      })
+      .map((schedule) => {
+        const jobDef = this.getJobDef(schedule.target);
+        return createPublicJobSchedule(schedule, jobDef);
+      });
+  }
+
+  protected createSignature(
+    jobId: string,
+    runAt: Date | undefined,
+    data: unknown,
+    cronExpression: string | undefined,
+  ): string {
+    const rounded = runAt
+      ? Math.floor(runAt.getTime() / 1000) * 1000
+      : "manual";
+    let signature = `${jobId}-${rounded}-${JSON.stringify(data)}`;
+    if (cronExpression) {
+      signature += `-${parseExpression(cronExpression).stringify(true)}`;
+    }
+    return signature;
+  }
+  protected async createJobSchedule(
+    defId: string,
+    title: string,
+    description: string,
+    data: unknown,
+    options: { cronExpression?: string; eventId?: string; runAt?: Date } = {},
+  ) {
+    const def = this.definedJobs[defId];
+    if (!def) {
+      throw new Error("You must create a JobDefinition first");
+    }
+    const { cronExpression, eventId, runAt } = options;
+    const signature = this.createSignature(defId, runAt, data, cronExpression);
+    const where: WhereOptions<ScheduleAttributes> = eventId
+      ? {
+          eventId,
+          claimed: false,
+        }
+      : {
+          signature,
+          claimed: false,
+        };
+    return Schedule.findOrCreate({
+      where,
+      defaults: {
+        target: defId,
+        // normalize the cron expression
+        cronExpression: cronExpression
+          ? parseExpression(cronExpression).stringify(true)
+          : undefined,
+        runAt,
+        data: JSON.stringify(data),
+        signature,
+        title,
+        description,
+      },
+    });
+  }
+  public getJobDefinition(definitionId: string): PublicJobDefinition {
+    const jobDef = this.definedJobs[definitionId];
+    if (!jobDef) {
+      throw new Error("invalid definitionId");
+    }
+    return createPublicJobDefinition(jobDef);
+  }
+
+  public async scheduleJob(
+    jobId: string,
+    data: unknown,
+    options?: ScheduleJobOptions,
+  ): Promise<PublicJobSchedule>;
+  public async scheduleJob<T extends ZodType = ZodType>(
+    job: JobDefinition<T>,
+    data: z.infer<T>,
+    options?: ScheduleJobOptions,
+  ): Promise<PublicJobSchedule>;
+  public async scheduleJob(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    def: string | JobDefinition<any>,
+    data: unknown,
+    options: ScheduleJobOptions,
+  ): Promise<PublicJobSchedule> {
+    const defId = typeof def === "string" ? def : def.id;
+    if (!this.definedJobs[defId]) {
+      throw new Error("You have not declared / registered a job with this id");
+    }
+
+    let runAt: Date | undefined = options.runAt;
+    const cronExpression: string | undefined = options.cronExpression;
+
+    if (cronExpression) {
+      runAt = parseExpression(cronExpression).next().toDate();
+    }
+
+    const [dbSchedule] = await this.createJobSchedule(
+      defId,
+      options.title,
+      options.description,
+      data,
+      {
+        eventId: options.eventId,
+        runAt,
+        cronExpression,
+      },
+    );
+    return {
+      id: Number(dbSchedule.id),
+      title: dbSchedule.title,
+      description: dbSchedule.description,
+      target: dbSchedule.target,
+      jobDefinition: this.getJobDefinition(dbSchedule.target),
+      lastRun: undefined,
+      runAt: dbSchedule.runAt,
+      cronExpression: dbSchedule.cronExpression,
+      createdAt: dbSchedule.createdAt,
+      numRuns: dbSchedule.numRuns,
+      data: dbSchedule.data,
+    };
+  }
+
+  protected async claimUnclaimedOverdueJobs() {
+    const jobKeys = Object.keys(this.definedJobs);
+    if (jobKeys.length === 0) {
+      throw new Error("You have no registered jobs on this client");
+    }
+    const overdueJobs = await Schedule.update(
+      {
+        claimed: true,
+      },
+      {
+        limit: this.maxJobsPerTick,
+        returning: [
+          "id",
+          "target",
+          "data",
+          "cronExpression",
+          "runAt",
+          "numRuns",
+        ],
+        where: {
+          target: {
+            [Op.any]: jobKeys,
+          },
+          claimed: {
+            [Op.eq]: false,
+          },
+          runAt: {
+            [Op.lte]: new Date(),
+          },
+        },
+      },
+    );
+    return { overdueJobs };
+  }
+
+  protected definedJobs: Record<string, undefined | JobDefinition> = {};
+
+  public registerJob<T extends ZodType = ZodType>(job: JobDefinition<T>) {
+    const id = job.id;
+    if (this.definedJobs[id]) {
+      throw new Error(
+        "You have already declared / registered a job with this id",
+      );
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.definedJobs[id] = job as JobDefinition<any>;
+    return job;
+  }
+
+  public async startPolling() {
+    await this.sequelize.sync();
+    const now = Date.now();
+    setTimeout(
+      () => {
+        setInterval(() => {
+          void this.tick();
+        }, this.tickDuration);
+      },
+      1000 - (now - Math.floor(now / 1000) * 1000),
+    );
+  }
+
+  protected async tick() {
+    await this.runOverdueJobs();
+  }
+
+  public async runSchedule(scheduleId: number) {
+    const schedule = await Schedule.findByPk(scheduleId);
+    if (!schedule) {
+      throw new Error("invalid scheduleId");
+    }
+    const run = await this.scheduleSingleRun(schedule);
+    await schedule.reload({
+      include: {
+        model: Run,
+        as: "lastRun",
+      },
+    });
+    return createPublicJobRun(run, schedule, this.getJobDef(schedule.target));
+  }
+
+  private async runDbSchedule(schedule: Schedule) {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+    const definition = this.getJobDef(schedule.target);
+    const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
+    const { Console } = console;
+    const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
+    const stdoutStream = new stream.PassThrough();
+    const stderrStream = new stream.PassThrough();
+    const bufferStream = (
+      pipeStream: stream.PassThrough,
+      key: "stderr" | "stdout",
+    ) => {
+      const buffer = output[key];
+      let _resolve: undefined | ((data: string) => void);
+      pipeStream.on("data", (chunk) => {
+        buffer.push(chunk);
+      });
+      pipeStream.on("finish", () => {
+        if (_resolve) {
+          _resolve(Buffer.concat(buffer).toString("utf8"));
+        }
+      });
+      return new Promise<string>((resolve) => {
+        _resolve = resolve;
+      });
+    };
+
+    const _console = new Console({
+      stdout: stdoutStream,
+      stderr: stderrStream,
+      ignoreErrors: true,
+      colorMode: false,
+    });
+
+    const promises = [
+      bufferStream(stdoutStream, "stdout"),
+      bufferStream(stderrStream, "stderr"),
+    ];
+
+    if (this.logJobs) {
+      stdoutStream.pipe(process.stdout, { end: false });
+      stderrStream.pipe(process.stderr, { end: false });
+    }
+
+    try {
+      await definition.job(data, _console);
+    } catch (err) {
+      _console.error(err);
+    }
+    stdoutStream.end();
+    stderrStream.end();
+    const [stdout, stderr] = await Promise.all(promises);
+    return { stdout, stderr };
+    /* eslint-enable */
+  }
+
+  private async scheduleSingleRun(schedule: Schedule) {
+    const startedAt = new Date();
+    const { stderr, stdout } = await this.runDbSchedule(schedule);
+    const finishedAt = new Date();
+
+    const runAt = schedule.runAt;
+
+    if (!runAt) {
+      throw new Error(
+        "The schedule has no runAt attribute, so there is no way to figure out when it should run",
+      );
+    }
+
+    const run = await schedule.createRun({
+      scheduledToRunAt: runAt,
+      startedAt,
+      stderr,
+      stdout,
+      finishedAt,
+      data: schedule.data,
+    });
+    schedule.numRuns += 1;
+    void schedule.setLastRun(run);
+    await schedule.save();
+    return run;
+  }
+
+  protected async runOverdueJobs() {
+    const overdueJobs = await this.claimUnclaimedOverdueJobs();
+    await Promise.all(
+      overdueJobs.overdueJobs[1].map(async (schedule) => {
+        await this.scheduleSingleRun(schedule);
+
+        if (schedule.cronExpression) {
+          const runAt = parseExpression(schedule.cronExpression)
+            .next()
+            .toDate();
+          schedule.runAt = runAt;
+          schedule.claimed = false;
+          await schedule.save();
+        }
+      }),
+    );
+    return overdueJobs;
+  }
+  public async deleteSchedules(scheduleIds: number[]) {
+    await Schedule.destroy({ where: { id: scheduleIds } });
+  }
+}
+
+// TODO
+/*
+[x] Handle cron jobs
+[x] Handle error and data
+[ ] Handle cleanup jobs
+[x] Handle ticker, handle duplicate jobs (same job signature with in a tick frame should not be duplicated)
+[x] Start cron jobs when the ticker starts
+[x] Handle overDueJobs taking more than tick time to complete and jobs stacking up, introduce a general timeout / max-in-queue
+[x] A a job and a cronjob is the same, make Run a separate table with time, stdout stderr. So a job can have multiple runs (re-runs) and a cron will also have repeated runs
+*/
+
+export class TestBackend extends PrivateBackend {
+  public maxJobsPerTick = 4;
+  public tickDuration = 5000;
+  public sequelize: Sequelize = this.sequelize;
+  public Run: typeof Run = this.Run;
+  public Schedule: typeof Schedule = this.Schedule;
+
+  public async createJobSchedule(
+    jobId: string,
+    title: string,
+    description: string,
+    data: unknown,
+    options: { cronId?: string; eventId?: string; runAt?: Date } = {},
+  ) {
+    return super.createJobSchedule(jobId, title, description, data, options);
+  }
+  public async getDbSchedules() {
+    return super.getDbSchedules();
+  }
+  public clearRegisteredJobs() {
+    this.definedJobs = {};
+  }
+  public async getDbRuns() {
+    return super.getDbRuns();
+  }
+  public claimUnclaimedOverdueJobs() {
+    return super.claimUnclaimedOverdueJobs();
+  }
+  public runOverdueJobs() {
+    return super.runOverdueJobs();
+  }
+  public createSignature(
+    jobId: string,
+    runAt: Date,
+    data: unknown,
+    cronExpression?: string,
+  ): string {
+    return super.createSignature(jobId, runAt, data, cronExpression);
+  }
+
+  public async tick() {
+    return super.tick();
+  }
+}

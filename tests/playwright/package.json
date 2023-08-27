@@ -1,0 +1,15 @@
+{
+  "name": "@enschedule/playwright-tests",
+  "version": "0.0.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "pg": "^8.8.0",
+    "@types/pg": "^8.6.5",
+    "dotenv": "16.0.3",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.25.5"
+  }
+}

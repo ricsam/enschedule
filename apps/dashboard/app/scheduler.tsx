@@ -1,4 +1,4 @@
-import { PrivateBackend } from '@enschedule/pg-driver';
+import { WorkerAPI } from '@enschedule/worker-api';
 
-export const scheduler = new PrivateBackend();
+export const scheduler = new WorkerAPI();
 scheduler.logJobs = true;

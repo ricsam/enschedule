@@ -32,6 +32,7 @@ import type {
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
 import type { z, ZodType } from "zod";
+import { log } from "./log";
 
 export const createPublicJobDefinition = (
   jobDef: JobDefinition,
@@ -575,6 +576,7 @@ export class PrivateBackend {
   }
 
   public async startPolling() {
+    log("Migrating the database");
     await this.sequelize.sync();
     const now = Date.now();
     setTimeout(
@@ -585,6 +587,7 @@ export class PrivateBackend {
       },
       1000 - (now - Math.floor(now / 1000) * 1000),
     );
+    log("Started polling");
   }
 
   protected async tick() {

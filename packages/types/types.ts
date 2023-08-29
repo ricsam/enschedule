@@ -1,4 +1,5 @@
-import type { z, ZodType } from "zod";
+import { z} from "zod";
+import type { ZodType } from "zod";
 
 export interface JobDefinition<T extends ZodType = ZodType> {
   dataSchema: T;
@@ -8,6 +9,47 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   job: (data: z.infer<T>, console: Console) => Promise<void> | void;
   example: z.infer<T>;
 }
+
+export const publicJobDefinitionSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  title: z.string(),
+  dataSchema: z.unknown(),
+  example: z.unknown(),
+});
+
+export const serializedRunSchema = z.object({
+  id: z.number(),
+  stdout: z.string(),
+  stderr: z.string(),
+  createdAt: z.date(),
+  finishedAt: z.date(),
+  startedAt: z.date(),
+  scheduledToRunAt: z.date(),
+  data: z.string(),
+});
+
+export const publicJobScheduleSchema = z.object({
+  id: z.number(),
+  description: z.string(),
+  title: z.string(),
+  runAt: z.union([z.date(), z.undefined()]),
+  cronExpression: z.union([z.string(), z.undefined()]),
+  lastRun: z.union([serializedRunSchema, z.undefined()]),
+  createdAt: z.date(),
+  target: z.string(),
+  jobDefinition: publicJobDefinitionSchema,
+  numRuns: z.number(),
+  data: z.string(),
+});
+
+export const publicJobRunSchema = serializedRunSchema.and(
+  z.object({
+    jobSchedule: publicJobScheduleSchema,
+  }),
+);
+
+// export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>
 
 export interface PublicJobDefinition {
   id: string;
@@ -50,19 +92,4 @@ export interface ScheduleJobOptions {
   eventId?: string;
   title: string;
   description: string;
-}
-
-export interface Task {
-  runAt: number;
-}
-
-export abstract class Backend {
-  tasks: Task[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  addTask(task: Task) {}
-  getTasksToRun() {
-    return this.tasks.map((task) => {
-      return task.runAt > Date.now();
-    });
-  }
 }

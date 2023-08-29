@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Default",
   "compilerOptions": {
+    "target": "ES6",
     "composite": false,
     "declaration": true,
     "declarationMap": true,
@@ -15,8 +16,7 @@
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "strict": true,
-    "strictNullChecks": true,
-    "outDir": "dist"
+    "strictNullChecks": true
   },
   "exclude": ["node_modules"]
 }

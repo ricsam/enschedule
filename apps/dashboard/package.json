@@ -17,7 +17,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zod": "^3.22.2",
-    "@enschedule/pg-driver": "workspace:*",
+    "@enschedule/worker-api": "workspace:*",
     "@enschedule/types": "workspace:*",
     "date-fns": "~2.29.3",
     "@emotion/react": "~11.10.5",
@@ -46,7 +46,6 @@
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "typescript": "^4.9.4",
-    "@rushstack/eslint-config": "~3.1.1",
     "@types/node": "^20.5.2"
   },
   "engines": {

@@ -6,13 +6,14 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint .",
-    "build": "tsc"
+    "build": "tsc -p ./tsconfig.json"
   },
   "devDependencies": {
     "@turbo/gen": "^1.10.12",
     "@types/node": "^20.5.2",
     "eslint-config-custom": "workspace:*",
     "tsconfig": "workspace:*",
+    "@enschedule/types": "workspace:*",
     "typescript": "^4.9.4"
   },
   "dependencies": {

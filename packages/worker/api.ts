@@ -4,10 +4,14 @@ import { z } from "zod";
 
 export interface ServeOptions {
   port: number;
+  hostname?: string;
 }
 
 export class Worker extends PrivateBackend {
   serve(serveOptions: ServeOptions): void {
+    if (!process.env.API_KEY) {
+      throw new Error('Environment variable API_KEY must be defined to start the API endpoint');
+    }
     const app = express();
 
     app.get("/job-definitions", (req, res) => {
@@ -22,7 +26,7 @@ export class Worker extends PrivateBackend {
 
     app.get("/schedules", (req, res, next) => {
       const querySchema = z.object({
-        definitionId: z.string(),
+        definitionId: z.string().optional(),
       });
       const validatedQuery = querySchema.parse(req.query);
       this.getSchedules(validatedQuery.definitionId)
@@ -123,9 +127,14 @@ export class Worker extends PrivateBackend {
 
     app.use(apiKeyMiddleware);
 
-    const { port } = serveOptions;
-    app.listen(port, () => {
+    const { port, hostname } = serveOptions;
+    const cb = () => {
       console.log(`Server is running on port ${port}`);
-    });
+    }
+    if (hostname) {
+      app.listen(port, hostname, cb);
+    } else {
+      app.listen(port, cb);
+    }
   }
 }

@@ -1,3 +1,1 @@
-import "dotenv/config";
-
-export { Worker } from "./worker";
+export { Worker } from "./api";

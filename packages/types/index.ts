@@ -5,9 +5,4 @@ export type {
     PublicJobDefinition,
     SerializedRun,
     PublicJobRun,
-    Task
-} from './types';
-
-export {
-    Backend
 } from './types';

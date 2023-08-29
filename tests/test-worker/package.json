@@ -3,15 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon ./index.ts",
-    "build": "echo 'Add build script here'",
-    "test": "echo 'Add test script here'",
-    "lint": "echo 'Add lint script here'"
+    "dev": "run-p -l worker:*",
+    "worker:rest": "ENSCHEDULE_API=true nodemon ./worker.ts",
+    "worker:work": "nodemon ./worker.ts",
+    "lint": "eslint .",
+    "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 dev || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c 'create database dev;'"
   },
-  "dependencies": {
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
     "@enschedule/worker": "workspace:*",
     "date-fns": "~2.29.3",
     "zod": "^3.22.2",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "@turbo/gen": "^1.10.12",
+    "@types/node": "^20.5.2",
+    "eslint-config-custom": "workspace:*",
+    "tsconfig": "workspace:*",
+    "typescript": "^4.9.4",
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.4",
+    "dotenv": "^16.3.1",
+    "jest": "^29.6.3",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1"
   }
 }

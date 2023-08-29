@@ -1,8 +1,21 @@
+import "dotenv/config";
 import { Worker } from '@enschedule/worker';
 import { z } from 'zod';
 import add from 'date-fns/add';
 
-const worker = new Worker();
+if (!process.env.PGUSER) { throw new Error('The environment variable PGUSER must be defined') }
+if (!process.env.PGHOST) { throw new Error('The environment variable PGHOST must be defined') }
+if (!process.env.PGPASSWORD) { throw new Error('The environment variable PGPASSWORD must be defined') }
+if (!process.env.PGDATABASE) { throw new Error('The environment variable PGDATABASE must be defined') }
+if (!process.env.PGPORT) { throw new Error('The environment variable PGPORT must be defined') }
+
+const worker = new Worker({
+  pgUser: process.env.PGUSER,
+  pgHost: process.env.PGHOST,
+  pgPassword: process.env.PGPASSWORD,
+  pgDatabase: process.env.PGDATABASE,
+  pgPort: process.env.PGPORT,
+});
 worker.logJobs = true;
 
 
@@ -12,7 +25,7 @@ const httpRequestJob = worker.registerJob({
     dataSchema: z.object({
         url: z.string(),
     }),
-    job: async (data, console) => {
+    job: (data, console) => {
         console.log('pretending to fetch', data.url);
     },
     description: 'Provide HTTP parameters as data to send a request',
@@ -26,7 +39,7 @@ worker.registerJob({
     dataSchema: z.object({
         message: z.string(),
     }),
-    job: async (data, console) => {
+    job: (data, console) => {
         console.log(data.message);
     },
     description: 'Will print the message on the server',
@@ -40,7 +53,7 @@ worker.registerJob({
     dataSchema: z.object({
         message: z.string(),
     }),
-    job: async (data) => {
+    job: (data) => {
         throw new Error(data.message);
     },
     description: 'Will throw the message as an error',
@@ -54,7 +67,7 @@ worker.registerJob({
     dataSchema: z.object({
         message: z.string(),
     }),
-    job: async (data, console) => {
+    job: (data, console) => {
         console.log('Will throw an error now');
         throw new Error(data.message);
     },
@@ -64,15 +77,7 @@ worker.registerJob({
     },
 });
 
-// #region schedule job
-// const schedule: Schedule = {
-//   type: 'cron',
-//   expression: '0 7 * * 0-4',
-// };
-
-// #endregion
-
-(async () => {
+void (async () => {
     if (process.env.ENSCHEDULE_API) {
         worker.serve({ port: 8080 });
     }

@@ -193,6 +193,9 @@ importers:
       debug:
         specifier: ^4.3.4
         version: 4.3.4
+      pascal-case:
+        specifier: ~3.1.2
+        version: 3.1.2
       pg:
         specifier: ^8.8.0
         version: 8.11.3
@@ -208,6 +211,12 @@ importers:
       zod:
         specifier: ^3.22.2
         version: 3.22.2
+      zod-to-json-schema:
+        specifier: ^3.21.4
+        version: 3.21.4(zod@3.22.2)
+      zod-to-ts:
+        specifier: ~1.1.1
+        version: 1.1.4(typescript@4.9.5)(zod@3.22.2)
     devDependencies:
       '@enschedule/types':
         specifier: workspace:*
@@ -296,6 +305,9 @@ importers:
       '@enschedule/pg-driver':
         specifier: workspace:*
         version: link:../pg-driver
+      debug:
+        specifier: ^4.3.4
+        version: 4.3.4
       express:
         specifier: ^4.18.2
         version: 4.18.2
@@ -303,9 +315,15 @@ importers:
         specifier: ^3.22.2
         version: 3.22.2
     devDependencies:
+      '@enschedule/types':
+        specifier: workspace:*
+        version: link:../types
       '@turbo/gen':
         specifier: ^1.10.12
         version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
+      '@types/debug':
+        specifier: ^4.1.8
+        version: 4.1.8
       '@types/express':
         specifier: ^4.17.17
         version: 4.17.17
@@ -342,6 +360,9 @@ importers:
 
   packages/worker-api:
     dependencies:
+      debug:
+        specifier: ^4.3.4
+        version: 4.3.4
       zod:
         specifier: ^3.22.2
         version: 3.22.2
@@ -352,6 +373,9 @@ importers:
       '@turbo/gen':
         specifier: ^1.10.12
         version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
+      '@types/debug':
+        specifier: ^4.1.8
+        version: 4.1.8
       '@types/node':
         specifier: ^20.5.2
         version: 20.5.4
@@ -5624,7 +5648,7 @@ packages:
       debug: 4.3.4
       enhanced-resolve: 5.15.0
       eslint: 8.48.0
-      eslint-module-utils: 2.8.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.0)(eslint@8.48.0)
+      eslint-module-utils: 2.8.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.6.0)(eslint@8.48.0)
       eslint-plugin-import: 2.28.1(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.6.0)(eslint@8.48.0)
       fast-glob: 3.3.1
       get-tsconfig: 4.7.0
@@ -5692,6 +5716,35 @@ packages:
       debug: 3.2.7(supports-color@5.5.0)
       eslint: 8.48.0
       eslint-import-resolver-node: 0.3.9
+      eslint-import-resolver-typescript: 3.6.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.28.1)(eslint@8.48.0)
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /eslint-module-utils@2.8.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.6.0)(eslint@8.48.0):
+    resolution: {integrity: sha512-aWajIYfsqCKRDgUfjEXNN/JlrzauMuSEy5sbd7WXbtW3EH6A6MpwEh42c7qD+MqQo9QMJ6fWLAeIJynx0g6OAw==}
+    engines: {node: '>=4'}
+    peerDependencies:
+      '@typescript-eslint/parser': '*'
+      eslint: '*'
+      eslint-import-resolver-node: '*'
+      eslint-import-resolver-typescript: '*'
+      eslint-import-resolver-webpack: '*'
+    peerDependenciesMeta:
+      '@typescript-eslint/parser':
+        optional: true
+      eslint:
+        optional: true
+      eslint-import-resolver-node:
+        optional: true
+      eslint-import-resolver-typescript:
+        optional: true
+      eslint-import-resolver-webpack:
+        optional: true
+    dependencies:
+      '@typescript-eslint/parser': 5.62.0(eslint@8.48.0)(typescript@4.9.5)
+      debug: 3.2.7(supports-color@5.5.0)
+      eslint: 8.48.0
       eslint-import-resolver-typescript: 3.6.0(@typescript-eslint/parser@5.62.0)(eslint-plugin-import@2.28.1)(eslint@8.48.0)
     transitivePeerDependencies:
       - supports-color

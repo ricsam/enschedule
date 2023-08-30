@@ -26,7 +26,7 @@ import type { PublicJobSchedule, ScheduleJobOptions } from '@enschedule/types';
 import { format, parse } from 'date-fns';
 import { pascalCase } from 'pascal-case';
 import { z } from 'zod';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 
 const SerializedJobEventSchema = z.object({
   title: z.string(),

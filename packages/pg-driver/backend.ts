@@ -1,6 +1,5 @@
 import stream from "node:stream";
 import type {
-  JobDefinition,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
@@ -8,6 +7,7 @@ import type {
   SerializedRun,
 } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
+import { pascalCase } from "pascal-case";
 import type {
   Association,
   CreationOptional,
@@ -32,17 +32,35 @@ import type {
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
 import type { z, ZodType } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
 import { log } from "./log";
 
+interface JobDefinition<T extends ZodType = ZodType> {
+  dataSchema: T;
+  id: string;
+  title: string;
+  description: string;
+  job: (data: z.infer<T>, console: Console) => Promise<void> | void;
+  example: z.infer<T>;
+}
+
 export const createPublicJobDefinition = (
-  jobDef: JobDefinition,
+  jobDef: JobDefinition
 ): PublicJobDefinition => {
+  const identifier = pascalCase(jobDef.title);
+  const { node } = zodToTs(jobDef.dataSchema, identifier);
+  const typeAlias = createTypeAlias(node, identifier);
+  const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
+  const jsonSchema: unknown = zodToJsonSchema(jobDef.dataSchema, identifier);
+
   return {
     id: jobDef.id,
     title: jobDef.title,
     description: jobDef.description,
-    dataSchema: jobDef.dataSchema,
     example: jobDef.example,
+    codeBlock,
+    jsonSchema,
   };
 };
 
@@ -61,14 +79,14 @@ export const serializeRun = (run: Run): SerializedRun => {
 
 export const createPublicJobSchedule = (
   schedule: Schedule,
-  jobDef: JobDefinition,
+  jobDef: JobDefinition
 ): PublicJobSchedule => {
   return {
     id: schedule.id,
     title: schedule.title,
     description: schedule.description,
-    runAt: schedule.runAt,
-    cronExpression: schedule.cronExpression,
+    runAt: schedule.runAt || undefined,
+    cronExpression: schedule.cronExpression || undefined,
     lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
     target: schedule.target,
     createdAt: schedule.createdAt,
@@ -81,7 +99,7 @@ export const createPublicJobSchedule = (
 export const createPublicJobRun = (
   run: Run,
   schedule: Schedule,
-  jobDef: JobDefinition,
+  jobDef: JobDefinition
 ): PublicJobRun => {
   return {
     id: Number(run.id),
@@ -106,15 +124,15 @@ class Schedule extends Model<
   InferCreationAttributes<Schedule, { omit: "runs" | "lastRun" }>
 > {
   declare id: CreationOptional<number>;
-  declare runAt?: CreationOptional<Date>;
+  declare runAt?: CreationOptional<Date> | null;
   declare signature: string;
   declare createdAt: CreationOptional<Date>;
   declare title: string;
   declare description: string;
   /** job definition target */
   declare target: string;
-  declare cronExpression?: CreationOptional<string>;
-  declare eventId?: CreationOptional<string>;
+  declare cronExpression?: CreationOptional<string> | null;
+  declare eventId?: CreationOptional<string> | null;
   declare claimed: CreationOptional<boolean>;
   declare data: string;
   declare numRuns: CreationOptional<number>;
@@ -134,7 +152,7 @@ class Schedule extends Model<
   declare setLastRun: HasOneSetAssociationMixin<Run, number>;
   declare createLastRun: HasOneCreateAssociationMixin<Run>;
 
-  declare lastRun?: NonAttribute<Run>;
+  declare lastRun?: NonAttribute<Run> | null;
   declare runs?: NonAttribute<Run[]>;
 
   declare static associations: {
@@ -163,7 +181,7 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
 }
 
 export const createJobDefinition = <T extends ZodType = ZodType>(
-  job: JobDefinition<T>,
+  job: JobDefinition<T>
 ) => job;
 
 export interface BackendOptions {
@@ -188,7 +206,7 @@ export class PrivateBackend {
       `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`,
       {
         logging: false,
-      },
+      }
     );
     this.sequelize = sequelize;
 
@@ -249,7 +267,7 @@ export class PrivateBackend {
       {
         sequelize,
         modelName: "Schedule",
-      },
+      }
     );
 
     Run.init(
@@ -294,7 +312,7 @@ export class PrivateBackend {
       {
         modelName: "Run",
         sequelize,
-      },
+      }
     );
 
     Schedule.hasMany(Run, {
@@ -377,17 +395,17 @@ export class PrivateBackend {
     return createPublicJobRun(run, schedule, definition);
   }
   public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
-    const job = await Schedule.findByPk(id, {
+    const schedule = await Schedule.findByPk(id, {
       include: {
         model: Run,
         as: "lastRun",
       },
     });
-    if (!job) {
+    if (!schedule) {
       return;
     }
-    const jobDef = this.getJobDef(job.target);
-    return createPublicJobSchedule(job, jobDef);
+    const jobDef = this.getJobDef(schedule.target);
+    return createPublicJobSchedule(schedule, jobDef);
   }
   public getDefinitions(): PublicJobDefinition[] {
     return Object.values(this.definedJobs)
@@ -415,7 +433,7 @@ export class PrivateBackend {
     jobId: string,
     runAt: Date | undefined,
     data: unknown,
-    cronExpression: string | undefined,
+    cronExpression: string | undefined
   ): string {
     const rounded = runAt
       ? Math.floor(runAt.getTime() / 1000) * 1000
@@ -431,7 +449,7 @@ export class PrivateBackend {
     title: string,
     description: string,
     data: unknown,
-    options: { cronExpression?: string; eventId?: string; runAt?: Date } = {},
+    options: { cronExpression?: string; eventId?: string; runAt?: Date } = {}
   ) {
     const def = this.definedJobs[defId];
     if (!def) {
@@ -475,18 +493,18 @@ export class PrivateBackend {
   public async scheduleJob(
     jobId: string,
     data: unknown,
-    options?: ScheduleJobOptions,
+    options?: ScheduleJobOptions
   ): Promise<PublicJobSchedule>;
   public async scheduleJob<T extends ZodType = ZodType>(
     job: JobDefinition<T>,
     data: z.infer<T>,
-    options?: ScheduleJobOptions,
+    options?: ScheduleJobOptions
   ): Promise<PublicJobSchedule>;
   public async scheduleJob(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     def: string | JobDefinition<any>,
     data: unknown,
-    options: ScheduleJobOptions,
+    options: ScheduleJobOptions
   ): Promise<PublicJobSchedule> {
     const defId = typeof def === "string" ? def : def.id;
     if (!this.definedJobs[defId]) {
@@ -509,7 +527,7 @@ export class PrivateBackend {
         eventId: options.eventId,
         runAt,
         cronExpression,
-      },
+      }
     );
     return {
       id: Number(dbSchedule.id),
@@ -518,8 +536,8 @@ export class PrivateBackend {
       target: dbSchedule.target,
       jobDefinition: this.getJobDefinition(dbSchedule.target),
       lastRun: undefined,
-      runAt: dbSchedule.runAt,
-      cronExpression: dbSchedule.cronExpression,
+      runAt: dbSchedule.runAt || undefined,
+      cronExpression: dbSchedule.cronExpression || undefined,
       createdAt: dbSchedule.createdAt,
       numRuns: dbSchedule.numRuns,
       data: dbSchedule.data,
@@ -556,7 +574,7 @@ export class PrivateBackend {
             [Op.lte]: new Date(),
           },
         },
-      },
+      }
     );
     return { overdueJobs };
   }
@@ -567,7 +585,7 @@ export class PrivateBackend {
     const id = job.id;
     if (this.definedJobs[id]) {
       throw new Error(
-        "You have already declared / registered a job with this id",
+        "You have already declared / registered a job with this id"
       );
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -578,16 +596,13 @@ export class PrivateBackend {
   public async startPolling() {
     log("Migrating the database");
     await this.sequelize.sync();
+    log("Polling the database for jobs");
     const now = Date.now();
-    setTimeout(
-      () => {
-        setInterval(() => {
-          void this.tick();
-        }, this.tickDuration);
-      },
-      1000 - (now - Math.floor(now / 1000) * 1000),
-    );
-    log("Started polling");
+    setTimeout(() => {
+      setInterval(() => {
+        void this.tick();
+      }, this.tickDuration);
+    }, 1000 - (now - Math.floor(now / 1000) * 1000));
   }
 
   protected async tick() {
@@ -619,7 +634,7 @@ export class PrivateBackend {
     const stderrStream = new stream.PassThrough();
     const bufferStream = (
       pipeStream: stream.PassThrough,
-      key: "stderr" | "stdout",
+      key: "stderr" | "stdout"
     ) => {
       const buffer = output[key];
       let _resolve: undefined | ((data: string) => void);
@@ -666,6 +681,14 @@ export class PrivateBackend {
   }
 
   private async scheduleSingleRun(schedule: Schedule) {
+    const definition = this.getJobDef(schedule.target);
+    log(
+      "Will run",
+      definition.title,
+      "according to the",
+      schedule.title,
+      "schedule"
+    );
     const startedAt = new Date();
     const { stderr, stdout } = await this.runDbSchedule(schedule);
     const finishedAt = new Date();
@@ -674,7 +697,7 @@ export class PrivateBackend {
 
     if (!runAt) {
       throw new Error(
-        "The schedule has no runAt attribute, so there is no way to figure out when it should run",
+        "The schedule has no runAt attribute, so there is no way to figure out when it should run"
       );
     }
 
@@ -693,9 +716,22 @@ export class PrivateBackend {
   }
 
   protected async runOverdueJobs() {
-    const overdueJobs = await this.claimUnclaimedOverdueJobs();
+    const claimed = await this.claimUnclaimedOverdueJobs();
+    const numJobs = claimed.overdueJobs[0];
+    const overdueJobs = claimed.overdueJobs[1];
+    if (numJobs > 0) {
+      log(
+        `Claimed ${numJobs} jobs that run in the following definition(schedule):`,
+        overdueJobs
+          .map(
+            (schedule) =>
+              `${this.getJobDef(schedule.target).title}${schedule.title}`
+          )
+          .join(", ")
+      );
+    }
     await Promise.all(
-      overdueJobs.overdueJobs[1].map(async (schedule) => {
+      overdueJobs.map(async (schedule) => {
         await this.scheduleSingleRun(schedule);
 
         if (schedule.cronExpression) {
@@ -706,9 +742,9 @@ export class PrivateBackend {
           schedule.claimed = false;
           await schedule.save();
         }
-      }),
+      })
     );
-    return overdueJobs;
+    return claimed;
   }
   public async deleteSchedules(scheduleIds: number[]) {
     await Schedule.destroy({ where: { id: scheduleIds } });
@@ -738,7 +774,7 @@ export class TestBackend extends PrivateBackend {
     title: string,
     description: string,
     data: unknown,
-    options: { cronId?: string; eventId?: string; runAt?: Date } = {},
+    options: { cronId?: string; eventId?: string; runAt?: Date } = {}
   ) {
     return super.createJobSchedule(jobId, title, description, data, options);
   }
@@ -761,7 +797,7 @@ export class TestBackend extends PrivateBackend {
     jobId: string,
     runAt: Date,
     data: unknown,
-    cronExpression?: string,
+    cronExpression?: string
   ): string {
     return super.createSignature(jobId, runAt, data, cronExpression);
   }

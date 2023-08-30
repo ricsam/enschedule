@@ -8,7 +8,7 @@ import assert from 'assert';
 import { z } from 'zod';
 import { RootLayout } from '~/components/Layout';
 import SchedulesTable from '~/components/SchedulesTable';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

@@ -5,7 +5,7 @@ import { useLoaderData } from '@remix-run/react';
 import { z } from 'zod';
 import { RootLayout } from '~/components/Layout';
 import SchedulePage from '~/components/SchedulePage';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';

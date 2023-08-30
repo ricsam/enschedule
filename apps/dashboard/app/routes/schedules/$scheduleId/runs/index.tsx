@@ -6,7 +6,7 @@ import type { PublicJobSchedule } from '@enschedule/types';
 import { z } from 'zod';
 import { RootLayout } from '~/components/Layout';
 import RunsTable from '~/components/RunsTable';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 import { extendBreadcrumbs } from '~/utils/extendBreadcrumbs';
 import { useBreadcrumbs as useParentBreadcrumbs, useNavbar } from '..';

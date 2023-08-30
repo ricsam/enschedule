@@ -1,8 +1,14 @@
 export type {
-    JobDefinition,
-    ScheduleJobOptions,
-    PublicJobSchedule,
-    PublicJobDefinition,
-    SerializedRun,
-    PublicJobRun,
-} from './types';
+  PublicJobDefinition,
+  PublicJobRun,
+  PublicJobSchedule,
+  ScheduleJobOptions,
+  SerializedRun,
+} from "./types";
+
+export {
+  publicJobDefinitionSchema,
+  serializedRunSchema,
+  publicJobScheduleSchema,
+  publicJobRunSchema,
+} from "./types";

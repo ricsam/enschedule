@@ -6,7 +6,7 @@ import type { PublicJobRun } from '@enschedule/types';
 import { differenceInMilliseconds } from 'date-fns';
 import { RootLayout } from '~/components/Layout';
 import RunPage from '~/components/RunPage';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 import { useRunBreadcrumbs } from '~/utils/breadcrumbUtils';
 import { extendBreadcrumbs } from '~/utils/extendBreadcrumbs';

@@ -7,7 +7,7 @@ import assert from 'assert';
 import { z } from 'zod';
 import { RootLayout } from '~/components/Layout';
 import SchedulesTable from '~/components/SchedulesTable';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 import { extendBreadcrumbs } from '~/utils/extendBreadcrumbs';
 import { useBreadcrumbs as useParentBreadcrumbs, useLayout } from '..';
@@ -20,7 +20,7 @@ export async function getLoaderData(params: Params<string>): Promise<{
 }> {
   const definitionId = params.definitionId;
   assert(definitionId, 'You must have a definitionId');
-  const jobDefinition = scheduler.getJobDefinition(definitionId);
+  const jobDefinition = await scheduler.getJobDefinition(definitionId);
   const schedules = await scheduler.getSchedules(definitionId);
   return { schedules, jobDefinition };
 }

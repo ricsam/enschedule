@@ -1,38 +1,89 @@
-import https from "node:https";
 import http from "node:http";
-import type { PublicJobSchedule, ScheduleJobOptions } from "@enschedule/types";
+import https from "node:https";
+import type {
+  PublicJobDefinition,
+  PublicJobRun,
+  PublicJobSchedule,
+  ScheduleJobOptions,
+} from "@enschedule/types";
+import {
+  publicJobDefinitionSchema,
+  publicJobRunSchema,
+  publicJobScheduleSchema,
+} from "@enschedule/types";
+import { debug } from "debug";
+import { z } from "zod";
+
+const log = debug("worker-api");
+if (process.env.DEBUG) {
+  debug.enable(process.env.DEBUG)
+}
 
 export class WorkerAPI {
   private hostname: string;
   private apiKey: string;
   private ssl: boolean;
   private port: number;
+  private url: string;
 
   /**
-   *
    * @param apiKey - The API_KEY environment variable provided to the worker
-   * @param hostname - The hostname of the worker e.g. localhost or my-worker.localdomain.localhost
-   * @param ssl - boolean if you are using https://
-   * @param port - if `worker.serve({ port: 8080 });` then 8080 is the port
+   * @param url - The URL of the worker e.g. https://localhost or http://my-worker.localdomain.localhost:8080
    */
-  constructor(apiKey: string, hostname: string, ssl: boolean, port: number) {
-    this.hostname = hostname;
+  constructor(apiKey: string, url: string) {
+    this.url = url;
+    const urlObject = new URL(url);
     this.apiKey = apiKey;
-    this.ssl = ssl;
-    this.port = port;
+    this.hostname = urlObject.hostname;
+    this.ssl = urlObject.protocol === "https:";
+    if (urlObject.port) {
+      this.port = parseInt(urlObject.port);
+    } else {
+      this.port = this.ssl ? 443 : 80;
+    }
   }
 
-  private async request(method: string, path: string, data?: unknown) {
+  private async request(
+    method: "POST" | "DELETE",
+    path: string,
+    data?: unknown
+  ): Promise<unknown>;
+  private async request(
+    method: "GET",
+    path: string,
+    data?: Record<string, string | number | boolean | undefined>
+  ): Promise<unknown>;
+  private async request(
+    method: "POST" | "DELETE" | "GET",
+    path: string,
+    data?: Record<string, string | number | boolean | undefined>
+  ) {
+    let dataString = "";
+    if (data && method === "GET") {
+      dataString = Object.entries(data)
+        .filter(
+          (a): a is [string, string | number | boolean] => a[1] !== undefined
+        )
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join("&");
+    }
     const options = {
       hostname: this.hostname,
       port: this.port,
-      path,
+      path: method === "GET" && dataString ? `${path}?${dataString}` : path,
       method,
       headers: {
         "Content-Type": "application/json",
         "X-API-KEY": this.apiKey,
       },
     };
+    log(
+      "Req:",
+      method,
+      `${this.url}${decodeURI(options.path)}${
+        data ? ` ${JSON.stringify(data)}` : ""
+      }`
+    );
 
     return new Promise((resolve, reject) => {
       const req = (this.ssl ? https : http).request(options, (res) => {
@@ -40,51 +91,69 @@ export class WorkerAPI {
         res.on("data", (chunk) => {
           body += chunk;
         });
-        res.on("end", () => resolve(JSON.parse(body)));
+        res.on("end", () => {
+          const resData: unknown = JSON.parse(body);
+          resolve(resData);
+
+          log(
+            "Res:",
+            method,
+            `${this.url}${path}`,
+            res.statusCode,
+            res.statusMessage,
+            resData ? ` ${JSON.stringify(resData)}` : ""
+          );
+        });
       });
 
       req.on("error", reject);
-      if (data) {
+      if (data && method !== "GET") {
         req.write(JSON.stringify(data));
       }
       req.end();
     });
   }
 
-  async getJobDefinitions() {
-    return this.request("GET", "/job-definitions");
+  async getJobDefinitions(): Promise<PublicJobDefinition[]> {
+    const jobDefinitions = await this.request("GET", "/job-definitions");
+    return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
   }
 
-  async getJobDefinition(id: string) {
-    return this.request("GET", `/job-definitions/${id}`);
+  async getJobDefinition(id: string): Promise<PublicJobDefinition> {
+    const definition = await this.request("GET", `/job-definitions/${id}`);
+    return publicJobDefinitionSchema.parse(definition);
   }
 
   async getSchedules(definitionId?: string): Promise<PublicJobSchedule[]> {
     const schedules = await this.request("GET", "/schedules", { definitionId });
-    return schedules as PublicJobSchedule[];
+    return z.array(publicJobScheduleSchema).parse(schedules);
   }
 
   async scheduleJob(jobId: string, data: unknown, options: ScheduleJobOptions) {
     return this.request("POST", "/schedules", { jobId, data, options });
   }
 
-  async getSchedule(id: number) {
-    return this.request("GET", `/schedules/${id}`);
+  async getSchedule(id: number): Promise<PublicJobSchedule> {
+    const schedule = await this.request("GET", `/schedules/${id}`);
+    return publicJobScheduleSchema.parse(schedule);
   }
 
   async deleteSchedules(scheduleIds: number[]) {
     return this.request("DELETE", "/schedules", { scheduleIds });
   }
 
-  async getRuns(scheduleId?: number) {
-    return this.request("GET", "/runs", { scheduleId });
+  async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
+    const runs = await this.request("GET", "/runs", { scheduleId });
+    return z.array(publicJobRunSchema).parse(runs);
   }
 
-  async getRun(id: number) {
-    return this.request("GET", `/runs/${id}`);
+  async getRun(id: number): Promise<PublicJobRun> {
+    const run = await this.request("GET", `/runs/${id}`);
+    return publicJobRunSchema.parse(run);
   }
 
-  async runSchedule(id: number) {
-    return this.request("POST", `/schedules/${id}/runs`);
+  async runSchedule(id: number): Promise<PublicJobRun> {
+    const run = await this.request("POST", `/schedules/${id}/runs`);
+    return publicJobRunSchema.parse(run);
   }
 }

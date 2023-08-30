@@ -1,5 +1,4 @@
-import type { SerializeFrom } from '@remix-run/node';
-import type { PublicJobDefinition } from '@enschedule/types';
-import type { getJobDefinitionDocs } from '~/utils/getJobDefinitionDocs';
+import type { PublicJobDefinition } from "@enschedule/types";
+import type { SerializeFrom } from "@remix-run/node";
 
-export type DefinitionRowData = SerializeFrom<PublicJobDefinition & ReturnType<typeof getJobDefinitionDocs>>;
+export type DefinitionRowData = SerializeFrom<PublicJobDefinition>;

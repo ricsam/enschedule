@@ -1,6 +1,6 @@
 import type { Params } from '@remix-run/react';
 import type { PublicJobRun } from '@enschedule/types';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 
 export const getRunData = async (params: Params): Promise<PublicJobRun> => {
   const runId = Number(params.runId);

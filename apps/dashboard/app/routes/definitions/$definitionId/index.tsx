@@ -1,33 +1,36 @@
-import Button from '@mui/material/Button';
-import type { LoaderFunction, SerializeFrom } from '@remix-run/node';
-import { json } from '@remix-run/node';
-import type { Params } from '@remix-run/react';
-import { Link as RemixLink, useLoaderData } from '@remix-run/react';
-import type { PublicJobDefinition } from '@enschedule/types';
-import DefinitionPage from '~/components/DefinitionPage';
-import { RootLayout } from '~/components/Layout';
-import { scheduler } from '~/scheduler';
-import type { Breadcrumb } from '~/types';
-import { extendBreadcrumbs } from '~/utils/extendBreadcrumbs';
-import { getJobDefinitionDocs } from '~/utils/getJobDefinitionDocs';
-import { useBreadcrumbs as useParentBreadcrumbs } from '..';
+import type { PublicJobDefinition } from "@enschedule/types";
+import Button from "@mui/material/Button";
+import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import type { Params } from "@remix-run/react";
+import { Link as RemixLink, useLoaderData } from "@remix-run/react";
+import DefinitionPage from "~/components/DefinitionPage";
+import { RootLayout } from "~/components/Layout";
+import { scheduler } from "~/scheduler.server";
+import type { Breadcrumb } from "~/types";
+import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
+import { useBreadcrumbs as useParentBreadcrumbs } from "..";
 
-export const useBreadcrumbs = (jobDefinition: SerializeFrom<PublicJobDefinition>): Breadcrumb[] => {
+export const useBreadcrumbs = (
+  jobDefinition: SerializeFrom<PublicJobDefinition>
+): Breadcrumb[] => {
   const parentBreadcrumbs = useParentBreadcrumbs();
 
-  return extendBreadcrumbs(parentBreadcrumbs, [{ href: `/${jobDefinition.id}`, title: jobDefinition.title }]);
+  return extendBreadcrumbs(parentBreadcrumbs, [
+    { href: `/${jobDefinition.id}`, title: jobDefinition.title },
+  ]);
 };
 
 export async function getLoaderData(params: Params<string>) {
   const id = getDefinitionId(params);
-  const def = scheduler.getJobDefinition(id);
-  return { def: { ...def, ...getJobDefinitionDocs(def) } };
+  const def = await scheduler.getJobDefinition(id);
+  return { def };
 }
 
 export const getDefinitionId = (params: Params<string>): string => {
   const definitionId = params.definitionId;
   if (!definitionId) {
-    throw new Error('invalid id');
+    throw new Error("invalid id");
   }
   return definitionId;
 };
@@ -51,7 +54,7 @@ export const useLayout = (def: SerializeFrom<PublicJobDefinition>) => {
             variant="contained"
             LinkComponent={RemixLink}
             component={RemixLink}
-            to={'/run?def=' + def.id}
+            to={"/run?def=" + def.id}
           >
             Create schedule
           </Button>
@@ -59,11 +62,11 @@ export const useLayout = (def: SerializeFrom<PublicJobDefinition>) => {
       ),
       tabs: [
         {
-          label: 'Schema',
+          label: "Schema",
           to: `/definitions/${def.id}`,
         },
         {
-          label: 'Schedules',
+          label: "Schedules",
           to: `/definitions/${def.id}/schedules`,
         },
       ],

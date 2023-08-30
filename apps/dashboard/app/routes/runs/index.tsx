@@ -4,7 +4,7 @@ import { useLoaderData } from '@remix-run/react';
 import type { PublicJobRun } from '@enschedule/types';
 import { RootLayout } from '~/components/Layout';
 import RunsTable from '~/components/RunsTable';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 
 export type LoaderData = {

@@ -1,6 +1,9 @@
 import { PrivateBackend } from "@enschedule/pg-driver";
 import express from "express";
 import { z } from "zod";
+import { debug } from "debug";
+
+const log = debug("worker");
 
 export interface ServeOptions {
   port: number;
@@ -10,7 +13,9 @@ export interface ServeOptions {
 export class Worker extends PrivateBackend {
   serve(serveOptions: ServeOptions): void {
     if (!process.env.API_KEY) {
-      throw new Error('Environment variable API_KEY must be defined to start the API endpoint');
+      throw new Error(
+        "Environment variable API_KEY must be defined to start the API endpoint"
+      );
     }
     const app = express();
 
@@ -84,7 +89,7 @@ export class Worker extends PrivateBackend {
     app.get("/runs", (req, res, next) => {
       const scheduleIdSchema = z.number().int().positive().optional();
       const validatedScheduleId = scheduleIdSchema.parse(
-        Number(req.query.scheduleId),
+        Number(req.query.scheduleId)
       );
       this.getRuns(validatedScheduleId)
         .then((runs) => {
@@ -116,7 +121,7 @@ export class Worker extends PrivateBackend {
     const apiKeyMiddleware = (
       req: express.Request,
       res: express.Response,
-      next: express.NextFunction,
+      next: express.NextFunction
     ) => {
       const apiKey = req.get("X-API-KEY");
       if (!apiKey || apiKey !== process.env.API_KEY) {
@@ -127,10 +132,17 @@ export class Worker extends PrivateBackend {
 
     app.use(apiKeyMiddleware);
 
+    app.use((req, res, next) => {
+      res.on("finish", () => {
+        log(req.method, decodeURI(req.url), res.statusCode, res.statusMessage);
+      });
+      next();
+    });
+
     const { port, hostname } = serveOptions;
     const cb = () => {
       console.log(`Server is running on port ${port}`);
-    }
+    };
     if (hostname) {
       app.listen(port, hostname, cb);
     } else {

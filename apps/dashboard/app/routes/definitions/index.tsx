@@ -3,13 +3,12 @@ import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import DefinitionsTable from '~/components/DefinitionsTable';
 import { RootLayout } from '~/components/Layout';
-import { scheduler } from '~/scheduler';
+import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
-import { getJobDefinitionDocs } from '~/utils/getJobDefinitionDocs';
 
 async function getLoaderData() {
-  const definitions = scheduler.getDefinitions();
-  return definitions.map((def) => ({ ...def, ...getJobDefinitionDocs(def) }));
+  const definitions = scheduler.getJobDefinitions();
+  return definitions;
 }
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

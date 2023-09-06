@@ -1,10 +1,9 @@
-import React from 'react';
-import type { Monaco } from '@monaco-editor/react';
-import type { SchemaObject } from 'ajv';
-import Ajv from 'ajv';
-import MonacoEditor from '@monaco-editor/react';
-import { Theme, useTheme } from '~/utils/theme-provider';
-import { Box } from '@mui/material';
+import type { Monaco } from "@monaco-editor/react";
+import MonacoEditor from "@monaco-editor/react";
+import { Box } from "@mui/material";
+import Ajv from "ajv";
+import React from "react";
+import { Theme, useTheme } from "~/utils/theme-provider";
 
 const ajv = new Ajv();
 
@@ -14,12 +13,14 @@ export function Editor({
   getValueRef,
   setIsValid,
 }: {
-  jsonSchema: SchemaObject;
+  jsonSchema: Record<string, unknown>;
   example: unknown;
   getValueRef: React.MutableRefObject<undefined | (() => string)>;
   setIsValid: (valid: boolean) => void;
 }) {
-  const editorRef = React.useRef<ReturnType<Monaco['editor']['create']> | undefined>(undefined);
+  const editorRef = React.useRef<
+    ReturnType<Monaco["editor"]["create"]> | undefined
+  >(undefined);
   const [validate] = React.useState(() => ajv.compile(jsonSchema));
 
   const initialValue = JSON.stringify(example, null, 2);
@@ -33,19 +34,19 @@ export function Editor({
       validate: true,
       schemas: [
         {
-          uri: '',
-          fileMatch: ['*'],
+          uri: "",
+          fileMatch: ["*"],
           schema: jsonSchema,
         },
       ],
     });
   }
   const [theme] = useTheme();
-  const height = initialValue.split('\n').length * 18;
+  const height = initialValue.split("\n").length * 18;
   return (
     <MonacoEditor
       language="json"
-      theme={theme === Theme.LIGHT ? 'light' : 'vs-dark'}
+      theme={theme === Theme.LIGHT ? "light" : "vs-dark"}
       height={`${height}px`}
       value={initialValue}
       beforeMount={handleEditorWillMount}
@@ -80,18 +81,22 @@ export function ReadOnlyEditor({
 }: {
   example: string;
   lang: string;
-  wordWrap?: Exclude<React.ComponentProps<typeof MonacoEditor>['options'], undefined>['wordWrap'];
+  wordWrap?: Exclude<
+    React.ComponentProps<typeof MonacoEditor>["options"],
+    undefined
+  >["wordWrap"];
   withLineNumbers?: boolean;
 }) {
   const [appTheme] = useTheme();
-  const editorTheme = appTheme === Theme.LIGHT ? 'light' : 'vs-dark';
-  const height = example.split('\n').length * 18 + 1;
+  const editorTheme = appTheme === Theme.LIGHT ? "light" : "vs-dark";
+  const height = example.split("\n").length * 18 + 1;
   return (
     <Box
       sx={{
-        '.monaco-editor, .monaco-editor-background, .monaco-editor .inputarea.ime-input': {
-          backgroundColor: 'transparent',
-        },
+        ".monaco-editor, .monaco-editor-background, .monaco-editor .inputarea.ime-input":
+          {
+            backgroundColor: "transparent",
+          },
       }}
     >
       <MonacoEditor
@@ -116,7 +121,7 @@ export function ReadOnlyEditor({
             declare const z: Zod;
           
           `,
-            'global.d.ts'
+            "global.d.ts"
           );
         }}
         className="read-only-editor"
@@ -147,14 +152,14 @@ export function ReadOnlyEditor({
                 glyphMargin: false,
                 folding: false,
                 lineDecorationsWidth: 0,
-                renderLineHighlight: 'none',
+                renderLineHighlight: "none",
                 scrollbar: {
                   alwaysConsumeMouseWheel: false,
-                  vertical: 'hidden',
-                  horizontal: 'hidden',
+                  vertical: "hidden",
+                  horizontal: "hidden",
                 },
                 readOnly: true,
-                lineNumbers: 'off',
+                lineNumbers: "off",
                 minimap: {
                   enabled: false,
                 },

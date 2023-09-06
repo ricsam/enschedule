@@ -52,7 +52,7 @@ export const createPublicJobDefinition = (
   const { node } = zodToTs(jobDef.dataSchema, identifier);
   const typeAlias = createTypeAlias(node, identifier);
   const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
-  const jsonSchema: unknown = zodToJsonSchema(jobDef.dataSchema, identifier);
+  const jsonSchema: Record<string, unknown> = zodToJsonSchema(jobDef.dataSchema, identifier);
 
   return {
     id: jobDef.id,
@@ -591,6 +591,11 @@ export class PrivateBackend {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.definedJobs[id] = job as JobDefinition<any>;
     return job;
+  }
+
+  public async migrate() {
+    log("Migrating the database");
+    await this.sequelize.sync();
   }
 
   public async startPolling() {

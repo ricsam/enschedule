@@ -88,10 +88,9 @@ worker.registerJob({
 
 void (async () => {
   if (process.env.ENSCHEDULE_API) {
-    worker.serve({ port: 8080 });
-  } else {
-    await worker.startPolling();
+    worker.serve({ port: process.env.PORT ? Number(process.env.PORT) : 8080 });
   }
+  await worker.startPolling();
   await worker.scheduleJob(
     httpRequestJob,
     { url: "http://localhost:3000" },
@@ -105,4 +104,5 @@ void (async () => {
         "This is an automatically created job which will run in 5 days",
     }
   );
+  console.log("Worker up and running");
 })();

@@ -83,6 +83,7 @@ export default function RunsTable({
 }>) {
   return (
     <ExpandableTable
+      id="runsTable"
       rows={runs}
       columns={columns}
       renderRow={(row) => {

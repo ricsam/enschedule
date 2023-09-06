@@ -1,7 +1,9 @@
 import { PrivateBackend } from "@enschedule/pg-driver";
+import { OptionalDateSchema } from "@enschedule/types";
 import express from "express";
 import { z } from "zod";
 import { debug } from "debug";
+import { json as parseJsonBody } from "body-parser";
 
 const log = debug("worker");
 
@@ -18,6 +20,21 @@ export class Worker extends PrivateBackend {
       );
     }
     const app = express();
+
+    const apiKeyMiddleware = (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      const apiKey = req.get("X-API-KEY");
+      if (!apiKey || apiKey !== process.env.API_KEY) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      next();
+    };
+
+    app.use(apiKeyMiddleware);
+    app.use(parseJsonBody());
 
     app.get("/job-definitions", (req, res) => {
       const jobDefinitions = this.getDefinitions();
@@ -42,13 +59,14 @@ export class Worker extends PrivateBackend {
     });
 
     app.post("/schedules", (req, res, next) => {
+      console.log("@reqbody", req.body);
       const ScheduleSchema = z.object({
         jobId: z.string(),
         data: z.unknown(),
         options: z
           .object({
             cronExpression: z.string().optional(),
-            runAt: z.date().optional(),
+            runAt: OptionalDateSchema,
             eventId: z.string().optional(),
             title: z.string(),
             description: z.string(),
@@ -87,10 +105,15 @@ export class Worker extends PrivateBackend {
     });
 
     app.get("/runs", (req, res, next) => {
-      const scheduleIdSchema = z.number().int().positive().optional();
-      const validatedScheduleId = scheduleIdSchema.parse(
-        Number(req.query.scheduleId)
-      );
+      const scheduleIdSchema = z
+        .string()
+        .optional()
+        .transform((strNumber) =>
+          strNumber
+            ? z.number().int().positive().parse(Number(strNumber))
+            : undefined
+        );
+      const validatedScheduleId = scheduleIdSchema.parse(req.query.scheduleId);
       this.getRuns(validatedScheduleId)
         .then((runs) => {
           res.json(runs);
@@ -117,20 +140,6 @@ export class Worker extends PrivateBackend {
         })
         .catch(next);
     });
-
-    const apiKeyMiddleware = (
-      req: express.Request,
-      res: express.Response,
-      next: express.NextFunction
-    ) => {
-      const apiKey = req.get("X-API-KEY");
-      if (!apiKey || apiKey !== process.env.API_KEY) {
-        return res.status(403).json({ error: "Unauthorized" });
-      }
-      next();
-    };
-
-    app.use(apiKeyMiddleware);
 
     app.use((req, res, next) => {
       res.on("finish", () => {

@@ -16,7 +16,7 @@ import { z } from "zod";
 
 const log = debug("worker-api");
 if (process.env.DEBUG) {
-  debug.enable(process.env.DEBUG)
+  debug.enable(process.env.DEBUG);
 }
 
 export class WorkerAPI {
@@ -67,6 +67,7 @@ export class WorkerAPI {
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join("&");
     }
+    const bodyString = JSON.stringify(data);
     const options = {
       hostname: this.hostname,
       port: this.port,
@@ -75,6 +76,9 @@ export class WorkerAPI {
       headers: {
         "Content-Type": "application/json",
         "X-API-KEY": this.apiKey,
+        // ...(data && method !== "GET"
+        //   ? { "Content-Length": Buffer.byteLength(bodyString) }
+        //   : {}),
       },
     };
     log(
@@ -92,23 +96,27 @@ export class WorkerAPI {
           body += chunk;
         });
         res.on("end", () => {
-          const resData: unknown = JSON.parse(body);
-          resolve(resData);
+          try {
+            const resData: unknown = JSON.parse(body);
+            resolve(resData);
 
-          log(
-            "Res:",
-            method,
-            `${this.url}${path}`,
-            res.statusCode,
-            res.statusMessage,
-            resData ? ` ${JSON.stringify(resData)}` : ""
-          );
+            log(
+              "Res:",
+              method,
+              `${this.url}${path}`,
+              res.statusCode,
+              res.statusMessage,
+              resData ? ` ${JSON.stringify(resData)}` : ""
+            );
+          } catch (err) {
+            reject(err);
+          }
         });
       });
 
       req.on("error", reject);
       if (data && method !== "GET") {
-        req.write(JSON.stringify(data));
+        req.write(bodyString);
       }
       req.end();
     });
@@ -129,8 +137,17 @@ export class WorkerAPI {
     return z.array(publicJobScheduleSchema).parse(schedules);
   }
 
-  async scheduleJob(jobId: string, data: unknown, options: ScheduleJobOptions) {
-    return this.request("POST", "/schedules", { jobId, data, options });
+  async scheduleJob(
+    jobId: string,
+    data: unknown,
+    options: ScheduleJobOptions
+  ): Promise<PublicJobSchedule> {
+    const newSchedule = await this.request("POST", "/schedules", {
+      jobId,
+      data,
+      options,
+    });
+    return publicJobScheduleSchema.parse(newSchedule);
   }
 
   async getSchedule(id: number): Promise<PublicJobSchedule> {

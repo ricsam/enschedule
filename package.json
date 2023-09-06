@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev -F 'test-worker' -F '@enschedule/dashboard'",
     "lint": "turbo run lint",
     "playwright": "playwright",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""

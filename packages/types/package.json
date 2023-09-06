@@ -5,8 +5,10 @@
   "types": "./index.ts",
   "license": "MIT",
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "tsc -p ./tsconfig.json"
   },
+  "files": ["index.ts", "types.ts", "dist"],
   "devDependencies": {
     "@turbo/gen": "^1.10.12",
     "@types/node": "^20.5.2",

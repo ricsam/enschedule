@@ -9,6 +9,7 @@ module.exports = {
   serverDependenciesToBundle: [
     /^@schedule\/.*/,
     /^@enschedule\/.*/,
-    'zod-to-ts'
-  ]
+    "zod-to-ts",
+  ],
+  watchPaths: ["../../packages/worker-api/*.ts", "../../packages/types/*.ts"],
 };

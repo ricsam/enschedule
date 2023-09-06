@@ -1,10 +1,24 @@
-import type { LinksFunction, LoaderFunction, MetaFunction } from '@remix-run/node';
-import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react';
-import styles from '~/style/global.css';
-import { MuiTheme } from '~/utils/MuiTheme';
-import type { Theme } from '~/utils/theme-provider';
-import { ThemeProvider } from '~/utils/theme-provider';
-import { getThemeSession } from '~/utils/theme.server';
+import { Typography } from "@mui/material";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import {
+  Links,
+  LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useCatch,
+  useLoaderData,
+} from "@remix-run/react";
+import styles from "~/style/global.css";
+import { MuiTheme } from "~/utils/MuiTheme";
+import type { Theme } from "~/utils/theme-provider";
+import { ThemeProvider } from "~/utils/theme-provider";
+import { getThemeSession } from "~/utils/theme.server";
 
 export type LoaderData = {
   theme: Theme | null;
@@ -13,7 +27,7 @@ export type LoaderData = {
 export const links: LinksFunction = () => {
   return [
     {
-      rel: 'stylesheet',
+      rel: "stylesheet",
       href: styles,
     },
   ];
@@ -30,9 +44,9 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export const meta: MetaFunction = () => ({
-  charset: 'utf-8',
-  title: 'Enschedule',
-  viewport: 'width=device-width,initial-scale=1',
+  charset: "utf-8",
+  title: "Enschedule",
+  viewport: "width=device-width,initial-scale=1",
 });
 
 export default function App() {
@@ -53,6 +67,46 @@ export default function App() {
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
+      </body>
+    </html>
+  );
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <html>
+      <head>
+        <title>Oh no!</title>
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Typography fontSize={60}>😪</Typography>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+export function CatchBoundary() {
+  let caught = useCatch();
+
+  return (
+    <html>
+      <head>
+        <title>Oh no!</title>
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Typography fontSize={60}>😪</Typography>
+        <div className="error-container">
+          <h1>
+            {caught.status} {caught.statusText}
+          </h1>
+        </div>
+        <Scripts />
       </body>
     </html>
   );

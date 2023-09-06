@@ -4,5 +4,5 @@
   "exclude": ["dist", "build", "node_modules"],
   "compilerOptions": {
     "outDir": "dist"
-  },
+  }
 }

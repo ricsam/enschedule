@@ -4,7 +4,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import Box from '@mui/material/Box';
 import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
-import Paper from '@mui/material/Paper';
+import Paper, { PaperProps } from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -57,11 +57,12 @@ export function ExpandableTable<T>({
   rows,
   renderRow,
   columns,
+  ...paperProps
 }: {
   rows: T[];
   renderRow: (row: Row<T>) => React.ReactNode;
   columns: ColumnDef<T, any>[];
-}) {
+} & PaperProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
@@ -95,7 +96,7 @@ export function ExpandableTable<T>({
   };
 
   return (
-    <Paper sx={{ width: '100%', mb: 2 }}>
+    <Paper sx={{ width: '100%', mb: 2 }} {...paperProps}>
       <TableContainer>
         <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size={'small'}>
           <TableHead>

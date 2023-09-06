@@ -305,6 +305,12 @@ importers:
       '@enschedule/pg-driver':
         specifier: workspace:*
         version: link:../pg-driver
+      '@enschedule/types':
+        specifier: workspace:*
+        version: link:../types
+      body-parser:
+        specifier: ^1.20.2
+        version: 1.20.2
       debug:
         specifier: ^4.3.4
         version: 4.3.4
@@ -315,12 +321,12 @@ importers:
         specifier: ^3.22.2
         version: 3.22.2
     devDependencies:
-      '@enschedule/types':
-        specifier: workspace:*
-        version: link:../types
       '@turbo/gen':
         specifier: ^1.10.12
         version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
+      '@types/body-parser':
+        specifier: ^1.19.2
+        version: 1.19.2
       '@types/debug':
         specifier: ^4.1.8
         version: 4.1.8
@@ -4518,6 +4524,26 @@ packages:
       unpipe: 1.0.0
     transitivePeerDependencies:
       - supports-color
+
+  /body-parser@1.20.2:
+    resolution: {integrity: sha512-ml9pReCu3M61kGlqoTm2umSXTlRTuGTx0bfYj+uIUKKYycG5NtSbeetV3faSU6R7ajOPw0g/J1PvK4qNy7s5bA==}
+    engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
+    dependencies:
+      bytes: 3.1.2
+      content-type: 1.0.5
+      debug: 2.6.9
+      depd: 2.0.0
+      destroy: 1.2.0
+      http-errors: 2.0.0
+      iconv-lite: 0.4.24
+      on-finished: 2.4.1
+      qs: 6.11.0
+      raw-body: 2.5.2
+      type-is: 1.6.18
+      unpipe: 1.0.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /bplist-parser@0.2.0:
     resolution: {integrity: sha512-z0M+byMThzQmD9NILRniCUXYsYpjwnlO8N5uCFaCqIOpqRsJCrQL9NK3JsD67CN5a08nF5oIL2bD6loTdHOuKw==}
@@ -9738,6 +9764,16 @@ packages:
       http-errors: 2.0.0
       iconv-lite: 0.4.24
       unpipe: 1.0.0
+
+  /raw-body@2.5.2:
+    resolution: {integrity: sha512-8zGqypfENjCIqGhgXToC8aB2r7YrBX+AQAfIPs/Mlk+BtPTztOvTS01NRW/3Eh60J+a48lt8qsCzirQ6loCVfA==}
+    engines: {node: '>= 0.8'}
+    dependencies:
+      bytes: 3.1.2
+      http-errors: 2.0.0
+      iconv-lite: 0.4.24
+      unpipe: 1.0.0
+    dev: false
 
   /rc@1.2.8:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}

@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: 'postgres:15-alpine'
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  worker:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: 'richi3/enschedule-worker:latest'
+    environment:
+      - PORT=3000
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=postgres
+      - API_KEY=secret_key
+      - ENSCHEDULE_API=true
+      - API_PORT=3000
+      - API_HOSTNAME=worker
+      - PGPORT=5432
+      - DEBUG=pg-driver
+    volumes:
+      - "${PWD}/JobDefinitions:/app/packages/worker/definitions"
+  dashboard:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    image: 'richi3/enschedule-dashboard:latest'
+    ports:
+      - "8008:3000"
+    environment:
+      - SESSION_SECRET=abc
+      - API_KEY=secret_key
+      - WORKER_URL=http://worker:3000
+      - DEBUG=worker-api

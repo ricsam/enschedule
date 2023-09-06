@@ -6,11 +6,11 @@ export const publicJobDefinitionSchema = z.object({
   title: z.string(),
   example: z.unknown(),
   codeBlock: z.string(),
-  jsonSchema: z.unknown(),
+  jsonSchema: z.record(z.unknown()),
 });
 
-const DateSchema = z.string().transform((val) => new Date(val));
-const OptionalDateSchema = z
+export const DateSchema = z.string().transform((val) => new Date(val));
+export const OptionalDateSchema = z
   .string()
   .optional()
   .transform((val) => (val ? new Date(val) : undefined));
@@ -52,7 +52,7 @@ export interface PublicJobDefinition {
   title: string;
   example?: unknown;
   codeBlock: string;
-  jsonSchema?: unknown;
+  jsonSchema: Record<string, unknown>;
 }
 
 export interface PublicJobSchedule {

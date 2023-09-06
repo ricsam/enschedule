@@ -1,32 +1,45 @@
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Chip from '@mui/material/Chip';
-import cronParser from 'cron-parser';
-import React from 'react';
-import { RootLayout } from '~/components/Layout';
-
-import Send from '@mui/icons-material/Send';
-import type { SxProps } from '@mui/material';
-import { Avatar, CardHeader, Link as MuiLink, Typography, useTheme } from '@mui/material';
-import Autocomplete from '@mui/material/Autocomplete';
-import IconButton from '@mui/material/IconButton';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import TextField from '@mui/material/TextField';
-import type { ActionFunction, LinksFunction, LoaderFunction } from '@remix-run/node';
-import { json } from '@remix-run/node';
-import { Link, useFetcher, useLoaderData, useSearchParams } from '@remix-run/react';
-import icon from '~/icon.svg';
-import { getLoaderData } from './runLoader.server';
-
-import { Editor, ReadOnlyEditor } from '~/components/Editor';
-
-import type { PublicJobSchedule, ScheduleJobOptions } from '@enschedule/types';
-import { format, parse } from 'date-fns';
-import { pascalCase } from 'pascal-case';
-import { z } from 'zod';
-import { scheduler } from '~/scheduler.server';
+import type { PublicJobSchedule, ScheduleJobOptions } from "@enschedule/types";
+import { publicJobScheduleSchema } from "@enschedule/types";
+import Send from "@mui/icons-material/Send";
+import type { SxProps } from "@mui/material";
+import {
+  Avatar,
+  CardHeader,
+  Link as MuiLink,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import OutlinedInput from "@mui/material/OutlinedInput";
+import TextField from "@mui/material/TextField";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  Link,
+  useFetcher,
+  useLoaderData,
+  useSearchParams,
+} from "@remix-run/react";
+import cronParser from "cron-parser";
+import { format, parse } from "date-fns";
+import { pascalCase } from "pascal-case";
+import React from "react";
+import { z } from "zod";
+import { Editor, ReadOnlyEditor } from "~/components/Editor";
+import { RootLayout } from "~/components/Layout";
+import icon from "~/icon.svg";
+import { scheduler } from "~/scheduler.server";
+import { getLoaderData } from "./runLoader.server";
 
 const SerializedJobEventSchema = z.object({
   title: z.string(),
@@ -79,14 +92,14 @@ export const Message = ({
   return (
     <Chip
       label={message}
-      color={outgoing ? (mode === 'dark' ? 'primary' : 'primary') : 'default'}
+      color={outgoing ? (mode === "dark" ? "primary" : "primary") : "default"}
       sx={{
-        maxWidth: '50%',
-        whiteSpace: 'normal',
-        height: 'auto',
-        py: '8px',
-        '.MuiChip-label': {
-          whiteSpace: 'normal',
+        maxWidth: "50%",
+        whiteSpace: "normal",
+        height: "auto",
+        py: "8px",
+        ".MuiChip-label": {
+          whiteSpace: "normal",
         },
         ...sx,
       }}
@@ -106,7 +119,7 @@ const EnscheduleBotMessage = ({
       <Avatar
         src={icon}
         alt="Enschedule bot"
-        sx={{ width: 24, height: 24, p: 1, backgroundColor: 'action.selected' }}
+        sx={{ width: 24, height: 24, p: 1, backgroundColor: "action.selected" }}
       />
       <Box pr={1} />
       <Message message={message} outgoing={false} sx={sx} />
@@ -145,14 +158,20 @@ export const loader: LoaderFunction = async () => {
   return json<LoaderData>(await getLoaderData());
 };
 
-const SendButton = ({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) => (
+const SendButton = ({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) => (
   <Box pl={1}>
     <IconButton
       color="primary"
       disabled={disabled}
       onClick={onClick}
       edge="end"
-      sx={{ transform: 'rotate(-45deg)' }}
+      sx={{ transform: "rotate(-45deg)" }}
     >
       <Send />
     </IconButton>
@@ -171,7 +190,9 @@ const FormattedJson = ({ data }: { data: any }) => {
   );
 };
 
-export type Definition = LoaderData[number] | ReturnType<typeof useLoaderData<LoaderData[number]>>;
+export type Definition =
+  | LoaderData[number]
+  | ReturnType<typeof useLoaderData<LoaderData[number]>>;
 
 const InputArea = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -180,9 +201,9 @@ const InputArea = ({ children }: { children: React.ReactNode }) => {
       alignItems="center"
       justifyContent="flex-end"
       sx={{
-        borderTopStyle: 'solid',
-        borderTopWidth: 'thin',
-        borderTopColor: 'divider',
+        borderTopStyle: "solid",
+        borderTopWidth: "thin",
+        borderTopColor: "divider",
         pt: 2,
         mt: 2,
       }}
@@ -195,13 +216,17 @@ const InputArea = ({ children }: { children: React.ReactNode }) => {
 export default function Run() {
   const definitions = useLoaderData<LoaderData>();
   const fetcher = useFetcher<PublicJobSchedule>();
-  const qps: { def?: string } = Object.fromEntries(useSearchParams()[0].entries());
-  const [selectedDef, setSelectedJob] = React.useState<Definition | undefined>(() => {
-    if (qps.def) {
-      const def = definitions.find((def) => def.id === qps.def);
-      return def;
+  const qps: { def?: string } = Object.fromEntries(
+    useSearchParams()[0].entries()
+  );
+  const [selectedDef, setSelectedJob] = React.useState<Definition | undefined>(
+    () => {
+      if (qps.def) {
+        const def = definitions.find((def) => def.id === qps.def);
+        return def;
+      }
     }
-  });
+  );
   const getValueRef = React.useRef<undefined | (() => string)>(undefined);
   const [isValid, setIsValid] = React.useState(true);
   // const [data, setData] = React.useState<any>({
@@ -210,19 +235,24 @@ export default function Run() {
   const [data, setData] = React.useState<any>(undefined);
   const [isCron, setIsCron] = React.useState<boolean | undefined>(undefined);
 
-  const [runLater, setRunLater] = React.useState(format(new Date(), "yyyy-MM-dd'T'HH:00"));
+  const [runLater, setRunLater] = React.useState(
+    format(new Date(), "yyyy-MM-dd'T'HH:00")
+  );
   const [acceptRunLater, setAcceptRunLater] = React.useState(false);
 
   const parsedRunLater = parse(runLater, "yyyy-MM-dd'T'HH:00", new Date());
 
-  const [whenToSend, setWhenToSend] = React.useState<undefined | 'now' | 'later' | 'manual'>();
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [submitTitleAndDescription, setSubmitTitleAndDescription] = React.useState(false);
-  const [cronExpression, setCronExpression] = React.useState('');
+  const [whenToSend, setWhenToSend] = React.useState<
+    undefined | "now" | "later" | "manual"
+  >();
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [submitTitleAndDescription, setSubmitTitleAndDescription] =
+    React.useState(false);
+  const [cronExpression, setCronExpression] = React.useState("");
   const [cronDefined, setCronDefined] = React.useState(false);
   const hasSubmitted = React.useRef(false);
-  if (hasSubmitted.current === false && fetcher.state === 'submitting') {
+  if (hasSubmitted.current === false && fetcher.state === "submitting") {
     hasSubmitted.current = true;
   }
 
@@ -233,7 +263,7 @@ export default function Run() {
 
   const hasSaved = React.useRef<undefined | PublicJobSchedule>(undefined);
   if (hasSaved.current === undefined && fetcher.data) {
-    hasSaved.current = fetcher.data;
+    hasSaved.current = publicJobScheduleSchema.parse(fetcher.data);
   }
 
   const describeJob = selectedDef && (
@@ -244,6 +274,9 @@ export default function Run() {
         <Box display="flex" alignItems="center">
           <Box width="100%">
             <OutlinedInput
+              inputProps={{
+                "data-testid": "title-input",
+              }}
               placeholder="Title..."
               type="text"
               value={title}
@@ -254,6 +287,9 @@ export default function Run() {
             />
             <Box pt={1} />
             <OutlinedInput
+              inputProps={{
+                "data-testid": "description-input",
+              }}
               placeholder="Description..."
               multiline
               rows={4}
@@ -276,10 +312,16 @@ export default function Run() {
         <>
           <MyMessage
             message={
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr",
+                  columnGap: 1,
+                }}
+              >
                 <Box component="span" sx={{ opacity: 0.87 }}>
                   Title:
-                </Box>{' '}
+                </Box>{" "}
                 <span>{title}</span>
                 <Box component="span" sx={{ opacity: 0.87 }}>
                   Description:
@@ -291,31 +333,41 @@ export default function Run() {
 
           <EnscheduleBotMessage
             message={`You will create the following ${
-              whenToSend === 'manual' ? 'job' : 'schedule for the defined job'
+              whenToSend === "manual" ? "job" : "schedule for the defined job"
             }:`}
           />
 
           <Box width="100%" pl={4}>
             <React.Fragment>
               <Card variant="outlined">
-                <CardHeader title={title} subheader={description} sx={{ pb: 0.5 }} />
+                <CardHeader
+                  title={title}
+                  subheader={description}
+                  sx={{ pb: 0.5 }}
+                />
                 <CardContent>
                   <Typography color="text.secondary" variant="body2">
-                    {whenToSend === 'manual' ? (
+                    {whenToSend === "manual" ? (
                       <>Will create a job</>
                     ) : (
                       <>
-                        Will run the <MuiLink>{selectedDef.title}</MuiLink> definition{' '}
-                        {whenToSend === 'now' ? (
-                          <Typography color="text.primary" variant="body2" component="span">
+                        Will run the <MuiLink>{selectedDef.title}</MuiLink>{" "}
+                        definition{" "}
+                        {whenToSend === "now" ? (
+                          <Typography
+                            data-testid="run-now-button"
+                            color="text.primary"
+                            variant="body2"
+                            component="span"
+                          >
                             now
                           </Typography>
                         ) : cronDefined ? (
                           <>
-                            later according the following expression{' '}
+                            later according the following expression{" "}
                             <Typography
                               component="span"
-                              sx={{ whiteSpace: 'nowrap' }}
+                              sx={{ whiteSpace: "nowrap" }}
                               color="text.primary"
                               variant="body2"
                             >
@@ -324,19 +376,19 @@ export default function Run() {
                           </>
                         ) : (
                           <>
-                            {'on '}
+                            {"on "}
                             <Typography
                               color="text.primary"
                               variant="body2"
                               component="span"
-                              sx={{ whiteSpace: 'nowrap' }}
+                              sx={{ whiteSpace: "nowrap" }}
                             >
                               {parsedRunLater.toString()}
                             </Typography>
                           </>
                         )}
                       </>
-                    )}{' '}
+                    )}{" "}
                     with the following data:
                   </Typography>
                   <Box pb={1} />
@@ -347,7 +399,9 @@ export default function Run() {
           </Box>
 
           <EnscheduleBotMessage
-            message={`Do you want to save this ${whenToSend === 'manual' ? 'job' : 'schedule'}?`}
+            message={`Do you want to save this ${
+              whenToSend === "manual" ? "job" : "schedule"
+            }?`}
           />
 
           {!hasSubmitted.current ? (
@@ -356,6 +410,7 @@ export default function Run() {
                 <Button
                   variant="outlined"
                   color="primary"
+                  data-testid="submit-button"
                   onClick={() => {
                     const job: SerializedJobEvent = {
                       title,
@@ -363,16 +418,16 @@ export default function Run() {
                       target: selectedDef.id,
                       data: JSON.stringify(data),
                     };
-                    if (whenToSend === 'now') {
+                    if (whenToSend === "now") {
                       job.runAt = new Date().toJSON();
-                    } else if (whenToSend === 'later') {
+                    } else if (whenToSend === "later") {
                       if (cronDefined) {
                         job.cronExpression = parsedCron;
                       } else {
                         job.runAt = parsedRunLater.toJSON();
                       }
                     }
-                    fetcher.submit(job, { method: 'post' });
+                    fetcher.submit(job, { method: "post" });
                   }}
                 >
                   Yes
@@ -392,10 +447,14 @@ export default function Run() {
               <EnscheduleBotMessage
                 message={
                   <div>
-                    Successfully saved the job to the database! Click{' '}
-                    <MuiLink to={`/schedules/${hasSaved.current.id}`} component={Link}>
+                    Successfully saved the job to the database! Click{" "}
+                    <MuiLink
+                      data-testid="schedule-link"
+                      to={`/schedules/${hasSaved.current.id}`}
+                      component={Link}
+                    >
                       here
-                    </MuiLink>{' '}
+                    </MuiLink>{" "}
                     to view the newly created job.
                   </div>
                 }
@@ -408,7 +467,7 @@ export default function Run() {
   );
 
   return (
-    <RootLayout breadcrumbs={[{ title: 'Run', href: '/run' }]}>
+    <RootLayout breadcrumbs={[{ title: "Run", href: "/run" }]}>
       <Box
         height="100%"
         display="flex"
@@ -416,8 +475,8 @@ export default function Run() {
         alignItems="stretch"
         justifyContent="flex-start"
         gap={2}
-        maxWidth={'640px'}
-        pb={'50vh'}
+        maxWidth={"640px"}
+        pb={"50vh"}
       >
         <EnscheduleBotMessage message="Which definition would you like to schedule?" />
 
@@ -428,8 +487,8 @@ export default function Run() {
             <EnscheduleBotMessage
               message={
                 <div>
-                  The <LightB>{selectedDef.title}</LightB> definition is described as{' '}
-                  <i>{selectedDef.description}</i>
+                  The <LightB>{selectedDef.title}</LightB> definition is
+                  described as <i>{selectedDef.description}</i>
                 </div>
               }
             />
@@ -438,11 +497,15 @@ export default function Run() {
               message={
                 <div>
                   <div>
-                    Let's create a schedule for the <LightB>{selectedDef.title}</LightB> definition, please
+                    Let's create a schedule for the{" "}
+                    <LightB>{selectedDef.title}</LightB> definition, please
                     provide the data according to the following schema:
                   </div>
                   <Box pt={1}>
-                    <ReadOnlyEditor example={selectedDef.codeBlock} lang="typescript" />
+                    <ReadOnlyEditor
+                      example={selectedDef.codeBlock}
+                      lang="typescript"
+                    />
                   </Box>
                 </div>
               }
@@ -452,6 +515,7 @@ export default function Run() {
         {!selectedDef ? (
           <InputArea>
             <Autocomplete
+              data-testid="definition-autocomplete"
               disablePortal
               options={definitions}
               getOptionLabel={(job) => job.title}
@@ -462,7 +526,9 @@ export default function Run() {
                 }
               }}
               fullWidth
-              renderInput={(params) => <TextField {...params} label="Select a job definition" />}
+              renderInput={(params) => (
+                <TextField {...params} label="Select a job definition" />
+              )}
             />
             <SendButton onClick={() => {}} />
           </InputArea>
@@ -474,12 +540,13 @@ export default function Run() {
                   message={<FormattedJson data={data} />}
                   sx={{
                     flex: 1,
-                    '.MuiChip-label': {
+                    ".MuiChip-label": {
                       flex: 1,
                     },
-                    '.read-only-editor': {
+                    ".read-only-editor": {
                       /* the up most container of the editor */
-                      filter: 'invert(1) hue-rotate(100deg) brightness(1) grayscale(0)',
+                      filter:
+                        "invert(1) hue-rotate(100deg) brightness(1) grayscale(0)",
                     },
                   }}
                 />
@@ -490,30 +557,33 @@ export default function Run() {
                   <InputArea>
                     <>
                       <Button
+                        data-testid="run-now"
                         variant="outlined"
                         color="primary"
                         onClick={() => {
-                          setWhenToSend('now');
+                          setWhenToSend("now");
                         }}
                       >
                         Now
                       </Button>
                       <Box pr={1} />
                       <Button
+                        data-testid="run-later"
                         variant="outlined"
                         color="primary"
                         onClick={() => {
-                          setWhenToSend('later');
+                          setWhenToSend("later");
                         }}
                       >
                         Later
                       </Button>
                       <Box pr={1} />
                       <Button
+                        data-testid="run-manual"
                         variant="outlined"
                         color="primary"
                         onClick={() => {
-                          setWhenToSend('manual');
+                          setWhenToSend("manual");
                         }}
                       >
                         Manually
@@ -524,7 +594,7 @@ export default function Run() {
                   <>
                     <MyMessage message={pascalCase(whenToSend)} />
 
-                    {whenToSend === 'later' ? (
+                    {whenToSend === "later" ? (
                       <>
                         <EnscheduleBotMessage message="Do you want this job to repeat?" />
 
@@ -554,17 +624,18 @@ export default function Run() {
                           </InputArea>
                         ) : isCron ? (
                           <>
-                            <MyMessage message={'Yes'} />
+                            <MyMessage message={"Yes"} />
                             <EnscheduleBotMessage
                               sx={{
-                                maxWidth: 'none',
-                                width: '536px',
-                                '.MuiChip-label': { width: '100%' },
+                                maxWidth: "none",
+                                width: "536px",
+                                ".MuiChip-label": { width: "100%" },
                               }}
                               message={
                                 <div>
                                   <div>
-                                    Please provide a CRON expression according to the following schema:
+                                    Please provide a CRON expression according
+                                    to the following schema:
                                   </div>
                                   <Box pt={1}>
                                     <ReadOnlyEditor
@@ -609,8 +680,8 @@ the last Wednesday of the month:
                                         <Box
                                           component="span"
                                           sx={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'auto 1fr',
+                                            display: "grid",
+                                            gridTemplateColumns: "auto 1fr",
                                             columnGap: 1,
                                           }}
                                         >
@@ -618,12 +689,18 @@ the last Wednesday of the month:
                                           <span>{parsedCron}</span>
                                           <span>Next run:</span>
                                           <span>
-                                            {cronParser.parseExpression(parsedCron).next().toString()}
+                                            {cronParser
+                                              .parseExpression(parsedCron)
+                                              .next()
+                                              .toString()}
                                           </span>
                                           <span>Next next run:</span>
                                           <span>
                                             {(() => {
-                                              const expr = cronParser.parseExpression(parsedCron);
+                                              const expr =
+                                                cronParser.parseExpression(
+                                                  parsedCron
+                                                );
                                               expr.next();
                                               return expr.next().toString();
                                             })()}
@@ -654,15 +731,16 @@ the last Wednesday of the month:
                           </>
                         ) : (
                           <>
-                            <MyMessage message={'No'} />
+                            <MyMessage message={"No"} />
                             <EnscheduleBotMessage message="When would you like to run this job?" />
                             {!acceptRunLater ? (
                               <InputArea>
                                 <TextField
                                   fullWidth
                                   inputProps={{
-                                    type: 'datetime-local',
-                                    pattern: '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}',
+                                    type: "datetime-local",
+                                    pattern:
+                                      "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}",
                                   }}
                                   value={runLater}
                                   onChange={(ev) => {
@@ -677,7 +755,9 @@ the last Wednesday of the month:
                               </InputArea>
                             ) : (
                               <>
-                                <MyMessage message={parsedRunLater.toString()} />
+                                <MyMessage
+                                  message={parsedRunLater.toString()}
+                                />
                                 {describeJob}
                               </>
                             )}
@@ -701,8 +781,8 @@ the last Wednesday of the month:
               flex="1"
               sx={{
                 borderWidth: 2,
-                borderStyle: 'solid',
-                borderColor: isValid ? 'transparent' : 'error.main',
+                borderStyle: "solid",
+                borderColor: isValid ? "transparent" : "error.main",
               }}
             >
               <Editor

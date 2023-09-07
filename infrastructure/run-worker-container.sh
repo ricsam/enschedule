@@ -6,7 +6,9 @@ cd $SCRIPT_DIR
 
 docker container run \
   --rm \
-  -e PORT=3000 \
+  -e API_PORT=3000 \
+  -e API_KEY=secret_key \
+  -e ENSCHEDULE_API=true \
   -e PGUSER=postgres \
   -e PGHOST=postgres \
   -e PGPASSWORD=postgres \

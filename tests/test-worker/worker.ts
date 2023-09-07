@@ -88,7 +88,7 @@ worker.registerJob({
 
 void (async () => {
   if (process.env.ENSCHEDULE_API) {
-    worker.serve({ port: process.env.PORT ? Number(process.env.PORT) : 8080 });
+    worker.serve({ port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080 });
   }
   await worker.startPolling();
   await worker.scheduleJob(

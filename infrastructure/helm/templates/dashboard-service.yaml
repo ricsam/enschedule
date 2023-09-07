@@ -1,0 +1,17 @@
+{{- if .Values.dashboard }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.dashboard.service.type }}
+  ports:
+    - port: {{ .Values.dashboard.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: dashboard
+{{- end }}

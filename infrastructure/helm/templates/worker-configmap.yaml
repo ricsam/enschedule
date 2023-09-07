@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "enschedule.fullname" . }}-worker-config
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+data:
+  index.js: |
+    {{- .Files.Get "files/index.js" | nindent 4 }}

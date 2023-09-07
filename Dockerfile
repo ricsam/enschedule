@@ -1,5 +1,4 @@
 FROM node:16.20-slim as base
-
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -16,11 +15,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-l
 FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm install turbo --global
+ENV NODE_ENV=production
 RUN turbo build
 
 # Worker image
 FROM base AS worker
-
+ENV NODE_ENV=production
 # Install pg-driver
 COPY --from=prod-deps /app/packages/pg-driver/node_modules/ /app/packages/pg-driver/node_modules
 COPY --from=build /app/packages/pg-driver/dist /app/packages/pg-driver/dist
@@ -47,6 +47,7 @@ CMD node dist/docker-entry.js
 
 # Dashboard image
 FROM base AS dashboard
+ENV NODE_ENV=production
 # Install worker-api
 COPY --from=prod-deps /app/packages/worker-api/node_modules/ /app/packages/worker-api/node_modules
 COPY --from=build /app/packages/worker-api/dist /app/packages/worker-api/dist
@@ -56,6 +57,7 @@ COPY --from=build /app/packages/types/dist /app/packages/types/dist
 # Install dashboard
 COPY --from=prod-deps /app/apps/dashboard/node_modules/ /app/apps/dashboard/node_modules
 COPY --from=build /app/apps/dashboard/build /app/apps/dashboard/build
+COPY --from=build /app/apps/dashboard/public/build /app/apps/dashboard/public/build
 
 # Root node_modules
 COPY --from=prod-deps /app/node_modules/ /app/node_modules

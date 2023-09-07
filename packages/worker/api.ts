@@ -33,6 +33,10 @@ export class Worker extends PrivateBackend {
       next();
     };
 
+    app.get("/healthz", (req, res) => {
+      res.status(200).json({ message: "Endpoint is healthy" });
+    });
+
     app.use(apiKeyMiddleware);
     app.use(parseJsonBody());
 
@@ -59,7 +63,6 @@ export class Worker extends PrivateBackend {
     });
 
     app.post("/schedules", (req, res, next) => {
-      console.log("@reqbody", req.body);
       const ScheduleSchema = z.object({
         jobId: z.string(),
         data: z.unknown(),
@@ -150,7 +153,7 @@ export class Worker extends PrivateBackend {
 
     const { port, hostname } = serveOptions;
     const cb = () => {
-      console.log(`Server is running on port ${port}`);
+      log(`Server is running on port ${port}`);
     };
     if (hostname) {
       app.listen(port, hostname, cb);

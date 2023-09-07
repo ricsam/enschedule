@@ -39,7 +39,7 @@ void (async () => {
     // ignore
   }
   if (fileExists) {
-    console.log('Will load', defaultRegisterJob)
+    console.log('Will load mounted job definitions', defaultRegisterJob)
     await require(defaultRegisterJob)(worker);
   }
   if (process.env.REGISTER_JOBS_SCRIPT) {

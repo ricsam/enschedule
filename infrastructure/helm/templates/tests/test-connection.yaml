@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "enschedule.fullname" . }}:{{ .Values.service.port }}']
+      args: ['dashboard-service:{{ .Values.dashboard.service.port }}']
   restartPolicy: Never

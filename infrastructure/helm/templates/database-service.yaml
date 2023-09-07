@@ -1,0 +1,17 @@
+{{- if .Values.database }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-service
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.database.service.type }}
+  ports:
+    - port: {{ .Values.database.service.port }}
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    app.kubernetes.io/name: database
+{{- end }}

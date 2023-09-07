@@ -35,20 +35,13 @@ Common labels
 */}}
 {{- define "enschedule.labels" -}}
 helm.sh/chart: {{ include "enschedule.chart" . }}
-{{ include "enschedule.selectorLabels" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{/*
-Selector labels
-*/}}
-{{- define "enschedule.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "enschedule.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
 
 {{/*
 Create the name of the service account to use

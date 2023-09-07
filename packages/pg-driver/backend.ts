@@ -459,13 +459,13 @@ export class PrivateBackend {
     const signature = this.createSignature(defId, runAt, data, cronExpression);
     const where: WhereOptions<ScheduleAttributes> = eventId
       ? {
-          eventId,
-          claimed: false,
-        }
+        eventId,
+        claimed: false,
+      }
       : {
-          signature,
-          claimed: false,
-        };
+        signature,
+        claimed: false,
+      };
     return Schedule.findOrCreate({
       where,
       defaults: {
@@ -697,6 +697,15 @@ export class PrivateBackend {
     const startedAt = new Date();
     const { stderr, stdout } = await this.runDbSchedule(schedule);
     const finishedAt = new Date();
+    log(
+      "Finished running",
+      definition.title,
+      "according to the",
+      schedule.title,
+      "schedule",
+      "and it took",
+      String(finishedAt.getTime() - startedAt.getTime()) + 'ms'
+    );
 
     const runAt = schedule.runAt;
 
@@ -714,6 +723,9 @@ export class PrivateBackend {
       finishedAt,
       data: schedule.data,
     });
+    log(
+      `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`,
+    );
     schedule.numRuns += 1;
     void schedule.setLastRun(run);
     await schedule.save();

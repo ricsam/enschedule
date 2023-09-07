@@ -1,3 +1,6 @@
+/* eslint-disable eslint-comments/disable-enable-pair */
+/* eslint-disable @typescript-eslint/no-loop-func */
+/* eslint-disable no-await-in-loop */
 import http from "node:http";
 import https from "node:https";
 import type {
@@ -76,11 +79,10 @@ export class WorkerAPI {
       headers: {
         "Content-Type": "application/json",
         "X-API-KEY": this.apiKey,
-        // ...(data && method !== "GET"
-        //   ? { "Content-Length": Buffer.byteLength(bodyString) }
-        //   : {}),
       },
     };
+    const retries = 5;
+    const delay = 1000;
     log(
       "Req:",
       method,
@@ -89,37 +91,62 @@ export class WorkerAPI {
       }`
     );
 
-    return new Promise((resolve, reject) => {
-      const req = (this.ssl ? https : http).request(options, (res) => {
-        let body = "";
-        res.on("data", (chunk) => {
-          body += chunk;
-        });
-        res.on("end", () => {
-          try {
-            const resData: unknown = JSON.parse(body);
-            resolve(resData);
+    let attempt = 0;
 
-            log(
-              "Res:",
-              method,
-              `${this.url}${path}`,
-              res.statusCode,
-              res.statusMessage,
-              resData ? ` ${JSON.stringify(resData)}` : ""
-            );
-          } catch (err) {
-            reject(err);
+    while (attempt < retries) {
+      try {
+        const response = new Promise((resolve, reject) => {
+          const req = (this.ssl ? https : http).request(options, (res) => {
+            let body = "";
+            res.on("data", (chunk) => {
+              body += chunk;
+            });
+            res.on("end", () => {
+              log(
+                "Res:",
+                method,
+                `${this.url}${path}`,
+                res.statusCode,
+                res.statusMessage
+              );
+              try {
+                const resData: unknown = JSON.parse(body);
+                resolve(resData);
+                if (resData) {
+                  log("Res data:", JSON.stringify(resData));
+                }
+              } catch (err) {
+                log("Failed to json parse, the response body was:", body);
+                reject(err);
+              }
+            });
+          });
+
+          req.on("error", reject);
+          if (data && method !== "GET") {
+            req.write(bodyString);
           }
+          req.end();
         });
-      });
+        return response;
+      } catch (error) {
+        attempt += 1;
+        const errorMessage = error instanceof Error ? error.message : "";
+        log(`Attempt ${attempt} failed:`, errorMessage);
 
-      req.on("error", reject);
-      if (data && method !== "GET") {
-        req.write(bodyString);
+        // If we've used all retries, throw the error
+        if (attempt >= retries) {
+          throw new Error(
+            `Request failed after ${attempt} attempts: ${errorMessage}`
+          );
+        }
+
+        // Wait for an exponential backoff time before retrying
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, delay * Math.pow(2, attempt - 1));
+        });
       }
-      req.end();
-    });
+    }
   }
 
   async getJobDefinitions(): Promise<PublicJobDefinition[]> {

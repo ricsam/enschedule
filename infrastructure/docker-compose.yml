@@ -16,7 +16,6 @@ services:
         condition: service_healthy
     image: 'richi3/enschedule-worker:latest'
     environment:
-      - PORT=3000
       - PGUSER=postgres
       - PGHOST=postgres
       - PGPASSWORD=postgres
@@ -43,3 +42,4 @@ services:
       - API_KEY=secret_key
       - WORKER_URL=http://worker:3000
       - DEBUG=worker-api
+      - NODE_ENV=production

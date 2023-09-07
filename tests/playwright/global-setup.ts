@@ -77,7 +77,7 @@ async function globalSetup(config: FullConfig) {
       ...process.env,
       ...workerEnvs,
       ENSCHEDULE_API: "true",
-      PORT: String(workerApiPort),
+      API_PORT: String(workerApiPort),
     },
     stdio: ["inherit", "pipe", "inherit"],
     cwd: workerPwd,

@@ -35,12 +35,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Docker meta
-        id: meta
+        name: Docker Worker meta
+        id: workerMeta
         uses: docker/metadata-action@v4
         with:
           images: |
             ghcr.io/ricsam/enschedule-worker
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      -
+        name: Build and push worker
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.workerMeta.outputs.tags }}
+          labels: ${{ steps.workerMeta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          target: worker
+      -
+        name: Docker Dashboard meta
+        id: dashboardMeta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/ricsam/enschedule-dashboard
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -54,20 +78,10 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.dashboardMeta.outputs.tags }}
+          labels: ${{ steps.dashboardMeta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           target: dashboard
-      -
-        name: Build and push worker
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          target: worker
 
   lint-helm:
     runs-on: ubuntu-latest

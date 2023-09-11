@@ -1,33 +1,50 @@
+# BASE
 FROM node:16.20-slim as base
+LABEL org.opencontainers.image.source=https://github.com/ricsam/enschedule
+LABEL org.opencontainers.image.licenses=MIT
+WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+ENV NODE_ENV=production
 RUN corepack enable
-COPY . /app
-WORKDIR /app
+RUN pnpm install turbo --global
 
 RUN apt-get update && \
     apt-get install -y jq moreutils && \
     rm -rf /var/lib/apt/lists/*
 
+# INSTALL BASE
+FROM base as install-base
+COPY . .
+RUN turbo prune --scope="@enschedule/worker" --scope="@enschedule/dashboard" --docker
+RUN rm -rf /app/out/**/node_modules
+
 FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+COPY --from=install-base /app/out/json/ .
+COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm install turbo --global
-ENV NODE_ENV=production
+COPY --from=install-base /app/out/full/ .
+COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
+RUN NODE_ENV="development" pnpm install --frozen-lockfile
 RUN turbo build
 
 # Worker image
 FROM base AS worker
-ENV NODE_ENV=production
+LABEL org.opencontainers.image.description="Worker"
+COPY --from=install-base /app/out/full/ .
+
 # Install pg-driver
+RUN rm -rf /app/packages/pg-driver/node_modules
 COPY --from=prod-deps /app/packages/pg-driver/node_modules/ /app/packages/pg-driver/node_modules
 COPY --from=build /app/packages/pg-driver/dist /app/packages/pg-driver/dist
 # Install types
+RUN rm -rf /app/packages/types/node_modules
 COPY --from=prod-deps /app/packages/types/node_modules/ /app/packages/types/node_modules
 COPY --from=build /app/packages/types/dist /app/packages/types/dist
 # Install worker
+RUN rm -rf /app/packages/worker/node_modules
 COPY --from=prod-deps /app/packages/worker/node_modules/ /app/packages/worker/node_modules
 COPY --from=build /app/packages/worker/dist /app/packages/worker/dist
 
@@ -47,14 +64,19 @@ CMD node dist/docker-entry.js
 
 # Dashboard image
 FROM base AS dashboard
-ENV NODE_ENV=production
+LABEL org.opencontainers.image.description="Dashboard"
+COPY --from=install-base /app/out/full/ .
+
 # Install worker-api
+RUN rm -rf /app/packages/worker-api/node_modules
 COPY --from=prod-deps /app/packages/worker-api/node_modules/ /app/packages/worker-api/node_modules
 COPY --from=build /app/packages/worker-api/dist /app/packages/worker-api/dist
 # Install types
+RUN rm -rf /app/packages/types/node_modules
 COPY --from=prod-deps /app/packages/types/node_modules/ /app/packages/types/node_modules
 COPY --from=build /app/packages/types/dist /app/packages/types/dist
 # Install dashboard
+RUN rm -rf /app/apps/dashboard/node_modules
 COPY --from=prod-deps /app/apps/dashboard/node_modules/ /app/apps/dashboard/node_modules
 COPY --from=build /app/apps/dashboard/build /app/apps/dashboard/build
 COPY --from=build /app/apps/dashboard/public/build /app/apps/dashboard/public/build

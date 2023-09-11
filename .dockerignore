@@ -11,3 +11,4 @@ build
 /playwright-report/
 /playwright/.cache/
 /infrastructure
+.github

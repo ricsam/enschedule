@@ -20,7 +20,7 @@ minikube image rm 'richi3/enschedule-dashboard:latest'
 minikube image load --overwrite=true 'richi3/enschedule-worker:latest'
 minikube image load --overwrite=true 'richi3/enschedule-dashboard:latest'
 
-helm upgrade --install enschedule ./helm \
+helm upgrade --install enschedule ./charts/enschedule \
   --set worker.image.pullPolicy=Never \
   --set dashboard.image.pullPolicy=Never \
   --set dashboard.service.type=ClusterIP \

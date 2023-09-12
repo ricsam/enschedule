@@ -14,7 +14,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    image: 'richi3/enschedule-worker:latest'
+    image: 'ghcr.io/ricsam/enschedule-worker:latest'
     environment:
       - PGUSER=postgres
       - PGHOST=postgres
@@ -34,7 +34,7 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
-    image: 'richi3/enschedule-dashboard:latest'
+    image: 'ghcr.io/ricsam/enschedule-dashboard:latest'
     ports:
       - "8008:3000"
     environment:

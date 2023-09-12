@@ -17,4 +17,4 @@ docker container run \
   -i \
   -v ${PWD}/JobDefinitions:/app/packages/worker/definitions \
   --network enschedule-2_default \
-  richi3/enschedule-worker:latest
+  ghcr.io/ricsam/enschedule-worker:latest

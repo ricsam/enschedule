@@ -6,7 +6,7 @@ worker:
   replicaCount: 1
 
   image:
-    repository: richi3/enschedule-worker
+    repository: ghcr.io/ricsam/enschedule-worker
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
@@ -132,7 +132,7 @@ dashboard:
   replicaCount: 1
 
   image:
-    repository: richi3/enschedule-dashboard
+    repository: ghcr.io/ricsam/enschedule-dashboard
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"

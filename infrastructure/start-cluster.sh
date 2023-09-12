@@ -14,11 +14,11 @@ while [[ $(kubectl get pods | wc -l) -gt 0 ]]; do
   sleep 5
 done
 
-minikube image rm 'richi3/enschedule-worker:latest'
-minikube image rm 'richi3/enschedule-dashboard:latest'
+minikube image rm 'ghcr.io/ricsam/enschedule-worker:latest'
+minikube image rm 'ghcr.io/ricsam/enschedule-dashboard:latest'
 
-minikube image load --overwrite=true 'richi3/enschedule-worker:latest'
-minikube image load --overwrite=true 'richi3/enschedule-dashboard:latest'
+minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:latest'
+minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:latest'
 
 helm upgrade --install enschedule ./charts/enschedule \
   --set worker.image.pullPolicy=Never \
@@ -42,5 +42,5 @@ kubectl --namespace default port-forward $POD_NAME 8888:$CONTAINER_PORT
 
 SESSION_SECRET=abc API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
 
-# docker container run --rm -e PORT=3000 -e PGUSER=postgres -e PGHOST=postgres -e PGPASSWORD=postgres -e PGDATABASE=postgres -e PGPORT=5432 -p 3030:3000 --network enschedule-2_default richi3/enschedule-worker:latest
-docker container run --rm -e SESSION_SECRET=abc -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 richi3/enschedule-dashboard:latest
+# docker container run --rm -e PORT=3000 -e PGUSER=postgres -e PGHOST=postgres -e PGPASSWORD=postgres -e PGDATABASE=postgres -e PGPORT=5432 -p 3030:3000 --network enschedule-2_default ghcr.io/ricsam/enschedule-worker:latest
+docker container run --rm -e SESSION_SECRET=abc -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:latest

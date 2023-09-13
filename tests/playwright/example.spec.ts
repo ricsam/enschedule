@@ -46,9 +46,6 @@ test.describe("Run Route", () => {
 
     await page.getByTestId("schedule-link").click();
 
-    let runId = 1;
-    await page.goto(`${URL}/runs/${runId}`);
-
     const details = await page.waitForSelector('div#runDetailsSection')
 
     // Then I should see the details section

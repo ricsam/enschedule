@@ -23,7 +23,7 @@ export default function SchedulePage({
 
   return (
     <Box>
-      <Box display="flex" gap={3} flexWrap="wrap">
+      <Box display="flex" gap={3} flexWrap="wrap" id="SchedulePage">
         <Card sx={{ flex: 1, minWidth: 'fit-content', display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ flex: 1 }}>
             <Typography variant="h5" gutterBottom>

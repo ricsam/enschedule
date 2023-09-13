@@ -16,7 +16,7 @@ export default function RunPage({
 }) {
   return (
     <>
-      <Box display="flex" flexDirection="column" gap={3} id="runDetailsSection">
+      <Box display="flex" flexDirection="column" gap={3} id="RunPage">
         <Box display="flex" gap={3} flexWrap="wrap">
           <Card sx={{ flex: 1, minWidth: 'fit-content', display: 'flex', flexDirection: 'column' }}>
             <CardContent sx={{ flex: 1 }}>

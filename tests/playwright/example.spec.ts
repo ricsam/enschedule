@@ -44,11 +44,21 @@ test.describe("Run Route", () => {
     // Click the send button next to the title and description
     await page.getByTestId("submit-button").click();
 
-    await page.getByTestId("schedule-link").click();
+    const link = page.getByTestId("schedule-link");
 
-    const details = await page.waitForSelector('div#runDetailsSection')
+    const url = await link.getAttribute('href');
 
-    // Then I should see the details section
+    if (!url) {
+      throw new Error('invalid URL');
+    }
+
+    await page.goto(URL + url);
+
+    await page.waitForURL('**/schedules/*');
+
+    const details = await page.waitForSelector('div#SchedulePage')
+
+    // Then I should see the SchedulePage
     expect(details).toBeTruthy();
   });
 });

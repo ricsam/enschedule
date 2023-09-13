@@ -455,7 +455,7 @@ export default function Run() {
                     >
                       here
                     </MuiLink>{" "}
-                    to view the newly created job.
+                    to view the newly created schedule.
                   </div>
                 }
               />

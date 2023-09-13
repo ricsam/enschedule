@@ -40,8 +40,15 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "chromium",
+      name: "Create runs",
+      testMatch: "createRuns.spec.ts",
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium",
+      testIgnore: ['createRuns.spec.ts'],
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ['Create runs'],
     },
 
     // {

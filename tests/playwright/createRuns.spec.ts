@@ -6,22 +6,7 @@ const URL =
     process.env.DASHBOARD_PORT
   }`;
 
-test.describe("Feature: Listing of Runs", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto(`${URL}/runs`);
-  });
-
-  test("Scenario: Seeing the runs table", async ({ page }) => {
-    // Given I visit the Runs page
-    // When I check for the table
-    const runsTable = await page.waitForSelector("#runsTable"); // assuming the table has id 'runsTable'
-
-    // Then I should see the table
-    expect(runsTable).toBeTruthy();
-  });
-});
-
-test.describe("Run Route", () => {
+test.describe("/run create a run", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`${URL}/run`);
   });
@@ -56,7 +41,7 @@ test.describe("Run Route", () => {
 
     await page.waitForURL('**/schedules/*');
 
-    const details = await page.waitForSelector('div#SchedulePage')
+    const details = await page.waitForSelector('div#SchedulePage');
 
     // Then I should see the SchedulePage
     expect(details).toBeTruthy();

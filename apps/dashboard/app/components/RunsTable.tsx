@@ -20,6 +20,7 @@ const columns: ColumnDef<RowData, any>[] = [
       return (
         <MuiLink
           to={`${runId}`}
+          data-testid="run-link"
           component={RemixLink}
           onClick={(ev) => {
             ev.stopPropagation();
@@ -83,7 +84,7 @@ export default function RunsTable({
 }>) {
   return (
     <ExpandableTable
-      id="runsTable"
+      id="RunsTable"
       rows={runs}
       columns={columns}
       renderRow={(row) => {

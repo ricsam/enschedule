@@ -9,7 +9,7 @@ import type { DefinitionRowData } from './DefinitionTypes';
 
 export default function DefinitionPage({ definition }: { definition: DefinitionRowData }) {
   return (
-    <Box>
+    <Box id="DefinitionPage">
       <Box>
         <Typography variant="subtitle1" color="text.secondary">
           Every schedule can create runs of this definition with data according to the following schema. To

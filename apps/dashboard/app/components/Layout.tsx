@@ -1,30 +1,35 @@
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
-import AddIcon from '@mui/icons-material/Add';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import MenuIcon from '@mui/icons-material/Menu';
-import { Tab, Tabs, Typography } from '@mui/material';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import Drawer from '@mui/material/Drawer';
-import IconButton from '@mui/material/IconButton';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
-import Toolbar from '@mui/material/Toolbar';
-import { Link, Link as RemixLink, NavLink, useLocation } from '@remix-run/react';
-import { pascalCase } from 'pascal-case';
-import React from 'react';
-import logo from '~/logo.svg';
-import type { Breadcrumb, NavBar } from '~/types';
-import { Theme, useTheme } from '~/utils/theme-provider';
-import { AppBreadcrumbs } from './AppBreadcrumbs';
+import "@fontsource/roboto/300.css";
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import "@fontsource/roboto/700.css";
+import AddIcon from "@mui/icons-material/Add";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
+import MenuIcon from "@mui/icons-material/Menu";
+import { Tab, Tabs, Typography } from "@mui/material";
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import Toolbar from "@mui/material/Toolbar";
+import {
+  Link,
+  Link as RemixLink,
+  NavLink,
+  useLocation,
+} from "@remix-run/react";
+import { pascalCase } from "pascal-case";
+import React from "react";
+import logo from "~/logo.svg";
+import type { Breadcrumb, NavBar } from "~/types";
+import { Theme, useTheme } from "~/utils/theme-provider";
+import { AppBreadcrumbs } from "./AppBreadcrumbs";
 
 const drawerWidth = 240;
 
@@ -47,8 +52,8 @@ export function RootLayout({
   const drawer = (
     <div>
       <Toolbar>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center' }}>
-          <img src={logo} alt="Enschedule" style={{ width: '100%' }} />
+        <Link to="/" style={{ display: "flex", alignItems: "center" }}>
+          <img src={logo} alt="Enschedule" style={{ width: "100%" }} />
           {/* Schedule */}
         </Link>
       </Toolbar>
@@ -58,23 +63,32 @@ export function RootLayout({
         <NavLink
           to="/run"
           style={({ isActive }) => ({
-            width: '100%',
-            textDecoration: 'none',
-            cursor: isActive ? 'default' : 'pointer',
+            width: "100%",
+            textDecoration: "none",
+            cursor: isActive ? "default" : "pointer",
           })}
         >
           {({ isActive }) => (
-            <Button variant="contained" endIcon={<AddIcon />} disabled={isActive} sx={{ width: '100%' }}>
+            <Button
+              variant="contained"
+              endIcon={<AddIcon />}
+              disabled={isActive}
+              sx={{ width: "100%" }}
+            >
               Run
             </Button>
           )}
         </NavLink>
       </Box>
       <List>
-        {['definitions', 'schedules', 'runs'].map((text, index) => {
+        {["definitions", "schedules", "runs"].map((text, index) => {
           return (
             <ListItem key={text} disablePadding>
-              <ListItemButton to={`/${text}`} component={Link} selected={pathname.startsWith(`/${text}`)}>
+              <ListItemButton
+                to={`/${text}`}
+                component={Link}
+                selected={pathname.startsWith(`/${text}`)}
+              >
                 <ListItemText primary={pascalCase(text)} />
               </ListItemButton>
             </ListItem>
@@ -85,13 +99,14 @@ export function RootLayout({
   );
   const [theme, setTheme] = useTheme();
 
-  const container = typeof window !== 'undefined' ? () => window.document.body : undefined;
+  const container =
+    typeof window !== "undefined" ? () => window.document.body : undefined;
 
   const location = useLocation();
   return (
     <Box
       sx={{
-        display: 'flex',
+        display: "flex",
       }}
     >
       <AppBar
@@ -117,22 +132,26 @@ export function RootLayout({
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 2, display: { sm: "none" } }}
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ width: '100%' }}>{breadcrumbs && <AppBreadcrumbs breadcrumbs={breadcrumbs} />}</Box>
+          <Box sx={{ width: "100%" }}>
+            {breadcrumbs && <AppBreadcrumbs breadcrumbs={breadcrumbs} />}
+          </Box>
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <IconButton
               sx={{ ml: 1 }}
               onClick={() => {
-                setTheme((prevTheme) => (prevTheme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT));
+                setTheme((prevTheme) =>
+                  prevTheme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT
+                );
               }}
               color="inherit"
             >
@@ -156,8 +175,11 @@ export function RootLayout({
             keepMounted: true, // Better open performance on mobile.
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "block", sm: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
         >
           {drawer}
@@ -165,8 +187,11 @@ export function RootLayout({
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "none", sm: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
           open
         >
@@ -177,25 +202,25 @@ export function RootLayout({
         component="main"
         sx={{
           flexGrow: 1,
-          width: { xs: '100%', sm: `calc(100% - ${drawerWidth}px)` },
-          minHeight: '100vh',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          justifyContent: 'flex-start',
+          width: { xs: "100%", sm: `calc(100% - ${drawerWidth}px)` },
+          minHeight: "100vh",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch",
+          justifyContent: "flex-start",
         }}
       >
-        <Box sx={navbar ? { backgroundColor: 'background.paper' } : undefined}>
+        <Box sx={navbar ? { backgroundColor: "background.paper" } : undefined}>
           <Toolbar />
           {navbar && (
             <Box
               sx={{
                 px: 3,
                 pt: 2,
-                borderBottomWidth: 'thin',
-                borderBottomStyle: 'solid',
-                borderBottomColor: 'divider',
+                borderBottomWidth: "thin",
+                borderBottomStyle: "solid",
+                borderBottomColor: "divider",
               }}
             >
               <Box display="flex">
@@ -221,7 +246,13 @@ export function RootLayout({
               </Box>
               <Box pt={3}></Box>
               {navbar.tabs && (
-                <Tabs value={location.pathname}>
+                <Tabs
+                  value={
+                    location.pathname !== "/"
+                      ? location.pathname.replace(/\/$/, "")
+                      : "/"
+                  }
+                >
                   {navbar.tabs.map((tab) => (
                     <Tab
                       key={tab.to}

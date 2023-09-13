@@ -1,20 +1,25 @@
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import Box from '@mui/material/Box';
-import Collapse from '@mui/material/Collapse';
-import IconButton from '@mui/material/IconButton';
-import Paper, { PaperProps } from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TablePagination from '@mui/material/TablePagination';
-import TableRow from '@mui/material/TableRow';
-import TableSortLabel from '@mui/material/TableSortLabel';
-import { visuallyHidden } from '@mui/utils';
-import type { ColumnDef, ExpandedState, Row, SortingState } from '@tanstack/react-table';
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import Box from "@mui/material/Box";
+import Collapse from "@mui/material/Collapse";
+import IconButton from "@mui/material/IconButton";
+import Paper, { PaperProps } from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import { visuallyHidden } from "@mui/utils";
+import type {
+  ColumnDef,
+  ExpandedState,
+  Row,
+  SortingState,
+} from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -23,13 +28,17 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table';
-import React from 'react';
+} from "@tanstack/react-table";
+import React from "react";
 
-export const checkboxCol = <T extends unknown>(): ColumnDef<T> => ({
-  id: 'select',
+export const checkboxCol = <T,>(): ColumnDef<T> => ({
+  id: "select",
   header: ({ table }) => (
-    <IconButton aria-label="expand row" size="small" onClick={table.getToggleAllRowsExpandedHandler()}>
+    <IconButton
+      aria-label="expand row"
+      size="small"
+      onClick={table.getToggleAllRowsExpandedHandler()}
+    >
       {table.getIsAllRowsExpanded() ? (
         <KeyboardArrowUpIcon />
       ) : table.getIsSomeRowsExpanded() ? (
@@ -48,7 +57,11 @@ export const checkboxCol = <T extends unknown>(): ColumnDef<T> => ({
         row.toggleExpanded();
       }}
     >
-      {row.getIsExpanded() ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+      {row.getIsExpanded() ? (
+        <KeyboardArrowUpIcon />
+      ) : (
+        <KeyboardArrowDownIcon />
+      )}
     </IconButton>
   ),
 });
@@ -90,29 +103,42 @@ export function ExpandableTable<T>({
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
   return (
-    <Paper sx={{ width: '100%', mb: 2 }} {...paperProps}>
+    <Paper sx={{ width: "100%", mb: 2 }} {...paperProps}>
       <TableContainer>
-        <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size={'small'}>
+        <Table
+          sx={{ minWidth: 750 }}
+          aria-labelledby="tableTitle"
+          size={"small"}
+        >
           <TableHead>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map((headerGroup, index) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  const isCheckbox = header.column.id === 'select';
-                  const isSorted = isCheckbox ? false : header.column.getIsSorted();
+                  const isCheckbox = header.column.id === "select";
+                  const isSorted = isCheckbox
+                    ? false
+                    : header.column.getIsSorted();
                   let children = (
                     <>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       {isCheckbox && isSorted ? (
                         <Box component="span" sx={visuallyHidden}>
-                          {isSorted === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                          {isSorted === "desc"
+                            ? "sorted descending"
+                            : "sorted ascending"}
                         </Box>
                       ) : null}
                     </>
@@ -121,13 +147,13 @@ export function ExpandableTable<T>({
                     <TableCell
                       key={header.id}
                       align="left"
-                      padding={isCheckbox ? 'checkbox' : 'normal'}
+                      padding={isCheckbox ? "checkbox" : "normal"}
                       sortDirection={isSorted}
                     >
                       {!isCheckbox ? (
                         <TableSortLabel
                           active={!!isSorted}
-                          direction={isSorted || 'asc'}
+                          direction={isSorted || "asc"}
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {children}
@@ -149,7 +175,12 @@ export function ExpandableTable<T>({
               return (
                 <React.Fragment key={row.id}>
                   <TableRow
-                    sx={open ? undefined : { '&, .MuiTableCell-root': { borderBottom: 'unset' } }}
+                    data-testid={`table-row-${index + 1}`}
+                    sx={
+                      open
+                        ? undefined
+                        : { "&, .MuiTableCell-root": { borderBottom: "unset" } }
+                    }
                     hover
                     onClick={() => {
                       row.toggleExpanded();
@@ -166,15 +197,23 @@ export function ExpandableTable<T>({
                           id={labelId}
                           scope="row"
                           key={cell.id}
-                          padding={cell.column.id === 'select' ? 'checkbox' : 'normal'}
+                          padding={
+                            cell.column.id === "select" ? "checkbox" : "normal"
+                          }
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
                         </TableCell>
                       );
                     })}
                   </TableRow>
                   <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={columns.length}>
+                    <TableCell
+                      style={{ paddingBottom: 0, paddingTop: 0 }}
+                      colSpan={columns.length}
+                    >
                       <Collapse in={open} timeout="auto" unmountOnExit>
                         <Box sx={{ margin: 1 }}>{renderRow(row)}</Box>
                       </Collapse>

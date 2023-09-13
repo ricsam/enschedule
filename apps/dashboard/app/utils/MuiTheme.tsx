@@ -10,7 +10,7 @@ import { Theme, useTheme } from "./theme-provider";
 
 export const MuiTheme = ({ children }: { children: React.ReactNode }) => {
   const [selectedTheme] = useTheme();
-  let mode: "light" | "dark" = "light";
+  let mode: "light" | "dark" = "dark";
   if (selectedTheme === Theme.LIGHT) {
     mode = "light";
   } else if (selectedTheme === Theme.DARK) {

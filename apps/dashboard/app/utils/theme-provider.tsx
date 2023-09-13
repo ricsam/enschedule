@@ -8,13 +8,9 @@ export enum Theme {
 }
 const themes: Array<Theme> = Object.values(Theme);
 
-type ThemeContextType = [Theme | null, Dispatch<SetStateAction<Theme | null>>];
+type ThemeContextType = [Theme, Dispatch<SetStateAction<Theme>>];
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-const prefersDarkMQ = "(prefers-color-scheme: dark)";
-const getPreferredTheme = () =>
-  window.matchMedia(prefersDarkMQ).matches ? Theme.DARK : Theme.LIGHT;
 
 export function ThemeProvider({
   children,
@@ -23,26 +19,13 @@ export function ThemeProvider({
   children: ReactNode;
   specifiedTheme: Theme | null;
 }) {
-  const [theme, setTheme] = useState<Theme | null>(() => {
-    // On the server, if we don't have a specified theme then we should
-    // return null and the clientThemeCode will set the theme for us
-    // before hydration. Then (during hydration), this code will get the same
-    // value that clientThemeCode got so hydration is happy.
+  const [theme, setTheme] = useState<Theme>(() => {
     if (specifiedTheme) {
       if (themes.includes(specifiedTheme)) {
         return specifiedTheme;
-      } else {
-        return null;
       }
     }
-
-    // there's no way for us to know what the theme should be in this context
-    // the client will have to figure it out before hydration.
-    if (typeof document === "undefined") {
-      return null;
-    }
-
-    return getPreferredTheme();
+    return Theme.DARK;
   });
 
   const persistTheme = useFetcher();
@@ -68,15 +51,6 @@ export function ThemeProvider({
       { action: "action/set-theme", method: "post" }
     );
   }, [theme]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(prefersDarkMQ);
-    const handleChange = () => {
-      setTheme(mediaQuery.matches ? Theme.DARK : Theme.LIGHT);
-    };
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
 
   return (
     <ThemeContext.Provider value={[theme, setTheme]}>

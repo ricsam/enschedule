@@ -1,8 +1,14 @@
 import { test, expect } from "@playwright/test";
 
+const URL =
+  process.env.DASHBOARD_URL ||
+  `http://${process.env.DASHBOARD_HOST || "localhost"}:${
+    process.env.DASHBOARD_PORT
+  }`;
+
 test.describe("Feature: Listing of Runs", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`http://localhost:${process.env.DASHBOARD_PORT}/runs`);
+    await page.goto(`${URL}/runs`);
   });
 
   test("Scenario: Seeing the runs table", async ({ page }) => {
@@ -17,14 +23,13 @@ test.describe("Feature: Listing of Runs", () => {
 
 test.describe("Run Route", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`http://localhost:${process.env.DASHBOARD_PORT}/run`);
+    await page.goto(`${URL}/run`);
   });
   test("Should create a new run via chatbot", async ({ page }) => {
     // Select a job definition from the dropdown
 
     await page.getByTestId("definition-autocomplete").click();
 
-    await page.keyboard.type("Send HTTP request"); // Type the name of the job definition to select
     await page.keyboard.press("ArrowDown"); // Press the arrow down key
     await page.keyboard.press("Enter"); // Press the enter key
     await page.getByTestId("SendIcon").click();
@@ -42,9 +47,7 @@ test.describe("Run Route", () => {
     await page.getByTestId("schedule-link").click();
 
     let runId = 1;
-    await page.goto(
-      `http://localhost:${process.env.DASHBOARD_PORT}/runs/${runId}`
-    );
+    await page.goto(`${URL}/runs/${runId}`);
 
     // When I check for the details section
     const detailsSection = await page.$("div#runDetailsSection"); // assuming the section has id 'runDetailsSection'

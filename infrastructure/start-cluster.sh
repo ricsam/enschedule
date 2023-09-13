@@ -23,7 +23,7 @@ minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:latest
 helm upgrade --install enschedule ./charts/enschedule \
   --set worker.image.pullPolicy=Never \
   --set dashboard.image.pullPolicy=Never \
-  --set dashboard.service.type=ClusterIP \
+  --set dashboard.service.type=NodePort \
   --set dashboard.service.port=3000
 
 # minikube service dashboard-service --url

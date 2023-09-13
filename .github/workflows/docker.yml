@@ -46,8 +46,29 @@ jobs:
           helm upgrade --install enschedule infrastructure/charts/enschedule \
             --set worker.image.pullPolicy=Never \
             --set dashboard.image.pullPolicy=Never \
-            --set dashboard.service.type=ClusterIP \
+            --set dashboard.service.type=NodePort \
             --set dashboard.service.port=3000
+      -
+        name: Test service URLs
+        run: |
+          minikube service list
+          minikube service dashboard-service --url
+
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 8.7.0
+ 
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'pnpm'
+ 
+      - name: Install dependencies
+        run: pnpm install
+ 
+      - name: Playwright on helm
+        run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) pnpm run playwright test
     
   # helm:
   #   needs: integration-test

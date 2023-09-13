@@ -84,7 +84,10 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 1
-
+      - name: Start postgres for testing
+        run: docker compose up -d
+      - name: Run unit tests
+        run: pnpm run --filter=@enschedule/pg-driver test
   # helm:
   #   needs: integration-test
   #   runs-on: ubuntu-latest

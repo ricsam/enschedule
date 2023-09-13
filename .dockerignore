@@ -12,3 +12,4 @@ build
 /playwright/.cache/
 /infrastructure
 .github
+tests

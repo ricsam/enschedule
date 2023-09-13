@@ -14,7 +14,7 @@ test.describe("Feature: Listing of Runs", () => {
   test("Scenario: Seeing the runs table", async ({ page }) => {
     // Given I visit the Runs page
     // When I check for the table
-    const runsTable = await page.$("#runsTable"); // assuming the table has id 'runsTable'
+    const runsTable = await page.waitForSelector("#runsTable"); // assuming the table has id 'runsTable'
 
     // Then I should see the table
     expect(runsTable).toBeTruthy();
@@ -49,10 +49,9 @@ test.describe("Run Route", () => {
     let runId = 1;
     await page.goto(`${URL}/runs/${runId}`);
 
-    // When I check for the details section
-    const detailsSection = await page.$("div#runDetailsSection"); // assuming the section has id 'runDetailsSection'
+    const details = await page.waitForSelector('div#runDetailsSection')
 
     // Then I should see the details section
-    expect(detailsSection).toBeTruthy();
+    expect(details).toBeTruthy();
   });
 });

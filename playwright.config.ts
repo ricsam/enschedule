@@ -18,7 +18,7 @@ export default defineConfig({
     : require.resolve("./tests/playwright/global-teardown"),
   testDir: "./tests/playwright",
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -41,15 +41,8 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "Create runs",
-      testMatch: "createRuns.spec.ts",
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
       name: "chromium",
-      testIgnore: ['createRuns.spec.ts'],
       use: { ...devices["Desktop Chrome"] },
-      dependencies: ['Create runs'],
     },
 
     // {

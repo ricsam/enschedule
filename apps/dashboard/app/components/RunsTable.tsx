@@ -40,18 +40,22 @@ const columns: ColumnDef<RowData, any>[] = [
     header: "Started",
   }),
   {
-    cell: ({ row }) => {
-      const run = row.original;
+    cell: ({ row, getValue }) => {
       return (
         <>
-          {new Date(run.finishedAt).getTime() -
-            new Date(run.startedAt).getTime()}
+          {getValue()}
           ms
         </>
       );
     },
+    enableSorting: true,
     header: "Duration",
     id: "duration",
+    accessorFn: (run) => {
+      return (
+        new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()
+      );
+    },
   },
   columnHelper.accessor("finishedAt", {
     cell: (info) => {

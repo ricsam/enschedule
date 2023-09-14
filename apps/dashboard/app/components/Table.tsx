@@ -1,11 +1,15 @@
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import Alert from "@mui/material/Alert";
+import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import type { PaperProps } from "@mui/material/Paper";
 import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -15,9 +19,11 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import { visuallyHidden } from "@mui/utils";
+import { useSearchParams } from "@remix-run/react";
 import type {
   ColumnDef,
   ExpandedState,
+  OnChangeFn,
   Row,
   SortingState,
 } from "@tanstack/react-table";
@@ -67,6 +73,97 @@ export const checkboxCol = <T,>(): ColumnDef<T> => ({
   ),
 });
 
+const usePagination = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // const searchParams = new URLSearchParams();
+  // const setSearchParams = (
+  //   params: URLSearchParams | ((oldParams: URLSearchParams) => URLSearchParams)
+  // ) => {};
+
+  const getSorting = (): SortingState => {
+    return (searchParams.getAll("sorting") ?? []).map((value) => {
+      const [id, sorting] = value.split(".");
+      return {
+        id,
+        desc: sorting === "desc",
+      };
+    });
+  };
+
+  const stringifySorting = (sorting: SortingState) => {
+    return sorting
+      .map((s) => `${s.id}.${s.desc ? "desc" : "asc"}`)
+      .sort()
+      .join("&");
+  };
+
+  const newSorting = getSorting();
+  const sortingRef = React.useRef<SortingState>(newSorting);
+
+  if (!sortingRef.current) {
+    sortingRef.current = getSorting();
+  }
+
+  if (stringifySorting(newSorting) !== stringifySorting(sortingRef.current)) {
+    sortingRef.current = newSorting;
+  }
+
+  /**
+   * 1 indexed in url, 0 indexed in api
+   */
+  const page: number = Math.max((Number(searchParams.get("page")) || 1) - 1, 0);
+  const rowsPerPage: number = Number(searchParams.get("rowsPerPage")) || 5;
+
+  const setSorting: OnChangeFn<SortingState> = (newSortingFn) => {
+    let newSorting =
+      typeof newSortingFn === "function"
+        ? newSortingFn(sortingRef.current)
+        : newSortingFn;
+
+    setSearchParams((prevParams) => {
+      prevParams.delete("sorting");
+      newSorting.forEach((sorting) => {
+        prevParams.append(
+          "sorting",
+          `${sorting.id}.${sorting.desc ? "desc" : "asc"}`
+        );
+      });
+      return prevParams;
+    });
+  };
+
+  const setPage = (page: number) => {
+    setSearchParams((prevParams) => {
+      // 1 indexed in url, 0 index in pagination api
+      prevParams.set("page", String(page + 1));
+      return prevParams;
+    });
+  };
+  const setRowsPerPage = (page: number) => {
+    setSearchParams((prevParams) => {
+      prevParams.set("rowsPerPage", String(page));
+      return prevParams;
+    });
+  };
+
+  const clearPagination = () => {
+    setSearchParams(() => {
+      return new URLSearchParams();
+    });
+  };
+
+  return {
+    sorting: sortingRef.current,
+    setSorting,
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    clearPagination,
+  };
+};
+
 export function ExpandableTable<T>({
   rows,
   renderRow,
@@ -77,7 +174,20 @@ export function ExpandableTable<T>({
   renderRow: (row: Row<T>) => React.ReactNode;
   columns: ColumnDef<T, any>[];
 } & PaperProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const {
+    sorting,
+    setSorting,
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    clearPagination,
+  } = usePagination();
+  // const [page, setPage] = React.useState(0);
+  // const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  // const [sorting, setSorting] = React.useState<SortingState>([]);
+  // const clearPagination = () => {};
+
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   const table = useReactTable({
@@ -97,9 +207,6 @@ export function ExpandableTable<T>({
     getExpandedRowModel: getExpandedRowModel(),
   });
 
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -111,14 +218,39 @@ export function ExpandableTable<T>({
     setPage(0);
   };
 
+  if (page * rowsPerPage >= rows.length && page > 0) {
+    return (
+      <Box sx={{ maxWidth: 600 }}>
+        <Box pb={1.5} />
+        <Stack sx={{ width: "100%" }} spacing={2}>
+          <Alert
+            variant="outlined"
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                variant="outlined"
+                onClick={clearPagination}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                Go back
+              </Button>
+            }
+          >
+            <AlertTitle>Pagination is out of range</AlertTitle>
+            There are only {rows.length} rows in this table, and you want to
+            view page {page + 1} with {rowsPerPage} rows per page.
+          </Alert>
+        </Stack>
+      </Box>
+    );
+  }
+
   return (
     <Paper sx={{ width: "100%", mb: 2 }} {...paperProps}>
       <TableContainer>
-        <Table
-          sx={{ minWidth: 750 }}
-          aria-labelledby="tableTitle"
-          size={"small"}
-        >
+        <Table sx={{ minWidth: 750 }} size={"small"}>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup, index) => (
               <TableRow key={headerGroup.id}>

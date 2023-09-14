@@ -86,6 +86,8 @@ jobs:
           retention-days: 1
       - name: Start postgres for testing
         run: docker compose up -d
+      - name: Wait for postgres to be up
+        run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
       - name: Run unit tests
         run: pnpm run --filter=@enschedule/pg-driver test
   # helm:

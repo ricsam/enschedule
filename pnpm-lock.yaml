@@ -105,7 +105,7 @@ importers:
         specifier: ~3.0.4
         version: 3.0.4
       ts-node:
-        specifier: 10.9.1
+        specifier: ^10.9.1
         version: 10.9.1(@types/node@20.5.4)(typescript@4.9.5)
       zod:
         specifier: ^3.22.2
@@ -242,6 +242,9 @@ importers:
       jest:
         specifier: ^29.6.3
         version: 29.6.4(@types/node@20.5.4)(ts-node@10.9.1)
+      ts-node:
+        specifier: ^10.9.1
+        version: 10.9.1(@types/node@20.5.4)(typescript@4.9.5)
       tsconfig:
         specifier: workspace:*
         version: link:../tsconfig

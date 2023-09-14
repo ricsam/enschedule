@@ -11,7 +11,7 @@
     "docker:start": "remix-serve build"
   },
   "dependencies": {
-    "ts-node": "10.9.1",
+    "ts-node": "^10.9.1",
     "dotenv": "16.0.3",
     "@remix-run/node": "^1.7.0",
     "@remix-run/react": "^1.7.0",

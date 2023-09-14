@@ -413,7 +413,7 @@ describe("delete schedules", () => {
     );
     const schedules = await backend.getDbSchedules();
     expect(schedules.length).toBe(1);
-    backend.deleteSchedules(schedules.map((s) => Number(s.id)));
+    await backend.deleteSchedules(schedules.map((s) => Number(s.id)));
     expect((await backend.getDbSchedules()).length).toBe(0);
   });
 });

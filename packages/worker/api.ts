@@ -134,12 +134,30 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
+    app.delete("/runs/:id", (req, res, next) => {
+      const idSchema = z.number().int().positive();
+      const validatedId = idSchema.parse(Number(req.params.id));
+      this.deleteRun(validatedId)
+        .then((run) => {
+          res.json(run);
+        })
+        .catch(next);
+    });
+
     app.post("/schedules/:id/runs", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.runSchedule(validatedId)
         .then((run) => {
           res.json(run);
+        })
+        .catch(next);
+    });
+
+    app.delete("/", (req, res, next) => {
+      this.reset()
+        .then(() => {
+          res.json({ success: true });
         })
         .catch(next);
     });

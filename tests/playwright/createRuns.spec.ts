@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
-import { navigate } from "./navigate";
+import { navigate, numRows } from "./utils";
 import { baseURL } from "./url";
 
 const createRun = async (page: Page, definitionNumber: number) => {
@@ -38,8 +38,50 @@ const createRun = async (page: Page, definitionNumber: number) => {
 
 test.describe("/run create a run", () => {
   test("Should create new runs via chatbot", async ({ page }) => {
+    await page.goto(`${baseURL}/settings`);
+
+    // reset enschedule
+    await page.getByTestId("reset-enschedule").click();
+    await page.getByTestId("confirm-reset-enschedule").click();
+
+    // make sure tables are empty
+    await page.goto(`${baseURL}/runs`);
+    expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(0);
+
+    await page.goto(`${baseURL}/schedules`);
+    expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(0);
+
+    // create 4 runs + 4 schedules
     for (let i = 1; i < 5; i += 1) {
       await createRun(page, i);
     }
+
+    // wait for all runs to be created
+    await page.goto(`${baseURL}/runs`);
+
+    if ((await numRows(page)) !== 4) {
+      let i = 0;
+      do {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            resolve();
+          }, 5000);
+        });
+        await page.reload();
+      } while ((await numRows(page)) !== 4 && i++ < 4);
+      if (i >= 4) {
+        throw new Error('Timed out waiting for the runs to show up in the table')
+      }
+    }
+
+    // There should be 4 runs / schedules in the tables
+    expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(4);
+
+    await page.goto(`${baseURL}/schedules`);
+    expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(4);
   });
 });

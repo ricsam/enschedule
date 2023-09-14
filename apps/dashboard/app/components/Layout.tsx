@@ -95,6 +95,18 @@ export function RootLayout({
           );
         })}
       </List>
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton
+            to={'/settings'}
+            component={Link}
+            selected={pathname.startsWith('/settings')}
+          >
+            <ListItemText primary={"Settings"} />
+          </ListItemButton>
+        </ListItem>
+      </List>
     </div>
   );
   const [theme, setTheme] = useTheme();

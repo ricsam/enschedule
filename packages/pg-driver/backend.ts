@@ -52,7 +52,10 @@ export const createPublicJobDefinition = (
   const { node } = zodToTs(jobDef.dataSchema, identifier);
   const typeAlias = createTypeAlias(node, identifier);
   const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
-  const jsonSchema: Record<string, unknown> = zodToJsonSchema(jobDef.dataSchema, identifier);
+  const jsonSchema: Record<string, unknown> = zodToJsonSchema(
+    jobDef.dataSchema,
+    identifier
+  );
 
   return {
     id: jobDef.id,
@@ -394,6 +397,28 @@ export class PrivateBackend {
     }
     return createPublicJobRun(run, schedule, definition);
   }
+  
+  public async reset(): Promise<void> {
+    await Run.truncate({
+      cascade: true
+    });
+    await Schedule.truncate({
+      cascade: true
+    });
+    // await this.sequelize.sync({ force: true });
+  }
+
+  public async deleteRun(runId: number): Promise<PublicJobRun> {
+    const run = await Run.findByPk(runId);
+    if (!run) {
+      throw new Error("invalid runId");
+    }
+    const publicRun = await this.getRun(runId);
+
+    await run.destroy();
+
+    return publicRun;
+  }
   public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
     const schedule = await Schedule.findByPk(id, {
       include: {
@@ -459,13 +484,13 @@ export class PrivateBackend {
     const signature = this.createSignature(defId, runAt, data, cronExpression);
     const where: WhereOptions<ScheduleAttributes> = eventId
       ? {
-        eventId,
-        claimed: false,
-      }
+          eventId,
+          claimed: false,
+        }
       : {
-        signature,
-        claimed: false,
-      };
+          signature,
+          claimed: false,
+        };
     return Schedule.findOrCreate({
       where,
       defaults: {
@@ -704,7 +729,7 @@ export class PrivateBackend {
       schedule.title,
       "schedule",
       "and it took",
-      String(finishedAt.getTime() - startedAt.getTime()) + 'ms'
+      `${String(finishedAt.getTime() - startedAt.getTime())}ms`
     );
 
     const runAt = schedule.runAt;
@@ -724,7 +749,7 @@ export class PrivateBackend {
       data: schedule.data,
     });
     log(
-      `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`,
+      `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
     schedule.numRuns += 1;
     void schedule.setLastRun(run);

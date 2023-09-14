@@ -196,6 +196,15 @@ export class WorkerAPI {
     return publicJobRunSchema.parse(run);
   }
 
+  async deleteRun(id: number): Promise<PublicJobRun> {
+    const run = await this.request("DELETE", `/runs/${id}`);
+    return publicJobRunSchema.parse(run);
+  }
+
+  async reset(): Promise<void> {
+    await this.request("DELETE", `/`);
+  }
+
   async runSchedule(id: number): Promise<PublicJobRun> {
     const run = await this.request("POST", `/schedules/${id}/runs`);
     return publicJobRunSchema.parse(run);

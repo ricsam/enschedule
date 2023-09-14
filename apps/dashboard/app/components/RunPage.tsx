@@ -1,3 +1,4 @@
+import type { PublicJobRun, PublicJobSchedule } from "@enschedule/types";
 import {
   Button,
   Card,
@@ -9,7 +10,6 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { SerializeFrom } from "@remix-run/node";
 import { Link, useHref } from "@remix-run/react";
-import type { PublicJobSchedule, SerializedRun } from "@enschedule/types";
 import { ReadOnlyEditor } from "~/components/Editor";
 import { formatDate } from "~/utils/formatDate";
 
@@ -17,7 +17,7 @@ export default function RunPage({
   run,
   schedule,
 }: {
-  run: SerializeFrom<SerializedRun>;
+  run: SerializeFrom<PublicJobRun>;
   schedule: SerializeFrom<PublicJobSchedule>;
 }) {
   const scheduleLink = useHref("../../../../schedules/" + schedule.id, {
@@ -92,9 +92,6 @@ export default function RunPage({
                 </Typography>
               </Box>
             </CardContent>
-            <CardActions>
-              <Button>Update</Button>
-            </CardActions>
           </Card>
           <Card
             sx={{
@@ -123,9 +120,6 @@ export default function RunPage({
                 ></ReadOnlyEditor>
               </Box>
             </CardContent>
-            <CardActions>
-              <Button>Update</Button>
-            </CardActions>
           </Card>
         </Box>
         <Box display="flex" gap={3} flexWrap="wrap">

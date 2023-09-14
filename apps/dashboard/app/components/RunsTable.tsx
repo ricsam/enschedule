@@ -1,20 +1,20 @@
-import MuiLink from '@mui/material/Link';
-import type { SerializeFrom } from '@remix-run/node';
-import { Link as RemixLink } from '@remix-run/react';
-import type { PublicJobSchedule, SerializedRun } from '@enschedule/types';
-import type { ColumnDef } from '@tanstack/react-table';
-import { createColumnHelper } from '@tanstack/react-table';
-import { checkboxCol, ExpandableTable } from '~/components/Table';
-import { formatDate } from '~/utils/formatDate';
-import RunPage from './RunPage';
+import type { PublicJobRun } from "@enschedule/types";
+import MuiLink from "@mui/material/Link";
+import type { SerializeFrom } from "@remix-run/node";
+import { Link as RemixLink } from "@remix-run/react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
+import { checkboxCol, ExpandableTable } from "~/components/Table";
+import { formatDate } from "~/utils/formatDate";
+import RunPage from "./RunPage";
 
-type RowData = SerializeFrom<SerializedRun & { jobSchedule: PublicJobSchedule }>;
+type RowData = SerializeFrom<PublicJobRun>;
 
 const columnHelper = createColumnHelper<RowData>();
 
 const columns: ColumnDef<RowData, any>[] = [
   checkboxCol(),
-  columnHelper.accessor('id', {
+  columnHelper.accessor("id", {
     cell: (info) => {
       const runId = info.row.original.id;
       return (
@@ -30,57 +30,63 @@ const columns: ColumnDef<RowData, any>[] = [
         </MuiLink>
       );
     },
-    header: 'Id',
+    header: "Id",
   }),
-  columnHelper.accessor('startedAt', {
+  columnHelper.accessor("startedAt", {
     cell: (info) => {
       const value = info.getValue();
       return formatDate(new Date(value), false).label;
     },
-    header: 'Started',
+    header: "Started",
   }),
   {
     cell: ({ row }) => {
       const run = row.original;
-      return <>{new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()}ms</>;
+      return (
+        <>
+          {new Date(run.finishedAt).getTime() -
+            new Date(run.startedAt).getTime()}
+          ms
+        </>
+      );
     },
-    header: 'Duration',
-    id: 'duration',
+    header: "Duration",
+    id: "duration",
   },
-  columnHelper.accessor('finishedAt', {
+  columnHelper.accessor("finishedAt", {
     cell: (info) => {
       const value = info.getValue();
       return formatDate(new Date(value), false).label;
     },
-    header: 'Completed',
+    header: "Completed",
   }),
-  columnHelper.accessor('scheduledToRunAt', {
+  columnHelper.accessor("scheduledToRunAt", {
     cell: (info) => {
       const value = info.getValue();
       return formatDate(new Date(value), false).label;
     },
-    header: 'Scheduled for',
+    header: "Scheduled for",
   }),
-  columnHelper.accessor('stdout', {
+  columnHelper.accessor("stdout", {
     cell: (info) => {
       const value = info.getValue();
       return String(!!value);
     },
-    header: 'Has stdout',
+    header: "Has stdout",
   }),
-  columnHelper.accessor('stderr', {
+  columnHelper.accessor("stderr", {
     cell: (info) => {
       const value = info.getValue();
       return String(!!value);
     },
-    header: 'Has stderr',
+    header: "Has stderr",
   }),
 ];
 
 export default function RunsTable({
   runs,
 }: SerializeFrom<{
-  runs: (SerializedRun & { jobSchedule: PublicJobSchedule })[];
+  runs: PublicJobRun[];
 }>) {
   return (
     <ExpandableTable

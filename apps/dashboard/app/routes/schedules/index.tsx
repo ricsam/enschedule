@@ -18,7 +18,7 @@ export async function getLoaderData(params: Params<string>): Promise<{
   definition?: PublicJobDefinition;
 }> {
   const definitionId = params.definitionId;
-  const definition = definitionId ? scheduler.getJobDefinition(definitionId) : undefined;
+  const definition = definitionId ? await scheduler.getJobDefinition(definitionId) : undefined;
   const schedules = await scheduler.getSchedules(definitionId);
   return { schedules, definition };
 }

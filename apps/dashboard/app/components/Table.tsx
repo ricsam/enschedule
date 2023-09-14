@@ -227,6 +227,7 @@ export function ExpandableTable<T>({
         </Table>
       </TableContainer>
       <TablePagination
+        data-testid="pagination"
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
         count={rows.length}

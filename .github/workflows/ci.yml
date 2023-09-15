@@ -92,7 +92,7 @@ jobs:
       - name: Run unit tests
         run: pnpm run --filter=@enschedule/pg-driver test
       - name: Build all packages
-        run: NODE_ENV=production turbo build
+        run: NODE_ENV=production pnpm run build
       - name: All playwright tests
         run: pnpm run playwright test
 

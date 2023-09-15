@@ -4,11 +4,10 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "remix build",
+    "build": "NODE_ENV=production remix build",
     "dev": "remix dev",
-    "serve": "remix serve",
     "start": "echo 'You probably want to run yarn run dev'; exit 1; remix-serve build",
-    "docker:start": "remix-serve build"
+    "docker:start": "NODE_ENV=production remix-serve build"
   },
   "dependencies": {
     "ts-node": "^10.9.1",

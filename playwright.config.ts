@@ -10,15 +10,10 @@ import { defineConfig, devices } from "@playwright/test";
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  globalSetup: process.env.TEST_HELM
-    ? undefined
-    : require.resolve("./tests/playwright/global-setup"),
-  globalTeardown: process.env.TEST_HELM
-    ? undefined
-    : require.resolve("./tests/playwright/global-teardown"),
   testDir: "./tests/playwright",
   /* Run tests in files in parallel */
-  fullyParallel: false,
+  fullyParallel: process.env.TEST_HELM ? false : true,
+  // fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -35,15 +30,22 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     // trace: "on-first-retry",
-    trace: "on-first-retry",
+    trace: "on",
   },
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
+    process.env.TEST_HELM
+      ? {
+          name: "helm test",
+          use: { ...devices["Desktop Chrome"] },
+          testMatch: "helm.spec.ts",
+        }
+      : {
+          name: "chromium",
+          use: { ...devices["Desktop Chrome"] },
+          testIgnore: ["helm.spec.ts"],
+        },
 
     // {
     //   name: 'firefox',

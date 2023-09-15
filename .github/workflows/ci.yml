@@ -90,6 +90,10 @@ jobs:
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
       - name: Run unit tests
         run: pnpm run --filter=@enschedule/pg-driver test
+      - name: Build all packages
+        run: NODE_ENV=production turbo build
+      - name: All playwright tests
+        run: pnpm run playwright test
   # helm:
   #   needs: integration-test
   #   runs-on: ubuntu-latest

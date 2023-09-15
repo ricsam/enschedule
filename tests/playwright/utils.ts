@@ -1,14 +1,14 @@
 import { Locator, Page } from "@playwright/test";
-import { baseURL } from "./url";
+import { Setup } from "./setup";
 
-export const navigate = async (page: Page, link: Locator) => {
+export const navigate = async (baseUrl: string, page: Page, link: Locator) => {
   const url = await link.getAttribute("href");
 
   if (!url) {
     throw new Error("invalid URL");
   }
 
-  const fullUrl = baseURL + url;
+  const fullUrl = baseUrl + url;
 
   await page.goto(fullUrl);
 

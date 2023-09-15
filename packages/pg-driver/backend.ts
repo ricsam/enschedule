@@ -397,13 +397,13 @@ export class PrivateBackend {
     }
     return createPublicJobRun(run, schedule, definition);
   }
-  
+
   public async reset(): Promise<void> {
     await Run.truncate({
-      cascade: true
+      cascade: true,
     });
     await Schedule.truncate({
-      cascade: true
+      cascade: true,
     });
     // await this.sequelize.sync({ force: true });
   }
@@ -623,9 +623,15 @@ export class PrivateBackend {
     await this.sequelize.sync();
   }
 
-  public async startPolling() {
-    log("Migrating the database");
-    await this.sequelize.sync();
+  public async startPolling(
+    settings: { dontMigrate: boolean } = {
+      dontMigrate: false,
+    }
+  ) {
+    if (!settings.dontMigrate) {
+      log("Migrating the database");
+      await this.sequelize.sync();
+    }
     log("Polling the database for jobs");
     const now = Date.now();
     setTimeout(() => {
@@ -633,6 +639,7 @@ export class PrivateBackend {
         void this.tick();
       }, this.tickDuration);
     }, 1000 - (now - Math.floor(now / 1000) * 1000));
+
   }
 
   protected async tick() {

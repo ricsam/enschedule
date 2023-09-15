@@ -88,9 +88,14 @@ worker.registerJob({
 
 void (async () => {
   if (process.env.ENSCHEDULE_API) {
-    worker.serve({ port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080 });
+    console.log("Starting the API");
+    worker.serve({
+      port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+    });
   }
-  await worker.startPolling();
+  console.log("Starting polling");
+  await worker.startPolling({ dontMigrate: true });
+  console.log("Scheduling test job");
   await worker.scheduleJob(
     httpRequestJob,
     { url: "http://localhost:3000" },

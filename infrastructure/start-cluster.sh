@@ -44,3 +44,20 @@ SESSION_SECRET=abc API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=wor
 
 # docker container run --rm -e PORT=3000 -e PGUSER=postgres -e PGHOST=postgres -e PGPASSWORD=postgres -e PGDATABASE=postgres -e PGPORT=5432 -p 3030:3000 --network enschedule-2_default ghcr.io/ricsam/enschedule-worker:latest
 docker container run --rm -e SESSION_SECRET=abc -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:latest
+
+
+# run dashboard
+NODE_ENV=production PORT=3501 DEBUG=worker-api API_KEY=secret_key WORKER_URL="http://localhost:8080" yarn run docker:start
+# run worker
+ENSCHEDULE_API=true API_PORT=8080 yarn run serve
+
+# run helm tests
+TEST_HELM=true DASHBOARD_URL=http://127.0.0.1:3000 pnpm run playwright test
+
+# run all tests
+# you need to run NODE_ENV=production yarn run build in the dashboard dir first
+pnpm run playwright test
+
+# start dev server
+yarn run dev # in root
+

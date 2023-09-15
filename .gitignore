@@ -37,6 +37,7 @@ yarn-error.log*
 
 /test-results/
 /playwright-report/
+/helm-playwright-report/
 /playwright/.cache/
 
 dist

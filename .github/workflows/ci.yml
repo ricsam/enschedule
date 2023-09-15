@@ -73,7 +73,7 @@ jobs:
         run: pnpm install
 
       - name: Install Playwright Browsers
-        run: npx playwright install chrome --with-deps
+        run: npx playwright install chromium --with-deps
  
       - name: Playwright on helm
         run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) pnpm run playwright test

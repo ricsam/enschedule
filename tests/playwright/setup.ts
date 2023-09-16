@@ -178,6 +178,9 @@ export class Setup {
               resolve(port);
             }
           });
+          server.stderr.on("data", (data) => {
+            log(data.toString());
+          });
         });
       };
 
@@ -285,6 +288,8 @@ export class Setup {
       return new Promise<void>((resolve, reject) => {
         childProcess.stdout?.removeAllListeners();
         childProcess.stdout?.pause();
+        childProcess.stderr?.removeAllListeners();
+        childProcess.stderr?.pause();
         childProcess.unref();
         if (childProcess.pid) {
           console.log("Terminating process pid", childProcess.pid);

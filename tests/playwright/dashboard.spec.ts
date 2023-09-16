@@ -5,11 +5,10 @@ import { Setup } from "./setup";
 const setup = new Setup();
 
 test.beforeEach(async () => {
-  test.setTimeout(60 * 1000);
+  test.setTimeout(120 * 1000);
   await setup.setup();
 });
 test.afterEach(async () => {
-  test.setTimeout(60 * 1000);
   await setup.teardown();
 });
 

@@ -65,7 +65,10 @@ export class Setup {
   private cwd = execSync("git rev-parse --show-toplevel").toString().trim();
   private workerPwd = path.join(this.cwd, "tests/test-worker");
 
-  async asyncExec(command: string | string[], options?: ExecOptions) {
+  async asyncExec(
+    command: string | string[],
+    options?: ExecOptions & { stdout?: boolean; stderr?: boolean }
+  ) {
     const result = await new Promise<string>((resolve, reject) => {
       const args = Array.isArray(command) ? command.join(" ") : command;
       const execOptions: ExecOptions = { ...options };
@@ -75,9 +78,15 @@ export class Setup {
         } else {
           resolve(result.toString());
         }
+        child.removeAllListeners();
       });
-      child.stdout?.pipe(process.stdout);
-      child.stderr?.pipe(process.stderr);
+
+      if (options?.stdout !== false) {
+        child.stdout?.pipe(process.stdout);
+      }
+      if (options?.stderr !== false) {
+        child.stderr?.pipe(process.stderr);
+      }
     });
 
     return result;
@@ -156,7 +165,9 @@ export class Setup {
               if (!server.pid) {
                 throw new Error(`${id} server must have a pid`);
               }
-              const pstree = await this.asyncExec("pstree -p " + server.pid);
+              const pstree = await this.asyncExec("pstree -p " + server.pid, {
+                stdout: false,
+              });
               const childprocs = [...pstree.matchAll(/[\( ](\d+)[\) ]/g)].map(
                 ([, v]) => v
               );
@@ -168,7 +179,13 @@ export class Setup {
                     return;
                   }
                   try {
-                    const lsof = await this.asyncExec("lsof -aPi -F -p " + pid);
+                    const lsof = await this.asyncExec(
+                      "lsof -aPi -F -p " + pid,
+                      {
+                        stderr: false,
+                        stdout: false,
+                      }
+                    );
                     const match = lsof.match(/^n\*:(\d+)$/m);
                     if (!match || !match[1] || Number.isNaN(Number(match[1]))) {
                       throw new Error(`${id} could not parse lsof ${lsof}`);
@@ -177,31 +194,6 @@ export class Setup {
                   } catch (err) {}
                 })
               );
-
-              // let lsof = "";
-              // try {
-              // lsof = await this.asyncExec("lsof -aPi -F -p " + server.pid);
-              // } catch (err) {
-              //   log("lsof -aPi -F -p " + server.pid, "failed");
-              //   log("Trying the child process pid");
-              //   const cppid = Number(
-              //     (await this.asyncExec("pgrep -P " + server.pid)).trim()
-              //   );
-              //   log("Found child process pid", cppid);
-              //   try {
-              //     lsof = await this.asyncExec("lsof -aPi -F -p " + cppid);
-              //   } catch (err) {
-              //     log("lsof on the child process did not work", err);
-              //     try {
-              //       const ssTest = await this.asyncExec(`ss -l -p -n`);
-              //       log("ssTest", ssTest);
-              //     } catch (err) {
-              //       log("ssTest", err);
-              //       // nothing
-              //     }
-              //     throw err;
-              //   }
-              // }
 
               log(`Web server running on http://localhost:${port} 🚀`);
               clearTimeout(timeout);

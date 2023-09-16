@@ -20,7 +20,7 @@ export default defineConfig({
   // retries: 0, // fail if there are flakyness
   retries: process.env.CI && process.env.TEST_HELM ? 3 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  // workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     [

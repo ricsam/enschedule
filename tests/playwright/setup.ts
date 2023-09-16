@@ -156,36 +156,49 @@ export class Setup {
               if (!server.pid) {
                 throw new Error(`${id} server must have a pid`);
               }
-              let lsof = "";
-              await this.asyncExec("pstree -p " + server.pid);
-              try {
-                lsof = await this.asyncExec("lsof -aPi -F -p " + server.pid);
-              } catch (err) {
-                log("lsof -aPi -F -p " + server.pid, "failed");
-                log("Trying the child process pid");
-                const cppid = Number(
-                  (await this.asyncExec("pgrep -P " + server.pid)).trim()
-                );
-                log("Found child process pid", cppid);
-                try {
-                  lsof = await this.asyncExec("lsof -aPi -F -p " + cppid);
-                } catch (err) {
-                  log("lsof on the child process did not work", err);
+              const pstree = await this.asyncExec("pstree -p " + server.pid);
+              const childprocs = [...pstree.matchAll(/[\( ](\d+)[\) ]/g)].map(
+                ([, v]) => v
+              );
+
+              let port = 0;
+              await Promise.all(
+                childprocs.map(async (pid) => {
                   try {
-                    const ssTest = await this.asyncExec(`ss -l -p -n`);
-                    log("ssTest", ssTest);
-                  } catch (err) {
-                    log("ssTest", err);
-                    // nothing
-                  }
-                  throw err;
-                }
-              }
-              const match = lsof.match(/^n\*:(\d+)$/m);
-              if (!match || !match[1] || Number.isNaN(Number(match[1]))) {
-                throw new Error(`${id} could not parse lsof ${lsof}`);
-              }
-              const port = Number(match[1]);
+                    const lsof = await this.asyncExec("lsof -aPi -F -p " + pid);
+                    const match = lsof.match(/^n\*:(\d+)$/m);
+                    if (!match || !match[1] || Number.isNaN(Number(match[1]))) {
+                      throw new Error(`${id} could not parse lsof ${lsof}`);
+                    }
+                    port = Number(match[1]);
+                  } catch (err) {}
+                })
+              );
+
+              // let lsof = "";
+              // try {
+              // lsof = await this.asyncExec("lsof -aPi -F -p " + server.pid);
+              // } catch (err) {
+              //   log("lsof -aPi -F -p " + server.pid, "failed");
+              //   log("Trying the child process pid");
+              //   const cppid = Number(
+              //     (await this.asyncExec("pgrep -P " + server.pid)).trim()
+              //   );
+              //   log("Found child process pid", cppid);
+              //   try {
+              //     lsof = await this.asyncExec("lsof -aPi -F -p " + cppid);
+              //   } catch (err) {
+              //     log("lsof on the child process did not work", err);
+              //     try {
+              //       const ssTest = await this.asyncExec(`ss -l -p -n`);
+              //       log("ssTest", ssTest);
+              //     } catch (err) {
+              //       log("ssTest", err);
+              //       // nothing
+              //     }
+              //     throw err;
+              //   }
+              // }
 
               log(`Web server running on http://localhost:${port} 🚀`);
               clearTimeout(timeout);

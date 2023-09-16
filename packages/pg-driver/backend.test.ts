@@ -303,8 +303,7 @@ describe("cron", () => {
     expect(spy).toHaveBeenCalledTimes(2);
     expect(schedules.filter((schedule) => !schedule.claimed)).toHaveLength(1);
     expect(schedules[0].runAt!.getTime()).toBe(backend.tickDuration * 2 + 1000);
-    // console.log("@schedules[0]", await schedules[0].getLastRun());
-    const lastRun = schedules[0].lastRun;
+    const lastRun = await schedules[0].getLastRun();
     expect(lastRun).toBeTruthy();
     expect(schedules[0].lastRun?.startedAt.getTime()).toBe(
       backend.tickDuration * 2

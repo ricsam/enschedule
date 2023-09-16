@@ -176,6 +176,7 @@ export class Setup {
                     );
                     log("ssTest", ssTest);
                   } catch (err) {
+                    log('ssTest', err);
                     // nothing
                   }
                   throw err;

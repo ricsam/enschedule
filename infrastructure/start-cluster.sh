@@ -49,7 +49,7 @@ docker container run --rm -e SESSION_SECRET=abc -e API_KEY=secret_key -e WORKER_
 # run dashboard
 NODE_ENV=production PORT=3501 DEBUG=worker-api API_KEY=secret_key WORKER_URL="http://localhost:8080" yarn run docker:start
 # run worker
-ENSCHEDULE_API=true API_PORT=8080 yarn run serve
+ENSCHEDULE_API=true API_PORT=8080 yarn run serve # in test-worker folder
 
 # run helm tests
 TEST_HELM=true DASHBOARD_URL=http://127.0.0.1:3000 pnpm run playwright test

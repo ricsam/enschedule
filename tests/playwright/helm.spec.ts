@@ -8,6 +8,8 @@ if (!baseURL) {
   );
 }
 
+test.describe.configure({ mode: 'serial' });
+
 const createRun = async (page: Page, definitionNumber: number) => {
   await page.goto(`${baseURL}/run`);
 

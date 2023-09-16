@@ -58,6 +58,7 @@ export class Setup {
       ...this.dbCreds,
       DEBUG: "pg-driver,worker",
       PGDATABASE: this.TEST_DB,
+      API_KEY: 'secret_key'
     };
   }
 

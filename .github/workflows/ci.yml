@@ -19,8 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: ss --help
-        run: ss --help
+      - name: ss
+        run: ss -l -p -n
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - uses: pnpm/action-setup@v2.0.1
@@ -39,8 +39,6 @@ jobs:
         run: docker compose up -d
       - name: Wait for postgres to be up
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
-      - name: Run unit tests
-        run: pnpm run --filter=@enschedule/pg-driver test
       - name: Build all packages
         run: NODE_ENV=production pnpm run build
       - name: All playwright tests
@@ -51,6 +49,8 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 1
+      - name: Run unit tests
+        run: pnpm run --filter=@enschedule/pg-driver test
 
       - name: Build images
         run: infrastructure/build-images.sh

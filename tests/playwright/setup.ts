@@ -171,9 +171,7 @@ export class Setup {
                 } catch (err) {
                   log("lsof on the child process did not work", err);
                   try {
-                    const ssTest = await this.asyncExec(
-                      `bash -c "ss -l -p -n | grep 'pid=${cppid},'"`
-                    );
+                    const ssTest = await this.asyncExec(`ss -l -p -n`);
                     log("ssTest", ssTest);
                   } catch (err) {
                     log("ssTest", err);

@@ -172,11 +172,11 @@ export class Setup {
                   log("lsof on the child process did not work", err);
                   try {
                     const ssTest = await this.asyncExec(
-                      `bash -c "ss -tulpn | grep ${cppid}"`
+                      `bash -c "ss -l -p -n | grep 'pid=${cppid},'"`
                     );
                     log("ssTest", ssTest);
                   } catch (err) {
-                    log('ssTest', err);
+                    log("ssTest", err);
                     // nothing
                   }
                   throw err;

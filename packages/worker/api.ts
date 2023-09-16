@@ -171,29 +171,21 @@ export class Worker extends PrivateBackend {
     });
 
     const { port, hostname } = serveOptions;
-    // const server = http.createServer(app);
+    const server = http.createServer(app);
     const cb = () => {
-      // const ad = server.address();
-      // const host =
-      //   typeof ad === "string"
-      //     ? ad
-      //     : `${
-      //         !ad?.address || ad.address === "::" ? "localhost" : ad.address
-      //       }:${ad?.port || port}`;
-      // console.log(`Worker API is running on http://${host}`);
-      console.log(
-        `Worker API is running on http://${hostname || "localhost"}:${port}`
-      );
+      const ad = server.address();
+      const host =
+        typeof ad === "string"
+          ? ad
+          : `${
+              !ad?.address || ad.address === "::" ? "localhost" : ad.address
+            }:${ad?.port || port}`;
+      console.log(`Worker API is running on http://${host}`);
     };
-    // if (hostname) {
-    //   server.listen(port, hostname, cb);
-    // } else {
-    //   server.listen(port, cb);
-    // }
     if (hostname) {
-      app.listen(port, hostname, cb);
+      server.listen(port, hostname, cb);
     } else {
-      app.listen(port, cb);
+      server.listen(port, cb);
     }
   }
 }

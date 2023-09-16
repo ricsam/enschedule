@@ -14,9 +14,6 @@ import treeKill from "tree-kill";
 
 export class Setup {
   // Will hold the child processes for cleanup later
-  constructor() {
-    console.log(Math.random());
-  }
   private childProcesses: ChildProcess[] = [];
 
   private dbCreds = {
@@ -129,7 +126,6 @@ export class Setup {
   }
 
   async setup() {
-    console.log("setup", Math.random());
     this.TEST_DB = "pw" + Math.random().toString(36).substring(2, 14) + "e";
 
     console.log("Running global setup");

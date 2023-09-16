@@ -164,6 +164,9 @@ export class Setup {
               let port = 0;
               await Promise.all(
                 childprocs.map(async (pid) => {
+                  if (port !== 0) {
+                    return;
+                  }
                   try {
                     const lsof = await this.asyncExec("lsof -aPi -F -p " + pid);
                     const match = lsof.match(/^n\*:(\d+)$/m);

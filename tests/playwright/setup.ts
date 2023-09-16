@@ -157,6 +157,7 @@ export class Setup {
                 throw new Error(`${id} server must have a pid`);
               }
               let lsof = "";
+              await this.asyncExec("pstree -p " + server.pid);
               try {
                 lsof = await this.asyncExec("lsof -aPi -F -p " + server.pid);
               } catch (err) {

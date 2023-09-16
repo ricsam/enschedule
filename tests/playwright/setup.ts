@@ -58,7 +58,7 @@ export class Setup {
       ...this.dbCreds,
       DEBUG: "pg-driver,worker",
       PGDATABASE: this.TEST_DB,
-      API_KEY: 'secret_key'
+      API_KEY: "secret_key",
     };
   }
 
@@ -166,7 +166,20 @@ export class Setup {
                   (await this.asyncExec("pgrep -P " + server.pid)).trim()
                 );
                 log("Found child process pid", cppid);
-                lsof = await this.asyncExec("lsof -aPi -F -p " + cppid);
+                try {
+                  lsof = await this.asyncExec("lsof -aPi -F -p " + cppid);
+                } catch (err) {
+                  log("lsof on the child process did not work", err);
+                  try {
+                    const ssTest = await this.asyncExec(
+                      `bash -c "ss -tulpn | grep ${cppid}"`
+                    );
+                    log("ssTest", ssTest);
+                  } catch (err) {
+                    // nothing
+                  }
+                  throw err;
+                }
               }
               const match = lsof.match(/^n\*:(\d+)$/m);
               if (!match || !match[1] || Number.isNaN(Number(match[1]))) {

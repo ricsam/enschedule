@@ -61,3 +61,5 @@ pnpm run playwright test
 # start dev server
 yarn run dev # in root
 
+# run act
+act --secret-file ci.secrets push --container-architecture linux/amd64

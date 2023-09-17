@@ -5,6 +5,7 @@ import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import type { PaperProps } from "@mui/material/Paper";
@@ -25,6 +26,7 @@ import type {
   ExpandedState,
   OnChangeFn,
   Row,
+  RowSelectionState,
   SortingState,
 } from "@tanstack/react-table";
 import {
@@ -37,9 +39,32 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import React from "react";
+import { EnhancedTableToolbar, SelectedProvider } from "./EnhancedTableToolbar";
 
 export const checkboxCol = <T,>(): ColumnDef<T> => ({
   id: "select",
+  header: ({ table }) => (
+    <Checkbox
+      {...{
+        checked: table.getIsAllRowsSelected(),
+        indeterminate: table.getIsSomeRowsSelected(),
+        onChange: table.getToggleAllRowsSelectedHandler(),
+      }}
+    />
+  ),
+  cell: ({ row }) => (
+    <Checkbox
+      {...{
+        checked: row.getIsSelected(),
+        indeterminate: row.getIsSomeSelected(),
+        onChange: row.getToggleSelectedHandler(),
+      }}
+    />
+  ),
+});
+
+export const expandCol = <T,>(): ColumnDef<T> => ({
+  id: "expand",
   header: ({ table }) => (
     <IconButton
       aria-label="expand row"
@@ -73,22 +98,19 @@ export const checkboxCol = <T,>(): ColumnDef<T> => ({
   ),
 });
 
-const usePagination = () => {
+const usePagination = (defaultSorting?: SortingState) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // const searchParams = new URLSearchParams();
-  // const setSearchParams = (
-  //   params: URLSearchParams | ((oldParams: URLSearchParams) => URLSearchParams)
-  // ) => {};
-
   const getSorting = (): SortingState => {
-    return (searchParams.getAll("sorting") ?? []).map((value) => {
-      const [id, sorting] = value.split(".");
-      return {
-        id,
-        desc: sorting === "desc",
-      };
-    });
+    return (searchParams.getAll("sorting") ?? defaultSorting ?? []).map(
+      (value) => {
+        const [id, sorting] = value.split(".");
+        return {
+          id,
+          desc: sorting === "desc",
+        };
+      }
+    );
   };
 
   const stringifySorting = (sorting: SortingState) => {
@@ -113,7 +135,7 @@ const usePagination = () => {
    * 1 indexed in url, 0 indexed in api
    */
   const page: number = Math.max((Number(searchParams.get("page")) || 1) - 1, 0);
-  const rowsPerPage: number = Number(searchParams.get("rowsPerPage")) || 5;
+  const rowsPerPage: number = Number(searchParams.get("rowsPerPage")) || 25;
 
   const setSorting: OnChangeFn<SortingState> = (newSortingFn) => {
     let newSorting =
@@ -121,36 +143,56 @@ const usePagination = () => {
         ? newSortingFn(sortingRef.current)
         : newSortingFn;
 
-    setSearchParams((prevParams) => {
-      prevParams.delete("sorting");
-      newSorting.forEach((sorting) => {
-        prevParams.append(
-          "sorting",
-          `${sorting.id}.${sorting.desc ? "desc" : "asc"}`
-        );
-      });
-      return prevParams;
-    });
+    setSearchParams(
+      (prevParams) => {
+        prevParams.delete("sorting");
+        newSorting.forEach((sorting) => {
+          prevParams.append(
+            "sorting",
+            `${sorting.id}.${sorting.desc ? "desc" : "asc"}`
+          );
+        });
+        return prevParams;
+      },
+      {
+        replace: true,
+      }
+    );
   };
 
   const setPage = (page: number) => {
-    setSearchParams((prevParams) => {
-      // 1 indexed in url, 0 index in pagination api
-      prevParams.set("page", String(page + 1));
-      return prevParams;
-    });
+    setSearchParams(
+      (prevParams) => {
+        // 1 indexed in url, 0 index in pagination api
+        prevParams.set("page", String(page + 1));
+        return prevParams;
+      },
+      {
+        replace: true,
+      }
+    );
   };
   const setRowsPerPage = (page: number) => {
-    setSearchParams((prevParams) => {
-      prevParams.set("rowsPerPage", String(page));
-      return prevParams;
-    });
+    setSearchParams(
+      (prevParams) => {
+        prevParams.set("rowsPerPage", String(page));
+        return prevParams;
+      },
+      {
+        replace: true,
+      }
+    );
   };
 
   const clearPagination = () => {
-    setSearchParams(() => {
-      return new URLSearchParams();
-    });
+    setSearchParams(
+      () => {
+        return new URLSearchParams();
+      },
+      {
+        replace: true,
+      }
+    );
   };
 
   return {
@@ -167,13 +209,29 @@ const usePagination = () => {
 export function ExpandableTable<T>({
   rows,
   renderRow,
-  columns,
+  columns: _columns,
+  title,
+  defaultSorting,
+  msButtons,
   ...paperProps
 }: {
   rows: T[];
-  renderRow: (row: Row<T>) => React.ReactNode;
+  title: React.ReactNode;
+  defaultSorting?: SortingState;
+  renderRow?: (row: Row<T>) => React.ReactNode;
+  msButtons?: React.ReactNode;
   columns: ColumnDef<T, any>[];
 } & PaperProps) {
+  const columns = React.useMemo((): ColumnDef<T, any>[] => {
+    const cols = [..._columns];
+    if (renderRow) {
+      cols.unshift(expandCol());
+    }
+    if (msButtons) {
+      cols.unshift(checkboxCol());
+    }
+    return cols;
+  }, [msButtons, _columns, renderRow]);
   const {
     sorting,
     setSorting,
@@ -182,7 +240,7 @@ export function ExpandableTable<T>({
     rowsPerPage,
     setRowsPerPage,
     clearPagination,
-  } = usePagination();
+  } = usePagination(defaultSorting);
   // const [page, setPage] = React.useState(0);
   // const [rowsPerPage, setRowsPerPage] = React.useState(5);
   // const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -190,21 +248,35 @@ export function ExpandableTable<T>({
 
   const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
+  const pagination = React.useMemo(
+    () => ({
+      pageIndex: page,
+      pageSize: rowsPerPage,
+    }),
+    [page, rowsPerPage]
+  );
+
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
   const table = useReactTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: msButtons ? setSorting : undefined,
+    getSortedRowModel: msButtons ? getSortedRowModel() : undefined,
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    enableExpanding: true,
+    onRowSelectionChange: setRowSelection,
+    enableExpanding: !!renderRow,
+    pageCount: Math.ceil(rows.length / pagination.pageSize),
     state: {
-      sorting,
-      expanded,
+      sorting: msButtons ? sorting : undefined,
+      expanded: renderRow ? expanded : undefined,
+      pagination,
+      rowSelection,
     },
-    onExpandedChange: setExpanded,
-    getExpandedRowModel: getExpandedRowModel(),
+    onExpandedChange: renderRow ? setExpanded : undefined,
+    getExpandedRowModel: renderRow ? getExpandedRowModel() : undefined,
   });
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -214,7 +286,7 @@ export function ExpandableTable<T>({
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+    setRowsPerPage(Number(event.target.value));
     setPage(0);
   };
 
@@ -249,16 +321,30 @@ export function ExpandableTable<T>({
 
   return (
     <Paper sx={{ width: "100%", mb: 2 }} {...paperProps}>
+      <SelectedProvider
+        selected={Object.keys(rowSelection)}
+        table={table}
+        rowSelection={rowSelection}
+        setRowSelection={setRowSelection}
+      >
+        <EnhancedTableToolbar
+          title={title}
+          totalCount={rows.length}
+          retrieved={rows.length}
+          msButtons={msButtons}
+        />
+      </SelectedProvider>
       <TableContainer>
         <Table sx={{ minWidth: 750 }} size={"small"}>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup, index) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  const isCheckbox = header.column.id === "select";
-                  const isSorted = isCheckbox
-                    ? false
-                    : header.column.getIsSorted();
+                  const isSorted =
+                    header.column.id === "select" ||
+                    header.column.id === "expand"
+                      ? false
+                      : header.column.getIsSorted();
                   let children = (
                     <>
                       {header.isPlaceholder
@@ -267,7 +353,10 @@ export function ExpandableTable<T>({
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                      {isCheckbox && isSorted ? (
+                      {!(
+                        header.column.id === "select" ||
+                        header.column.id === "expand"
+                      ) && isSorted ? (
                         <Box component="span" sx={visuallyHidden}>
                           {isSorted === "desc"
                             ? "sorted descending"
@@ -280,10 +369,18 @@ export function ExpandableTable<T>({
                     <TableCell
                       key={header.id}
                       align="left"
-                      padding={isCheckbox ? "checkbox" : "normal"}
+                      padding={
+                        header.column.id === "select" ||
+                        header.column.id === "expand"
+                          ? "checkbox"
+                          : "normal"
+                      }
                       sortDirection={isSorted}
                     >
-                      {!isCheckbox ? (
+                      {!(
+                        header.column.id === "select" ||
+                        header.column.id === "expand"
+                      ) ? (
                         <TableSortLabel
                           active={!!isSorted}
                           direction={isSorted || "asc"}
@@ -310,13 +407,13 @@ export function ExpandableTable<T>({
                   <TableRow
                     data-testid={`table-row-${index + 1}`}
                     sx={
-                      open
+                      open || !renderRow
                         ? undefined
                         : { "&, .MuiTableCell-root": { borderBottom: "unset" } }
                     }
                     hover
                     onClick={() => {
-                      row.toggleExpanded();
+                      row.toggleSelected();
                     }}
                     role="checkbox"
                     aria-checked={isItemSelected}
@@ -331,7 +428,10 @@ export function ExpandableTable<T>({
                           scope="row"
                           key={cell.id}
                           padding={
-                            cell.column.id === "select" ? "checkbox" : "normal"
+                            cell.column.id === "select" ||
+                            cell.column.id === "expand"
+                              ? "checkbox"
+                              : "normal"
                           }
                         >
                           {flexRender(
@@ -342,16 +442,18 @@ export function ExpandableTable<T>({
                       );
                     })}
                   </TableRow>
-                  <TableRow>
-                    <TableCell
-                      style={{ paddingBottom: 0, paddingTop: 0 }}
-                      colSpan={columns.length}
-                    >
-                      <Collapse in={open} timeout="auto" unmountOnExit>
-                        <Box sx={{ margin: 1 }}>{renderRow(row)}</Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
+                  {renderRow ? (
+                    <TableRow>
+                      <TableCell
+                        style={{ paddingBottom: 0, paddingTop: 0 }}
+                        colSpan={columns.length}
+                      >
+                        <Collapse in={open} timeout="auto" unmountOnExit>
+                          <Box sx={{ margin: 1 }}>{renderRow(row)}</Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
                 </React.Fragment>
               );
             })}
@@ -360,7 +462,6 @@ export function ExpandableTable<T>({
       </TableContainer>
       <TablePagination
         data-testid="pagination"
-        rowsPerPageOptions={[5, 10, 25]}
         component="div"
         count={rows.length}
         rowsPerPage={rowsPerPage}

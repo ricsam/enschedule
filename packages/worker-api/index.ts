@@ -123,7 +123,7 @@ export class WorkerAPI {
           });
 
           req.on("error", reject);
-          if (data && method !== "GET") {
+          if (data && method === "POST") {
             req.write(bodyString);
           }
           req.end();
@@ -199,6 +199,18 @@ export class WorkerAPI {
   async deleteRun(id: number): Promise<PublicJobRun> {
     const run = await this.request("DELETE", `/runs/${id}`);
     return publicJobRunSchema.parse(run);
+  }
+
+  async deleteRuns(runIds: number[]): Promise<{ deletedIds: number[] }> {
+    const response = await this.request("POST", "/runs", {
+      runIds,
+      action: "delete",
+    });
+    return z
+      .object({
+        deletedIds: z.array(z.number()),
+      })
+      .parse(response);
   }
 
   async reset(): Promise<void> {

@@ -27,6 +27,14 @@ export class Setup {
   private _dashboardUrl = "";
 
   get dashboardUrl() {
+    if (process.env.SKIP_SETUP) {
+      if (!process.env.DASHBOARD_URL) {
+        throw new Error(
+          "If SKIP_SETUP is enabled you must also provide process.env.DASHBOARD_URL"
+        );
+      }
+      return process.env.DASHBOARD_URL;
+    }
     if (!this._dashboardUrl) {
       throw new Error("Please call setup before accessing this property");
     }
@@ -126,6 +134,9 @@ export class Setup {
   }
 
   async setup() {
+    if (process.env.SKIP_SETUP) {
+      return;
+    }
     this.TEST_DB = "pw" + Math.random().toString(36).substring(2, 14) + "e";
 
     console.log("Running global setup");
@@ -302,6 +313,9 @@ export class Setup {
     console.log("Setup done");
   }
   async teardown() {
+    if (process.env.SKIP_SETUP) {
+      return;
+    }
     const terminationPromises = this.childProcesses.map((childProcess) => {
       return new Promise<void>((resolve, reject) => {
         childProcess.stdout?.removeAllListeners();

@@ -1,4 +1,4 @@
-import type { PublicJobRun, PublicJobSchedule } from "@enschedule/types";
+import type { PublicJobSchedule, SerializedRun } from "@enschedule/types";
 import {
   Button,
   Card,
@@ -17,7 +17,7 @@ export default function RunPage({
   run,
   schedule,
 }: {
-  run: SerializeFrom<PublicJobRun>;
+  run: SerializeFrom<SerializedRun>;
   schedule: SerializeFrom<PublicJobSchedule>;
 }) {
   const scheduleLink = useHref("../../../../schedules/" + schedule.id, {

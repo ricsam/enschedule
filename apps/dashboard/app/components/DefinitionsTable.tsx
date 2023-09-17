@@ -1,19 +1,18 @@
+import type { PublicJobDefinition } from "@enschedule/types";
 import Box from "@mui/material/Box";
 import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import type { SerializeFrom } from "@remix-run/node";
 import { Link as RemixLink } from "@remix-run/react";
-import type { PublicJobDefinition } from "@enschedule/types";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { ReadOnlyEditor } from "~/components/Editor";
-import { checkboxCol, ExpandableTable } from "~/components/Table";
+import { ExpandableTable } from "~/components/Table";
 import type { DefinitionRowData } from "./DefinitionTypes";
 
 const columnHelper = createColumnHelper<DefinitionRowData>();
 
 const columns: ColumnDef<DefinitionRowData, any>[] = [
-  checkboxCol(),
   columnHelper.accessor("id", {
     cell: (info) => {
       const definitions = info.row.original.id;
@@ -58,6 +57,7 @@ export default function DefinitionsTable({
       </Typography>
       <Box pb={3} />
       <ExpandableTable
+        title="Definitions"
         rows={definitions}
         columns={columns}
         renderRow={(row) => {

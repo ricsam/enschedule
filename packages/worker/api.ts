@@ -118,7 +118,7 @@ export class Worker extends PrivateBackend {
             : undefined
         );
       const validatedScheduleId = scheduleIdSchema.parse(req.query.scheduleId);
-      this.getRuns(validatedScheduleId)
+      this.getRuns({ scheduleId: validatedScheduleId })
         .then((runs) => {
           res.json(runs);
         })
@@ -143,6 +143,23 @@ export class Worker extends PrivateBackend {
           res.json(run);
         })
         .catch(next);
+    });
+
+    app.post("/runs", (req, res, next) => {
+      const idSchema = z.object({
+        runIds: z.array(z.number().int().positive()),
+        action: z.literal("delete"),
+      });
+      console.log(req.body, req.query, req.params);
+      const { runIds, action } = idSchema.parse(req.body);
+
+      if (action === "delete") {
+        this.deleteRuns(runIds)
+          .then(({ deletedIds }) => {
+            res.json({ deletedIds });
+          })
+          .catch(next);
+      }
     });
 
     app.post("/schedules/:id/runs", (req, res, next) => {

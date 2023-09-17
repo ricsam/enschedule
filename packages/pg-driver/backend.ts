@@ -357,9 +357,22 @@ export class PrivateBackend {
     }
     return def;
   }
-  public async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
+  public async getRuns({
+    scheduleId,
+    order,
+    limit,
+    offset,
+  }: {
+    scheduleId?: number;
+    order?: [string, "DESC" | "ASC"][];
+    limit?: number;
+    offset?: number;
+  }): Promise<PublicJobRun[]> {
     if (scheduleId === undefined) {
       const runs = await Run.findAll({
+        limit,
+        order,
+        offset,
         include: {
           model: Schedule,
           as: "schedule",
@@ -376,7 +389,7 @@ export class PrivateBackend {
     if (!jobSchedule) {
       throw new Error("invalid jobScheduleId");
     }
-    const runs = await jobSchedule.getRuns();
+    const runs = await jobSchedule.getRuns({ limit, order, offset });
     const jobDef = this.getJobDef(jobSchedule.target);
     return runs.map((run) => createPublicJobRun(run, jobSchedule, jobDef));
   }
@@ -418,6 +431,14 @@ export class PrivateBackend {
     await run.destroy();
 
     return publicRun;
+  }
+  public async deleteRuns(runIds: number[]): Promise<{ deletedIds: number[] }> {
+    await Run.destroy({
+      where: {
+        id: runIds,
+      },
+    });
+    return { deletedIds: runIds };
   }
   public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
     const schedule = await Schedule.findByPk(id, {
@@ -639,7 +660,6 @@ export class PrivateBackend {
         void this.tick();
       }, this.tickDuration);
     }, 1000 - (now - Math.floor(now / 1000) * 1000));
-
   }
 
   protected async tick() {

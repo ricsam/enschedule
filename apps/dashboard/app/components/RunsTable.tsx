@@ -1,15 +1,16 @@
 import type { PublicJobRun } from "@enschedule/types";
 import Button from "@mui/material/Button";
-import { produce } from "immer";
 import MuiLink from "@mui/material/Link";
 import type { SerializeFrom } from "@remix-run/node";
 import { Link as RemixLink, useFetcher } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
+import { produce } from "immer";
 import React from "react";
 import { ExpandableTable } from "~/components/Table";
+import { createContext } from "~/utils/createContext";
 import { formatDate } from "~/utils/formatDate";
-import { useSelected } from "./EnhancedTableToolbar";
+import { useTable } from "./EnhancedTableToolbar";
 import RunPage from "./RunPage";
 
 type RowData = SerializeFrom<PublicJobRun>;
@@ -101,6 +102,7 @@ export default function RunsTable({
       rows={runs}
       title="Runs"
       columns={columns}
+      ToolbarWrapper={ToolbarWrapper}
       renderRow={(row) => {
         const run = row.original;
         return <RunPage run={run} schedule={run.jobSchedule} />;
@@ -110,18 +112,19 @@ export default function RunsTable({
   );
 }
 
-function MsButtons() {
-  const { table, setRowSelection } = useSelected();
+const [useMsActions, MsActionsProvider] = createContext(
+  (props: { onDelete: () => void }) => props.onDelete,
+  "MsActions"
+);
+
+function ToolbarWrapper({ children }: { children: React.ReactNode }) {
+  const { table, setRowSelection, setPage } = useTable();
   const fetcher = useFetcher<{ deletedIds: number[] }>();
-  const [selectedIndexes, setSelectedIndexes] = React.useState<
-    undefined | number[]
-  >();
 
   const deleteRun = () => {
     const formData = new FormData();
     const selectedIds: string[] = [];
     const selectedIndexes: number[] = [];
-    setSelectedIndexes(selectedIndexes);
 
     table.getSelectedRowModel().rows.forEach(({ original: { id }, index }) => {
       selectedIds.push(id);
@@ -132,26 +135,28 @@ function MsButtons() {
       formData.append("run", String(selected));
     });
     formData.set("action", "delete");
+    setPage(0);
+    setRowSelection(
+      produce((ob) => {
+        selectedIndexes.forEach((index) => {
+          delete ob[index];
+        });
+      })
+    );
     fetcher.submit(formData, { method: "post", action: "/runs?index" });
   };
-  React.useEffect(() => {
-    if (selectedIndexes && fetcher.state === "idle") {
-      setRowSelection(
-        produce((ob) => {
-          selectedIndexes.forEach((index) => {
-            delete ob[index];
-          });
-        })
-      );
-      setSelectedIndexes(undefined);
-    }
-  }, [fetcher.state, selectedIndexes, setRowSelection]);
 
+  return <MsActionsProvider onDelete={deleteRun}>{children}</MsActionsProvider>;
+}
+
+function MsButtons() {
+  const deleteRun = useMsActions();
   return (
     <>
       <Button
         variant="text"
         color="inherit"
+        data-testid="ms-delete"
         onClick={() => {
           deleteRun();
         }}

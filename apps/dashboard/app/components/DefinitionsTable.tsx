@@ -20,6 +20,7 @@ const columns: ColumnDef<DefinitionRowData, any>[] = [
         <MuiLink
           to={`/definitions/${definitions}`}
           component={RemixLink}
+          data-testid="definition-link"
           onClick={(ev) => {
             ev.stopPropagation();
           }}

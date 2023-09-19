@@ -7,7 +7,7 @@ import { Link as RemixLink, useFetcher } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { formatDate } from "~/utils/formatDate";
-import { useSelected } from "./EnhancedTableToolbar";
+import { useTable } from "./EnhancedTableToolbar";
 import { ExpandableTable } from "./Table";
 
 export type RowData = SerializeFrom<PublicJobSchedule>;
@@ -99,7 +99,7 @@ export default function SchedulesTable({
 }
 
 function MsButtons() {
-  const { table } = useSelected();
+  const { table } = useTable();
   const fetcher = useFetcher();
 
   const submit = (action: "delete" | "run") => {

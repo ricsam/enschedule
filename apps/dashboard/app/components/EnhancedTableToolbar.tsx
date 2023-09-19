@@ -8,48 +8,20 @@ import Typography from "@mui/material/Typography";
 import { useSearchParams } from "@remix-run/react";
 import type { RowSelectionState, Table } from "@tanstack/react-table";
 import React from "react";
+import { createContext } from "~/utils/createContext";
+import type { usePagination } from "./usePagination";
 
-const SelectedContext = React.createContext<
-  | undefined
-  | {
+export const [useTable, TableProvider] = createContext(
+  (
+    props: {
       selected: string[];
       table: Table<any>;
       rowSelection: RowSelectionState;
       setRowSelection: React.Dispatch<React.SetStateAction<RowSelectionState>>;
-    }
->(undefined);
-
-export const useSelected = () => {
-  const ctx = React.useContext(SelectedContext);
-  if (!ctx) {
-    throw new Error(
-      "You must wrap this component in a SelectedProvider before using this hook"
-    );
-  }
-  return ctx;
-};
-
-export const SelectedProvider = ({
-  children,
-  selected,
-  table,
-  rowSelection,
-  setRowSelection,
-}: {
-  selected: string[];
-  children: React.ReactNode;
-  table: Table<any>;
-  rowSelection: RowSelectionState;
-  setRowSelection: React.Dispatch<React.SetStateAction<RowSelectionState>>;
-}) => {
-  return (
-    <SelectedContext.Provider
-      value={{ selected, table, rowSelection, setRowSelection }}
-    >
-      {children}
-    </SelectedContext.Provider>
-  );
-};
+    } & ReturnType<typeof usePagination>
+  ) => props,
+  "Table"
+);
 
 export function EnhancedTableToolbar({
   title,
@@ -62,7 +34,7 @@ export function EnhancedTableToolbar({
   retrieved: number;
   msButtons?: React.ReactNode;
 }) {
-  const { selected } = useSelected();
+  const { selected } = useTable();
   const numSelected = selected.length;
   const isSelected = numSelected > 0;
 
@@ -87,6 +59,7 @@ export function EnhancedTableToolbar({
           color="inherit"
           variant="subtitle1"
           component="div"
+          data-testid="num-selected"
         >
           {numSelected} selected
         </Typography>

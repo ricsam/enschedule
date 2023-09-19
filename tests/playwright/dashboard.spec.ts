@@ -142,12 +142,9 @@ const reset = async (page: Page) => {
 };
 
 const waitForNumRuns = async (page: Page, num: number) => {
-  // wait for all runs to be created
-  await page.goto(`${setup.dashboardUrl}/runs`);
-
   const TIMEOUT = 20000;
   const RETRY_DURATION = 5000;
-  if ((await numRows(page)) !== 4) {
+  if ((await numRows(page)) !== num) {
     let i = 0;
     const maxIter = Math.floor(TIMEOUT / RETRY_DURATION);
     do {
@@ -157,19 +154,12 @@ const waitForNumRuns = async (page: Page, num: number) => {
         }, RETRY_DURATION);
       });
       await page.reload();
-    } while ((await numRows(page)) !== 4 && i++ < maxIter);
+    } while ((await numRows(page)) !== num && i++ < maxIter);
     if (i >= maxIter) {
       throw new Error("Timed out waiting for the runs to show up in the table");
     }
   }
 };
-
-// test("a", async ({ page }) => {
-//   await page.goto(setup.dashboardUrl);
-// });
-// test("b", async ({ page }) => {
-//   await page.goto(setup.dashboardUrl);
-// });
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot, and then test the delete", async ({
@@ -182,6 +172,7 @@ test.describe("Single-Run", () => {
       await createRun(page, i);
     }
 
+    await page.goto(`${setup.dashboardUrl}/runs`);
     await waitForNumRuns(page, 4);
 
     // There should be 4 runs / schedules in the tables
@@ -222,15 +213,96 @@ test.describe("Single-Run", () => {
 test.describe("Multi runs", () => {
   test("Test pagination", async ({ page }) => {
     await reset(page);
-    for (let j = 0; j < 5; j += 1) {
-      for (let i = 1; i < 5; i += 1) {
-        await createRun(page, i);
-      }
+    for (let j = 0; j < 11; j += 1) {
+      await createRun(page, (j % 4) + 1);
     }
     const { runsTableUrls } = await visitRunPages(page);
 
     await page.goto(runsTableUrls[0]); // /runs
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-    expect(await numRows(page)).toBe(20);
+    await waitForNumRuns(page, 11);
+    expect(await numRows(page)).toBe(11);
+
+    await page.getByTestId("pagination").getByLabel("25").click();
+    await page.getByRole("option", { name: "10", exact: true }).click();
+    const getPaginationText = async () => {
+      const innerText = await (
+        await page.$(
+          '[data-testid="pagination"] .MuiTablePagination-displayedRows'
+        )
+      )?.innerText();
+      return innerText;
+    };
+    expect(await getPaginationText()).toBe("1–10 of 11");
+    await page
+      .getByTestId("pagination")
+      .getByTestId("KeyboardArrowRightIcon")
+      .click();
+    expect(await getPaginationText()).toBe("11–11 of 11");
+
+    await page.getByTestId("table-row-1").getByRole("checkbox").click();
+    await page.getByTestId("ms-delete").click();
+    await waitForNumRuns(page, 10);
+    expect(await getPaginationText()).toBe("1–10 of 10");
+
+    await page.getByTestId("table-row-2").getByRole("checkbox").click();
+    await page.getByTestId("table-row-3").getByRole("checkbox").click();
+    await page.getByTestId("ms-delete").click();
+    await waitForNumRuns(page, 8);
+    expect(await numRows(page)).toBe(8);
+  });
+  test("Test multi delete on schedules", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+    await waitForNumRuns(page, 1);
+
+    await page.getByTestId("table-row-1").getByRole("checkbox").click();
+    await page.getByTestId("ms-delete").click();
+    await waitForNumRuns(page, 0);
+    expect(await numRows(page)).toBe(0);
+  });
+  test("Test multi delete on definitions", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+
+    await page.goto(`${setup.dashboardUrl}/definitions`);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("definition-link")
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Schedules" })
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+    await waitForNumRuns(page, 1);
+
+    await page.getByTestId("table-row-1").getByRole("checkbox").click();
+    await page.getByTestId("ms-delete").click();
+    await waitForNumRuns(page, 0);
+    expect(await numRows(page)).toBe(0);
   });
 });

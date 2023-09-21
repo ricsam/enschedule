@@ -306,3 +306,73 @@ test.describe("Multi runs", () => {
     expect(await numRows(page)).toBe(0);
   });
 });
+
+test.describe("Single schedule", () => {
+  test("Can create multiple runs on a schedule, and filtering on runs work", async ({
+    page,
+  }) => {
+    await reset(page);
+    const createRuns = async (scheduleNum: number) => {
+      await createRun(page, 1);
+      await page.goto(`${setup.dashboardUrl}/schedules`);
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page
+          .getByTestId("table-row-" + scheduleNum)
+          .getByTestId("schedule-link")
+      );
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByRole("tab", { name: "Runs" })
+      );
+
+      // run now works
+      await page.getByTestId("run-now").click();
+      await page.getByTestId("run-now").click();
+      await page.getByTestId("run-now").click();
+
+      // make sure filtering works in the table
+      await waitForNumRuns(page, 4);
+      expect(await numRows(page)).toBe(4);
+    };
+    await createRuns(1);
+    await createRuns(2);
+    await page.goto(`${setup.dashboardUrl}/runs`);
+    // main runs page should have 8 runs
+    await waitForNumRuns(page, 8);
+    expect(await numRows(page)).toBe(8);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("run-link")
+    );
+    // also check that the runs page under the definitions hierarchy works
+    await page.getByTestId('definition-link').click();
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Schedules" })
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+    await waitForNumRuns(page, 4);
+    expect(await numRows(page)).toBe(4);
+
+    // make sure run button works under the definition hierarchy as well
+    await page.getByTestId("run-now").click();
+
+    // make sure filtering works in the table
+    await waitForNumRuns(page, 5);
+    expect(await numRows(page)).toBe(5);
+  });
+});

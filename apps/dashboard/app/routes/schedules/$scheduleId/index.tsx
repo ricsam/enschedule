@@ -1,42 +1,19 @@
 import type { PublicJobSchedule } from "@enschedule/types";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import type {
   ActionFunction,
   LoaderFunction,
-  SerializeFrom,
+  SerializeFrom
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { Form, useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
-import SchedulePage from "~/components/SchedulePage";
+import SchedulePage, { Actions } from "~/components/SchedulePage";
 import { scheduler } from "~/scheduler.server";
 import type { Breadcrumb } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
-
-export function Actions({ id }: { id: number }) {
-  return (
-    <>
-      <Box display="flex" gap={2}>
-        <Form method="post">
-          <Button type="submit" variant="outlined">
-            Delete
-          </Button>
-          <input type="hidden" name="action" value="delete" />
-        </Form>
-        <Form method="post">
-          <Button type="submit" variant="contained">
-            Run now
-          </Button>
-          <input type="hidden" name="action" value="run" />
-        </Form>
-      </Box>
-    </>
-  );
-}
 
 const getScheduleId = (params: Params<string>): number => {
   const scheduleId = params.scheduleId;
@@ -116,7 +93,7 @@ export const useNavbar = () => {
         to: `/schedules/${data.schedule.id}/runs`,
       },
     ],
-    actions: <Actions id={data.schedule.id} />,
+    actions: <Actions />,
   };
 };
 

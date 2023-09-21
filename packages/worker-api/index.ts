@@ -83,40 +83,48 @@ export class WorkerAPI {
     };
     const retries = 5;
     const delay = 1000;
-    log(
-      "Req:",
-      method,
-      `${this.url}${decodeURI(options.path)}${
-        data ? ` ${JSON.stringify(data)}` : ""
-      }`
-    );
+    const requestLog = (...args: unknown[]) => {
+      log("Req:", method, `${this.url}${decodeURI(options.path)}`, ...args);
+    };
+
+    if (data) {
+      requestLog("data:", JSON.stringify(data));
+    }
 
     let attempt = 0;
 
     while (attempt < retries) {
       try {
-        const response = new Promise((resolve, reject) => {
+        const response = await new Promise((resolve, reject) => {
           const req = (this.ssl ? https : http).request(options, (res) => {
             let body = "";
             res.on("data", (chunk) => {
               body += chunk;
             });
             res.on("end", () => {
-              log(
-                "Res:",
-                method,
-                `${this.url}${path}`,
-                res.statusCode,
-                res.statusMessage
-              );
+              const responseLog = (...args: unknown[]) => {
+                log(
+                  "Res:",
+                  method,
+                  `${this.url}${path}`,
+                  res.statusCode,
+                  res.statusMessage,
+                  ...args
+                );
+              };
+              responseLog();
+
               try {
                 const resData: unknown = JSON.parse(body);
                 resolve(resData);
                 if (resData) {
-                  log("Res data:", JSON.stringify(resData));
+                  responseLog("data:", JSON.stringify(resData));
                 }
               } catch (err) {
-                log("Failed to json parse, the response body was:", body);
+                responseLog(
+                  "Failed to json parse, the response body was:",
+                  body
+                );
                 reject(err);
               }
             });
@@ -132,12 +140,14 @@ export class WorkerAPI {
       } catch (error) {
         attempt += 1;
         const errorMessage = error instanceof Error ? error.message : "";
-        log(`Attempt ${attempt} failed:`, errorMessage);
+        requestLog(`Attempt ${attempt} failed:`, errorMessage);
 
         // If we've used all retries, throw the error
         if (attempt >= retries) {
           throw new Error(
-            `Request failed after ${attempt} attempts: ${errorMessage}`
+            `Req: ${method} ${this.url}${decodeURI(
+              options.path
+            )} failed after ${attempt} attempts: ${errorMessage}`
           );
         }
 

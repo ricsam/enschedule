@@ -223,8 +223,6 @@ test.describe("Multi runs", () => {
     await waitForNumRuns(page, 11);
     expect(await numRows(page)).toBe(11);
 
-    await page.getByTestId("pagination").getByLabel("25").click();
-    await page.getByRole("option", { name: "10", exact: true }).click();
     const getPaginationText = async () => {
       const innerText = await (
         await page.$(
@@ -233,6 +231,15 @@ test.describe("Multi runs", () => {
       )?.innerText();
       return innerText;
     };
+    expect(await getPaginationText()).toBe("1–11 of 11");
+
+    await page.getByTestId("pagination").getByLabel("25").click();
+    await page.getByRole("option", { name: "10", exact: true }).click();
+
+    await page.waitForURL(/rowsPerPage=10/);
+
+    await page.waitForSelector('[data-rows-per-page="10"]');
+
     expect(await getPaginationText()).toBe("1–10 of 11");
     await page
       .getByTestId("pagination")
@@ -349,7 +356,7 @@ test.describe("Single schedule", () => {
       page.getByTestId("table-row-1").getByTestId("run-link")
     );
     // also check that the runs page under the definitions hierarchy works
-    await page.getByTestId('definition-link').click();
+    await page.getByTestId("definition-link").click();
     await navigate(
       setup.dashboardUrl,
       page,

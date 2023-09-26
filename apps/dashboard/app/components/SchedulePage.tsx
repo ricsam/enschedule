@@ -30,6 +30,7 @@ export default function SchedulePage({
     <Box>
       <Box display="flex" gap={3} flexWrap="wrap" id="SchedulePage">
         <Card
+          data-testid="schedule-details"
           sx={{
             flex: 1,
             minWidth: "fit-content",

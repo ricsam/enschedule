@@ -404,7 +404,10 @@ test.describe("Single schedule", () => {
       page,
       page.getByTestId("table-row-1").getByTestId("schedule-link")
     );
-    await page.getByTestId("definition-link").click();
+    await page
+      .getByTestId("schedule-details")
+      .getByTestId("definition-link")
+      .click();
     await navigate(
       setup.dashboardUrl,
       page,

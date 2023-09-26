@@ -57,7 +57,12 @@ export default function SchedulePage({
                 {schedule.description}
               </Typography>
               <Typography color="text.secondary">Definition</Typography>
-              <MuiLink underline="hover" component={Link} to="/">
+              <MuiLink
+                underline="hover"
+                component={Link}
+                data-testid="definition-link"
+                to={"/definitions/" + schedule.jobDefinition.id}
+              >
                 {schedule.jobDefinition.title}
               </MuiLink>
               {schedule.cronExpression ? (
@@ -151,7 +156,11 @@ export function Actions({
     <>
       <Box display="flex" gap={2}>
         <Form method="post" action={action}>
-          <Button type="submit" variant="outlined">
+          <Button
+            type="submit"
+            variant="outlined"
+            data-testid="delete-schedule"
+          >
             Delete
           </Button>
           <input type="hidden" name="action" value="delete" />
@@ -186,7 +195,7 @@ export const action: ActionFunction = async (arg) => {
 
   const id = getScheduleId(params);
   if (action === "run") {
-    const redirectTo = z.string().parse(fd.get('redirect'))
+    const redirectTo = z.string().parse(fd.get("redirect"));
     await scheduler.runSchedule(id);
     return redirect(redirectTo);
   } else {

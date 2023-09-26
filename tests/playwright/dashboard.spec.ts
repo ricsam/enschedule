@@ -315,7 +315,7 @@ test.describe("Multi runs", () => {
 });
 
 test.describe("Single schedule", () => {
-  test("Can create multiple runs on a schedule, and filtering on runs work", async ({
+  test("Can create multiple runs (run now button) on a schedule, and filtering on runs work", async ({
     page,
   }) => {
     await reset(page);
@@ -381,5 +381,46 @@ test.describe("Single schedule", () => {
     // make sure filtering works in the table
     await waitForNumRuns(page, 5);
     expect(await numRows(page)).toBe(5);
+  });
+  test("Delete schedule button", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRuns(page, 2);
+    expect(await numRows(page)).toBe(2);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await page.getByTestId("delete-schedule").click();
+    await page.waitForURL(/\/schedules\/?$/);
+    await page.waitForSelector("div#SchedulesTable");
+    await waitForNumRuns(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await page.getByTestId("definition-link").click();
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Schedules" })
+    );
+    await waitForNumRuns(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await page.getByTestId("delete-schedule").click();
+    await page.waitForURL(/\/schedules\/?$/);
+    await page.waitForSelector("div#SchedulesTable");
+    await waitForNumRuns(page, 0);
+    expect(await numRows(page)).toBe(0);
   });
 });

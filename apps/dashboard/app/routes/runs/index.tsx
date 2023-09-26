@@ -1,36 +1,17 @@
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import type { PublicJobRun } from "@enschedule/types";
+import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import type { PublicJobRun } from "@enschedule/types";
 import { RootLayout } from "~/components/Layout";
 import RunsTable from "~/components/RunsTable";
 import { scheduler } from "~/scheduler.server";
 import type { Breadcrumb } from "~/types";
-import { z } from "zod";
 
 export type LoaderData = {
   runs: PublicJobRun[];
 };
 
-export const action: ActionFunction = async ({ request }) => {
-  const fd = await request.formData();
-  const action = z
-    .union([z.literal("delete"), z.literal("placeholder")])
-    .parse(fd.get("action"));
-  const selected = z
-    .array(z.number().int())
-    .parse(fd.getAll("run").map(Number));
-
-  if (action === "delete") {
-    const { deletedIds } = await scheduler.deleteRuns(selected);
-    return json({
-      deletedIds,
-    });
-  }
-  return json({
-    success: true,
-  });
-};
+export { action } from "~/components/RunsTable";
 
 export const loader: LoaderFunction = async ({ request }) => {
   // const url = new URL(request.url);

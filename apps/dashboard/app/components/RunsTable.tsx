@@ -1,16 +1,15 @@
 import type { PublicJobRun } from "@enschedule/types";
-import Button from "@mui/material/Button";
 import MuiLink from "@mui/material/Link";
-import type { SerializeFrom } from "@remix-run/node";
-import { Link as RemixLink, useFetcher } from "@remix-run/react";
+import type { ActionFunction, SerializeFrom } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
-import { produce } from "immer";
-import React from "react";
+import { z } from "zod";
 import { ExpandableTable } from "~/components/Table";
-import { createContext } from "~/utils/createContext";
+import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
-import { useTable } from "./EnhancedTableToolbar";
+import { createMsButtons } from "./createMsButtons";
 import RunPage from "./RunPage";
 
 type RowData = SerializeFrom<PublicJobRun>;
@@ -91,6 +90,10 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
 ];
 
+const { ToolbarWrapper, MsButtons } = createMsButtons({
+  formAction: "/runs?index",
+});
+
 export default function RunsTable({
   runs,
 }: SerializeFrom<{
@@ -111,58 +114,18 @@ export default function RunsTable({
     />
   );
 }
+export const action: ActionFunction = async ({ request }) => {
+  const fd = await request.formData();
+  const action = z
+    .union([z.literal("delete"), z.literal("placeholder")])
+    .parse(fd.get("action"));
+  const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
 
-const [useMsActions, MsActionsProvider] = createContext(
-  (props: { onDelete: () => void }) => props.onDelete,
-  "MsActions"
-);
-
-function ToolbarWrapper({ children }: { children: React.ReactNode }) {
-  const { table, setRowSelection, setPage } = useTable();
-  const fetcher = useFetcher<{ deletedIds: number[] }>();
-
-  const deleteRun = () => {
-    const formData = new FormData();
-    const selectedIds: string[] = [];
-    const selectedIndexes: number[] = [];
-
-    table.getSelectedRowModel().rows.forEach(({ original: { id }, index }) => {
-      selectedIds.push(id);
-      selectedIndexes.push(index);
-    });
-
-    selectedIds.forEach((selected) => {
-      formData.append("run", String(selected));
-    });
-    formData.set("action", "delete");
-    setPage(0);
-    setRowSelection(
-      produce((ob) => {
-        selectedIndexes.forEach((index) => {
-          delete ob[index];
-        });
-      })
-    );
-    fetcher.submit(formData, { method: "post", action: "/runs?index" });
-  };
-
-  return <MsActionsProvider onDelete={deleteRun}>{children}</MsActionsProvider>;
-}
-
-function MsButtons() {
-  const deleteRun = useMsActions();
-  return (
-    <>
-      <Button
-        variant="text"
-        color="inherit"
-        data-testid="ms-delete"
-        onClick={() => {
-          deleteRun();
-        }}
-      >
-        Delete
-      </Button>
-    </>
-  );
-}
+  if (action === "delete") {
+    const deletedIds = await scheduler.deleteRuns(selected);
+    return json(deletedIds);
+  }
+  return json({
+    success: true,
+  });
+};

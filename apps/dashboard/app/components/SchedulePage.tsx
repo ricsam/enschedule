@@ -6,10 +6,15 @@ import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
-import type { SerializeFrom } from "@remix-run/node";
+import type { ActionFunction, SerializeFrom } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import type { Params } from "@remix-run/react";
 import { Form, Link } from "@remix-run/react";
+import { z } from "zod";
 import { ReadOnlyEditor } from "~/components/Editor";
+import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
+import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
 
 export default function SchedulePage({
@@ -135,23 +140,57 @@ export default function SchedulePage({
   );
 }
 
-export function Actions() {
+export function Actions({
+  action,
+  runRedirect,
+}: {
+  action: string;
+  runRedirect: string;
+}) {
   return (
     <>
       <Box display="flex" gap={2}>
-        <Form method="post">
+        <Form method="post" action={action}>
           <Button type="submit" variant="outlined">
             Delete
           </Button>
           <input type="hidden" name="action" value="delete" />
         </Form>
-        <Form method="post">
+        <Form method="post" action={action}>
           <Button type="submit" variant="contained" data-testid="run-now">
             Run now
           </Button>
           <input type="hidden" name="action" value="run" />
+          <input type="hidden" name="redirect" value={runRedirect} />;
         </Form>
       </Box>
     </>
   );
 }
+
+export const getScheduleId = (params: Params<string>): number => {
+  const scheduleId = params.scheduleId;
+  const id = Number(scheduleId);
+  if (Number.isNaN(id)) {
+    throw new Error("invalid id");
+  }
+  return id;
+};
+
+export const action: ActionFunction = async (arg) => {
+  const { request, params } = arg;
+  const fd = await request.formData();
+  const action = z
+    .union([z.literal("delete"), z.literal("run")])
+    .parse(fd.get("action"));
+
+  const id = getScheduleId(params);
+  if (action === "run") {
+    const redirectTo = z.string().parse(fd.get('redirect'))
+    await scheduler.runSchedule(id);
+    return redirect(redirectTo);
+  } else {
+    await scheduler.deleteSchedule(id);
+    return redirect(getParentUrl(request.url));
+  }
+};

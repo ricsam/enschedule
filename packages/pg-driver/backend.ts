@@ -432,13 +432,13 @@ export class PrivateBackend {
 
     return publicRun;
   }
-  public async deleteRuns(runIds: number[]): Promise<{ deletedIds: number[] }> {
+  public async deleteRuns(runIds: number[]): Promise<number[]> {
     await Run.destroy({
       where: {
         id: runIds,
       },
     });
-    return { deletedIds: runIds };
+    return runIds;
   }
   public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
     const schedule = await Schedule.findByPk(id, {
@@ -459,6 +459,9 @@ export class PrivateBackend {
       .map((def) => createPublicJobDefinition(def));
   }
   public async getSchedules(definitionId?: string) {
+    if (definitionId) {
+      this.getJobDefinition(definitionId);
+    }
     const dbSchedules = await this.getDbSchedules();
     return dbSchedules
       .filter((schedule) => {
@@ -817,6 +820,19 @@ export class PrivateBackend {
   }
   public async deleteSchedules(scheduleIds: number[]) {
     await Schedule.destroy({ where: { id: scheduleIds } });
+    return scheduleIds;
+  }
+  public async deleteSchedule(scheduleId: number) {
+    const schedule = await Schedule.findByPk(scheduleId);
+    if (!schedule) {
+      throw new Error("invalid scheduleId");
+    }
+    const jobDef = this.getJobDef(schedule.target);
+    const publicSchedule = createPublicJobSchedule(schedule, jobDef);
+
+    await schedule.destroy();
+
+    return publicSchedule;
   }
 }
 

@@ -11,24 +11,18 @@ import RunPage from "~/components/RunPage";
 import { scheduler } from "~/scheduler.server";
 import type { Breadcrumb } from "~/types";
 import { formatDate } from "~/utils/formatDate";
+import { getParentUrl } from "../../utils/getParentUrl";
 
 export const action: ActionFunction = async ({ request }) => {
   const fd = await request.formData();
-  const url = new URL(request.url);
-  if (url.pathname !== "/") {
-    url.pathname = url.pathname
-      .replace(/\/$/, "")
-      .split("/")
-      .slice(0, -1)
-      .join("/");
-  }
+  const url = getParentUrl(request.url);
   const id = z
     .number()
     .int()
     .positive()
     .parse(Number(fd.get("id")));
   await scheduler.deleteRun(id);
-  return redirect(url.toString());
+  return redirect(url);
 };
 
 function Actions({ id }: { id: number }) {

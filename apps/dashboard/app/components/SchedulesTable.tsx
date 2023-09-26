@@ -2,12 +2,16 @@ import type { PublicJobSchedule } from "@enschedule/types";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import MuiLink from "@mui/material/Link";
-import type { SerializeFrom } from "@remix-run/node";
-import { Link as RemixLink, useFetcher } from "@remix-run/react";
+import type { ActionFunction, SerializeFrom } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
+import assert from "assert";
+import { z } from "zod";
+import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
-import { useTable } from "./EnhancedTableToolbar";
+import { createMsButtons } from "./createMsButtons";
 import { ExpandableTable } from "./Table";
 
 export type RowData = SerializeFrom<PublicJobSchedule>;
@@ -74,6 +78,35 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
 ];
 
+const { ToolbarWrapper, MsButtons } = createMsButtons({
+  formAction: "/schedules?index",
+  Buttons: ({ submit }) => {
+    return (
+      <>
+        <Button variant="text" color="inherit">
+          Edit data
+        </Button>
+        <Button variant="text" color="inherit">
+          Unschedule
+        </Button>
+        <Button
+          variant="text"
+          color="inherit"
+          onClick={() => {
+            submit("run");
+          }}
+        >
+          Run
+        </Button>
+        <Box
+          borderRight={(theme) => `thin solid ${theme.palette.divider}`}
+          height={32}
+        />
+      </>
+    );
+  },
+});
+
 export default function SchedulesTable({
   schedules,
 }: {
@@ -88,6 +121,7 @@ export default function SchedulesTable({
             desc: true,
           },
         ]}
+        ToolbarWrapper={ToolbarWrapper}
         id="SchedulesTable"
         rows={schedules}
         title="Schedules"
@@ -98,52 +132,26 @@ export default function SchedulesTable({
   );
 }
 
-function MsButtons() {
-  const { table } = useTable();
-  const fetcher = useFetcher();
-
-  const submit = (action: "delete" | "run") => {
-    const formData = new FormData();
-    formData.set("action", action);
-    const selected = table
-      .getSelectedRowModel()
-      .rows.map(({ original: { id } }) => id);
-    selected.forEach((selected) => {
-      formData.append("schedule", String(selected));
-    });
-    fetcher.submit(formData, { method: "post", action: "/schedules?index" });
-  };
-
-  return (
-    <>
-      <Button variant="text" color="inherit">
-        Edit data
-      </Button>
-      <Button variant="text" color="inherit">
-        Unschedule
-      </Button>
-      <Button
-        variant="text"
-        color="inherit"
-        onClick={() => {
-          submit("run");
-        }}
-      >
-        Run
-      </Button>
-      <Box
-        borderRight={(theme) => `thin solid ${theme.palette.divider}`}
-        height={32}
-      />
-      <Button
-        variant="text"
-        color="inherit"
-        onClick={() => {
-          submit("delete");
-        }}
-      >
-        Delete
-      </Button>
-    </>
+export const action: ActionFunction = async ({ request }) => {
+  const fd = await request.formData();
+  assert(
+    fd.has("schedule"),
+    "you must provide schedule field in the form data"
   );
-}
+  const action = z
+    .union([z.literal("delete"), z.literal("run")])
+    .parse(fd.get("action"));
+  const selected = z
+    .array(z.number().int())
+    .parse(fd.getAll("id").map(Number));
+  if (action === "run") {
+    await Promise.all(
+      selected.map(async (id) => {
+        return scheduler.runSchedule(id);
+      })
+    );
+  } else if (action === "delete") {
+    await scheduler.deleteSchedules(selected);
+  }
+  return json({ success: true });
+};

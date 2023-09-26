@@ -1,28 +1,18 @@
 import type { PublicJobSchedule } from "@enschedule/types";
-import type {
-  ActionFunction,
-  LoaderFunction,
-  SerializeFrom
-} from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
-import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
-import SchedulePage, { Actions } from "~/components/SchedulePage";
+import SchedulePage, {
+  Actions,
+  getScheduleId,
+} from "~/components/SchedulePage";
 import { scheduler } from "~/scheduler.server";
 import type { Breadcrumb } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
-
-const getScheduleId = (params: Params<string>): number => {
-  const scheduleId = params.scheduleId;
-  const id = Number(scheduleId);
-  if (Number.isNaN(id)) {
-    throw new Error("invalid id");
-  }
-  return id;
-};
+export { action } from "~/components/SchedulePage";
 
 export const getLoaderData = async (params: Params) => {
   const id = getScheduleId(params);
@@ -55,29 +45,12 @@ export const useBreadcrumbs = (
   ]);
 };
 
-export const action: ActionFunction = async ({ request, params }) => {
-  const fd = await request.formData();
-  const action = z
-    .union([z.literal("delete"), z.literal("run")])
-    .parse(fd.get("action"));
-
-  if (action === "run") {
-    const id = getScheduleId(params);
-    await scheduler.runSchedule(id);
-    return redirect(request.url);
-  } else {
-    // const id = getScheduleId(params);
-    // TODO delete
-    return redirect("..");
-  }
-};
-
 export function Page() {
   const { schedule, runs } = useLoaderData<LoaderData>();
   return <SchedulePage schedule={schedule} runs={runs} />;
 }
 
-export const useNavbar = () => {
+export const useNavbar = (action: string, runRedirect: string) => {
   const data = useData();
 
   return {
@@ -93,7 +66,7 @@ export const useNavbar = () => {
         to: `/schedules/${data.schedule.id}/runs`,
       },
     ],
-    actions: <Actions />,
+    actions: <Actions action={action} runRedirect={runRedirect} />,
   };
 };
 
@@ -102,7 +75,7 @@ export default function Schedule() {
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
-      navbar={useNavbar()}
+      navbar={useNavbar("", "")}
     >
       <Page />
     </RootLayout>

@@ -191,9 +191,17 @@ export class WorkerAPI {
     const schedule = await this.request("GET", `/schedules/${id}`);
     return publicJobScheduleSchema.parse(schedule);
   }
+  
+  async deleteSchedule(id: number): Promise<PublicJobSchedule> {
+    const schedule = await this.request("DELETE", `/schedules/${id}`);
+    return publicJobScheduleSchema.parse(schedule);
+  }
 
-  async deleteSchedules(scheduleIds: number[]) {
-    return this.request("DELETE", "/schedules", { scheduleIds });
+  async deleteSchedules(scheduleIds: number[]): Promise<number[]> {
+    const response = await this.request("POST", "/delete-schedules", {
+      scheduleIds,
+    });
+    return z.array(z.number()).parse(response);
   }
 
   async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
@@ -211,16 +219,11 @@ export class WorkerAPI {
     return publicJobRunSchema.parse(run);
   }
 
-  async deleteRuns(runIds: number[]): Promise<{ deletedIds: number[] }> {
-    const response = await this.request("POST", "/runs", {
+  async deleteRuns(runIds: number[]): Promise<number[]> {
+    const response = await this.request("POST", "/delete-runs", {
       runIds,
-      action: "delete",
     });
-    return z
-      .object({
-        deletedIds: z.array(z.number()),
-      })
-      .parse(response);
+    return z.array(z.number()).parse(response);
   }
 
   async reset(): Promise<void> {

@@ -38,6 +38,20 @@ export class Worker extends PrivateBackend {
       res.status(200).json({ message: "Endpoint is healthy" });
     });
 
+    app.use((req, res, next) => {
+      log("Incoming", req.method, decodeURI(req.url));
+      res.on("finish", () => {
+        log(
+          "Outgoing",
+          req.method,
+          decodeURI(req.url),
+          res.statusCode,
+          res.statusMessage
+        );
+      });
+      next();
+    });
+
     app.use(apiKeyMiddleware);
     app.use(parseJsonBody());
 
@@ -95,15 +109,25 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.delete("/schedules", (req, res, next) => {
+    app.delete("/schedules/:id", (req, res, next) => {
+      const idSchema = z.number().int().positive();
+      const validatedId = idSchema.parse(Number(req.params.id));
+      this.deleteSchedule(validatedId)
+        .then((schedule) => {
+          res.json(schedule);
+        })
+        .catch(next);
+    });
+
+    app.post("/delete-schedules", (req, res, next) => {
       const idSchema = z.object({
         scheduleIds: z.array(z.number().int().positive()),
       });
       const { scheduleIds } = idSchema.parse(req.body);
 
       this.deleteSchedules(scheduleIds)
-        .then(() => {
-          res.status(200).send("Schedules deleted successfully");
+        .then((deletedIds) => {
+          res.json(deletedIds);
         })
         .catch(next);
     });
@@ -145,21 +169,17 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/runs", (req, res, next) => {
+    app.post("/delete-runs", (req, res, next) => {
       const idSchema = z.object({
         runIds: z.array(z.number().int().positive()),
-        action: z.literal("delete"),
       });
-      console.log(req.body, req.query, req.params);
-      const { runIds, action } = idSchema.parse(req.body);
+      const { runIds } = idSchema.parse(req.body);
 
-      if (action === "delete") {
-        this.deleteRuns(runIds)
-          .then(({ deletedIds }) => {
-            res.json({ deletedIds });
-          })
-          .catch(next);
-      }
+      this.deleteRuns(runIds)
+        .then((deletedIds) => {
+          res.json(deletedIds);
+        })
+        .catch(next);
     });
 
     app.post("/schedules/:id/runs", (req, res, next) => {
@@ -180,12 +200,6 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.use((req, res, next) => {
-      res.on("finish", () => {
-        log(req.method, decodeURI(req.url), res.statusCode, res.statusMessage);
-      });
-      next();
-    });
 
     const { port, hostname } = serveOptions;
     const server = http.createServer(app);

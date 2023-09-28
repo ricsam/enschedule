@@ -9,7 +9,7 @@ import SchedulePage, {
   getScheduleId,
 } from "~/components/SchedulePage";
 import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
+import type { Breadcrumb, NavBar } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
 export { action } from "~/components/SchedulePage";
@@ -45,12 +45,7 @@ export const useBreadcrumbs = (
   ]);
 };
 
-export function Page() {
-  const { schedule, runs } = useLoaderData<LoaderData>();
-  return <SchedulePage schedule={schedule} runs={runs} />;
-}
-
-export const useNavbar = (action: string, runRedirect: string) => {
+export const useNavbar = (action: string, runRedirect: string): NavBar => {
   const data = useData();
 
   return {
@@ -60,6 +55,10 @@ export const useNavbar = (action: string, runRedirect: string) => {
       {
         label: "Details",
         to: `/schedules/${data.schedule.id}`,
+        match: [
+          `/schedules/${data.schedule.id}`,
+          `/schedules/${data.schedule.id}/edit-details`,
+        ],
       },
       {
         label: "Runs",
@@ -70,14 +69,16 @@ export const useNavbar = (action: string, runRedirect: string) => {
   };
 };
 
-export default function Schedule() {
+export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
+  const { schedule, runs } = useLoaderData<LoaderData>();
+
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
       navbar={useNavbar("", "")}
     >
-      <Page />
+      <SchedulePage schedule={schedule} runs={runs} editDetails={editDetails} />
     </RootLayout>
   );
 }

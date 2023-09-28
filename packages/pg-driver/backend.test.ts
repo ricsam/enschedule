@@ -45,7 +45,6 @@ const jobData = {
 
 describe("backends", () => {
   it("should be able to connect to the database and select tasks", async () => {
-    
     const jobs = await backend.getDbSchedules();
     expect(jobs.length).toBe(0);
   });
@@ -414,6 +413,55 @@ describe("delete schedules", () => {
     expect(schedules.length).toBe(1);
     await backend.deleteSchedules(schedules.map((s) => Number(s.id)));
     expect((await backend.getDbSchedules()).length).toBe(0);
+  });
+});
+
+describe("update schedule", () => {
+  it("should be able to update a schedule", async () => {
+    backend.clearRegisteredJobs();
+    backend.registerJob(httpJobDeclaration());
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      jobData,
+      {
+        runAt: new Date(0),
+      }
+    );
+    expect(schedule.title).toBe("title");
+    await backend.updateSchedule({
+      id: schedule.id,
+      title: "hello",
+    });
+    await schedule.reload();
+    expect(schedule.title).toBe("hello");
+  });
+  it("should be able to unset the run now", async () => {
+    backend.clearRegisteredJobs();
+    backend.registerJob(httpJobDeclaration());
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      jobData,
+      {
+        runAt: new Date(0),
+      }
+    );
+    expect(schedule.runAt?.getTime()).toBe(0);
+    await backend.updateSchedule({
+      id: schedule.id,
+      runAt: new Date(1000),
+    });
+    await schedule.reload();
+    expect(schedule.runAt?.getTime()).toBe(1000);
+    await backend.updateSchedule({
+      id: schedule.id,
+      runAt: null,
+    });
+    await schedule.reload();
+    expect(schedule.runAt).toBe(null);
   });
 });
 

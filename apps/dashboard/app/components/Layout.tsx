@@ -99,9 +99,9 @@ export function RootLayout({
       <List>
         <ListItem disablePadding>
           <ListItemButton
-            to={'/settings'}
+            to={"/settings"}
             component={Link}
-            selected={pathname.startsWith('/settings')}
+            selected={pathname.startsWith("/settings")}
           >
             <ListItemText primary={"Settings"} />
           </ListItemButton>
@@ -115,6 +115,8 @@ export function RootLayout({
     typeof window !== "undefined" ? () => window.document.body : undefined;
 
   const location = useLocation();
+  const currentTab =
+    location.pathname !== "/" ? location.pathname.replace(/\/$/, "") : "/";
   return (
     <Box
       sx={{
@@ -257,13 +259,7 @@ export function RootLayout({
               </Box>
               <Box pt={3}></Box>
               {navbar.tabs && (
-                <Tabs
-                  value={
-                    location.pathname !== "/"
-                      ? location.pathname.replace(/\/$/, "")
-                      : "/"
-                  }
-                >
+                <Tabs value={currentTab}>
                   {navbar.tabs.map((tab) => (
                     <Tab
                       key={tab.to}
@@ -271,7 +267,7 @@ export function RootLayout({
                       LinkComponent={RemixLink}
                       to={tab.to}
                       component={RemixLink}
-                      value={tab.to}
+                      value={tab.match?.find((m) => m === currentTab) ?? tab.to}
                     />
                   ))}
                 </Tabs>

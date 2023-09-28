@@ -1,6 +1,10 @@
 import http from "node:http";
 import { PrivateBackend } from "@enschedule/pg-driver";
-import { OptionalDateSchema } from "@enschedule/types";
+import type { ScheduleUpdatePayload } from "@enschedule/types";
+import {
+  OptionalDateSchema,
+  ScheduleUpdatePayloadSchema,
+} from "@enschedule/types";
 import express from "express";
 import { z } from "zod";
 import { debug } from "debug";
@@ -149,6 +153,19 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
+    app.put("/schedules/:id", (req, res, next) => {
+      const updatePayload: ScheduleUpdatePayload =
+        ScheduleUpdatePayloadSchema.parse({
+          ...req.body,
+          id: Number(req.params.id),
+        });
+      this.updateSchedule(updatePayload)
+        .then((updatedSchedule) => {
+          res.json(updatedSchedule);
+        })
+        .catch(next);
+    });
+
     app.get("/runs/:id", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
@@ -199,7 +216,6 @@ export class Worker extends PrivateBackend {
         })
         .catch(next);
     });
-
 
     const { port, hostname } = serveOptions;
     const server = http.createServer(app);

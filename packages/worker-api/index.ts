@@ -8,11 +8,11 @@ import type {
   PublicJobRun,
   PublicJobSchedule,
   ScheduleJobOptions,
-} from "@enschedule/types";
+  ScheduleUpdatePayload} from "@enschedule/types";
 import {
   publicJobDefinitionSchema,
   publicJobRunSchema,
-  publicJobScheduleSchema,
+  publicJobScheduleSchema
 } from "@enschedule/types";
 import { debug } from "debug";
 import { z } from "zod";
@@ -47,17 +47,17 @@ export class WorkerAPI {
   }
 
   private async request(
-    method: "POST" | "DELETE",
+    method: "POST" | "PUT",
     path: string,
     data?: unknown
   ): Promise<unknown>;
   private async request(
-    method: "GET",
+    method: "GET" | "DELETE",
     path: string,
     data?: Record<string, string | number | boolean | undefined>
   ): Promise<unknown>;
   private async request(
-    method: "POST" | "DELETE" | "GET",
+    method: "POST" | "DELETE" | "GET" | "PUT",
     path: string,
     data?: Record<string, string | number | boolean | undefined>
   ) {
@@ -131,7 +131,7 @@ export class WorkerAPI {
           });
 
           req.on("error", reject);
-          if (data && method === "POST") {
+          if (data && (method === "POST" || method === "PUT")) {
             req.write(bodyString);
           }
           req.end();
@@ -191,7 +191,7 @@ export class WorkerAPI {
     const schedule = await this.request("GET", `/schedules/${id}`);
     return publicJobScheduleSchema.parse(schedule);
   }
-  
+
   async deleteSchedule(id: number): Promise<PublicJobSchedule> {
     const schedule = await this.request("DELETE", `/schedules/${id}`);
     return publicJobScheduleSchema.parse(schedule);
@@ -207,6 +207,17 @@ export class WorkerAPI {
   async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
     const runs = await this.request("GET", "/runs", { scheduleId });
     return z.array(publicJobRunSchema).parse(runs);
+  }
+
+  async updateSchedule(
+    updatePayload: ScheduleUpdatePayload
+  ): Promise<PublicJobSchedule> {
+    const schedule = await this.request(
+      "PUT",
+      `/schedules/${updatePayload.id}`,
+      updatePayload
+    );
+    return publicJobScheduleSchema.parse(schedule);
   }
 
   async getRun(id: number): Promise<PublicJobRun> {

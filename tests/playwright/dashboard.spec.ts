@@ -1,6 +1,8 @@
 import { test, expect, Page } from "@playwright/test";
-import { navigate, numRows } from "./utils";
+import { navigate, numRows, sleep } from "./utils";
 import { Setup } from "./setup";
+import format from "date-fns/format";
+import parseISO from "date-fns/parseISO";
 
 const setup = new Setup();
 
@@ -141,7 +143,7 @@ const reset = async (page: Page) => {
   expect(await numRows(page)).toBe(0);
 };
 
-const waitForNumRuns = async (page: Page, num: number) => {
+const waitForNumRows = async (page: Page, num: number) => {
   const TIMEOUT = 20000;
   const RETRY_DURATION = 5000;
   if ((await numRows(page)) !== num) {
@@ -173,7 +175,7 @@ test.describe("Single-Run", () => {
     }
 
     await page.goto(`${setup.dashboardUrl}/runs`);
-    await waitForNumRuns(page, 4);
+    await waitForNumRows(page, 4);
 
     // There should be 4 runs / schedules in the tables
     await page.goto(`${setup.dashboardUrl}/runs`);
@@ -220,7 +222,7 @@ test.describe("Multi runs", () => {
 
     await page.goto(runsTableUrls[0]); // /runs
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-    await waitForNumRuns(page, 11);
+    await waitForNumRows(page, 11);
     expect(await numRows(page)).toBe(11);
 
     const getPaginationText = async () => {
@@ -249,13 +251,13 @@ test.describe("Multi runs", () => {
 
     await page.getByTestId("table-row-1").getByRole("checkbox").click();
     await page.getByTestId("ms-delete").click();
-    await waitForNumRuns(page, 10);
+    await waitForNumRows(page, 10);
     expect(await getPaginationText()).toBe("1–10 of 10");
 
     await page.getByTestId("table-row-2").getByRole("checkbox").click();
     await page.getByTestId("table-row-3").getByRole("checkbox").click();
     await page.getByTestId("ms-delete").click();
-    await waitForNumRuns(page, 8);
+    await waitForNumRows(page, 8);
     expect(await numRows(page)).toBe(8);
   });
   test("Test multi delete on schedules", async ({ page }) => {
@@ -273,11 +275,11 @@ test.describe("Multi runs", () => {
       page,
       page.getByRole("tab", { name: "Runs" })
     );
-    await waitForNumRuns(page, 1);
+    await waitForNumRows(page, 1);
 
     await page.getByTestId("table-row-1").getByRole("checkbox").click();
     await page.getByTestId("ms-delete").click();
-    await waitForNumRuns(page, 0);
+    await waitForNumRows(page, 0);
     expect(await numRows(page)).toBe(0);
   });
   test("Test multi delete on definitions", async ({ page }) => {
@@ -305,11 +307,11 @@ test.describe("Multi runs", () => {
       page,
       page.getByRole("tab", { name: "Runs" })
     );
-    await waitForNumRuns(page, 1);
+    await waitForNumRows(page, 1);
 
     await page.getByTestId("table-row-1").getByRole("checkbox").click();
     await page.getByTestId("ms-delete").click();
-    await waitForNumRuns(page, 0);
+    await waitForNumRows(page, 0);
     expect(await numRows(page)).toBe(0);
   });
 });
@@ -341,14 +343,14 @@ test.describe("Single schedule", () => {
       await page.getByTestId("run-now").click();
 
       // make sure filtering works in the table
-      await waitForNumRuns(page, 4);
+      await waitForNumRows(page, 4);
       expect(await numRows(page)).toBe(4);
     };
     await createRuns(1);
     await createRuns(2);
     await page.goto(`${setup.dashboardUrl}/runs`);
     // main runs page should have 8 runs
-    await waitForNumRuns(page, 8);
+    await waitForNumRows(page, 8);
     expect(await numRows(page)).toBe(8);
     await navigate(
       setup.dashboardUrl,
@@ -372,14 +374,14 @@ test.describe("Single schedule", () => {
       page,
       page.getByRole("tab", { name: "Runs" })
     );
-    await waitForNumRuns(page, 4);
+    await waitForNumRows(page, 4);
     expect(await numRows(page)).toBe(4);
 
     // make sure run button works under the definition hierarchy as well
     await page.getByTestId("run-now").click();
 
     // make sure filtering works in the table
-    await waitForNumRuns(page, 5);
+    await waitForNumRows(page, 5);
     expect(await numRows(page)).toBe(5);
   });
   test("Delete schedule button", async ({ page }) => {
@@ -387,7 +389,7 @@ test.describe("Single schedule", () => {
     await createRun(page, 1);
     await createRun(page, 1);
     await page.goto(`${setup.dashboardUrl}/schedules`);
-    await waitForNumRuns(page, 2);
+    await waitForNumRows(page, 2);
     expect(await numRows(page)).toBe(2);
     await navigate(
       setup.dashboardUrl,
@@ -397,7 +399,7 @@ test.describe("Single schedule", () => {
     await page.getByTestId("delete-schedule").click();
     await page.waitForURL(/\/schedules\/?$/);
     await page.waitForSelector("div#SchedulesTable");
-    await waitForNumRuns(page, 1);
+    await waitForNumRows(page, 1);
     expect(await numRows(page)).toBe(1);
     await navigate(
       setup.dashboardUrl,
@@ -413,7 +415,7 @@ test.describe("Single schedule", () => {
       page,
       page.getByRole("tab", { name: "Schedules" })
     );
-    await waitForNumRuns(page, 1);
+    await waitForNumRows(page, 1);
     expect(await numRows(page)).toBe(1);
     await navigate(
       setup.dashboardUrl,
@@ -423,7 +425,114 @@ test.describe("Single schedule", () => {
     await page.getByTestId("delete-schedule").click();
     await page.waitForURL(/\/schedules\/?$/);
     await page.waitForSelector("div#SchedulesTable");
-    await waitForNumRuns(page, 0);
+    await waitForNumRows(page, 0);
     expect(await numRows(page)).toBe(0);
+  });
+});
+test.describe("Can update a schedule", () => {
+  test("Update title", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRows(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    expect(await page.getByTestId("schedule-title").innerText()).toBe(
+      "Test Title"
+    );
+    await page.getByTestId("edit-details").click();
+    await page
+      .getByTestId("edit-details-form")
+      .getByTestId("title-field")
+      .clear();
+    await page
+      .getByTestId("edit-details-form")
+      .getByTestId("title-field")
+      .click();
+    await page
+      .getByTestId("edit-details-form")
+      .getByTestId("title-field")
+      .type("hello");
+    await page.click(
+      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+    );
+    await page.waitForURL(/\/\d+\/?$/);
+    await page.reload();
+    expect(await page.getByTestId("schedule-title").innerText()).toBe("hello");
+  });
+  test("Update runAt", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRows(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+
+    let i = 0;
+    while (
+      (await page.getByTestId("number-of-runs").innerText()) !== "1" &&
+      i++ < 5
+    ) {
+      await page.reload();
+      await sleep(5000);
+    }
+    expect(await page.getByTestId("number-of-runs").innerText()).toBe("1");
+
+    await page.getByTestId("edit-details").click();
+
+    const runAtField = page
+      .getByTestId("edit-details-form")
+      .getByTestId("runAt-field");
+    await runAtField.clear();
+
+    const now = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
+    await runAtField.fill(now);
+
+    await page.click(
+      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+    );
+    await page.waitForURL(/\/\d+\/?$/);
+    await page.reload();
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+    await waitForNumRows(page, 2);
+    expect(await numRows(page)).toBe(2);
+  });
+  test("Unschedule", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRows(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+
+    await page.getByTestId("edit-details").click();
+
+    await page
+      .getByTestId("edit-details-form")
+      .getByTestId("unschedule")
+      .click();
+
+    await page.click(
+      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+    );
+    await page.waitForURL(/\/\d+\/?$/);
+    await page.reload();
+    await page.getByTestId("no-run-at-edit").click();
   });
 });

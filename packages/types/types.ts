@@ -90,3 +90,34 @@ export interface ScheduleJobOptions {
   title: string;
   description: string;
 }
+
+export const scheduleUpdatePayloadSchema = z.object({
+  id: z.number().int().positive(),
+  runAt: z
+    .union([
+      z.date(),
+      z.string().refine((dateString) => {
+        return (
+          dateString.includes("Z") ||
+          dateString.includes("+") ||
+          dateString.includes("−") || // https://en.wikipedia.org/wiki/Minus_sign
+          dateString.includes("-") //    https://en.wikipedia.org/wiki/Hyphen-minus
+        );
+      }),
+    ])
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (typeof value === "string") {
+        return new Date(value);
+      }
+      if (value instanceof Date) {
+        return value;
+      }
+      return value;
+    }),
+  title: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export type ScheduleUpdatePayload = z.infer<typeof scheduleUpdatePayloadSchema>;

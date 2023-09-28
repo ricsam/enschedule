@@ -1,15 +1,21 @@
 import type { PublicJobRun, PublicJobSchedule } from "@enschedule/types";
+import { DialogContent, TextField } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
 import MuiLink from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { Form, Link } from "@remix-run/react";
+import { Form, Link, useNavigate } from "@remix-run/react";
+import format from "date-fns/format";
+import parseISO from "date-fns/parseISO";
+import React from "react";
 import { z } from "zod";
 import { ReadOnlyEditor } from "~/components/Editor";
 import { scheduler } from "~/scheduler.server";
@@ -17,14 +23,207 @@ import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
 
+export const editDetailsAction: ActionFunction = async ({
+  request,
+  params,
+}) => {
+  const scheduleId = getScheduleId(params);
+  const schedule = await scheduler.getSchedule(scheduleId);
+  const fd = await request.formData();
+  const scheduleUpdatePayload: Record<string, null | string> = {};
+  const init = {
+    runAt: schedule.runAt ? normalizeDate(schedule.runAt.toJSON()) : "",
+    description: schedule.description,
+    title: schedule.title,
+  };
+  const runAt = z.string().parse(fd.get("runAt"));
+  const description = z.string().parse(fd.get("description"));
+  const title = z.string().parse(fd.get("title"));
+  let updated = false;
+  if (init.runAt !== runAt) {
+    scheduleUpdatePayload.runAt = runAt === "" ? null : runAt;
+    updated = true;
+  }
+  if (init.description !== description) {
+    scheduleUpdatePayload.description = description;
+    updated = true;
+  }
+  if (init.title !== title) {
+    scheduleUpdatePayload.title = title;
+    updated = true;
+  }
+  if (updated) {
+    await scheduler.updateSchedule({
+      id: scheduleId,
+      ...scheduleUpdatePayload,
+    });
+  }
+  return redirect(getParentUrl(request.url));
+};
+
+const dateToLocal = (dt: string) => {
+  const date = parseISO(dt);
+  return format(date, "yyyy-MM-dd'T'HH:mm:ss");
+};
+
+/**
+ * ### 3 step conversion:
+ * 1. utc   2023-09-26T18:30:18.381Z
+ * 2. local 2023-09-26T20:30:18
+ * 3. utc   2023-09-26T18:30:18.000Z
+ */
+const normalizeDate = (input: string) => {
+  if (!input) {
+    return undefined;
+  }
+  const localTime = dateToLocal(input);
+  return parseISO(localTime).toJSON();
+};
+function EditForm({
+  schedule,
+  onClose,
+}: {
+  schedule: SerializeFrom<PublicJobSchedule>;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = React.useState(schedule.title);
+  const [description, setDescription] = React.useState(schedule.description);
+  const initScheduledFor = schedule.runAt
+    ? normalizeDate(schedule.runAt)
+    : undefined;
+  const [scheduledFor, setScheduledFor] = React.useState(initScheduledFor);
+  const dateInputValue = scheduledFor ? dateToLocal(scheduledFor) : "";
+
+  const formValues: Record<string, string | null> = {};
+  if (title !== schedule.title) {
+    formValues.title = title;
+  }
+  if (description !== schedule.description) {
+    formValues.description = description;
+  }
+  if (scheduledFor !== initScheduledFor) {
+    formValues.runAt = scheduledFor ?? null;
+  }
+  const canSubmit = Object.values(formValues).length > 0;
+
+  return (
+    <Form action="" method="post" data-testid="edit-details-form">
+      <Box
+        pt={1}
+        sx={{
+          "& > *": {
+            my: "8px !important",
+          },
+        }}
+      >
+        <TextField
+          label="Title"
+          fullWidth
+          value={title}
+          onChange={(ev) => setTitle(ev.target.value)}
+          name="title"
+          inputProps={{
+            "data-testid": "title-field",
+          }}
+        ></TextField>
+        <TextField
+          label="Description"
+          fullWidth
+          value={description}
+          onChange={(ev) => setDescription(ev.target.value)}
+          name="description"
+        ></TextField>
+
+        <Box sx={{ display: "flex", alignItems: "flex-end" }} gap={0.5}>
+          <input type="hidden" value={scheduledFor ?? ""} name="runAt" />
+          <TextField
+            InputLabelProps={{ shrink: true }}
+            label="Next run (local time)"
+            type="datetime-local"
+            fullWidth
+            value={dateInputValue}
+            onChange={(ev) => {
+              return setScheduledFor(parseISO(ev.target.value).toJSON());
+            }}
+            inputProps={{
+              "data-testid": "runAt-field",
+            }}
+          ></TextField>
+          <Box
+            sx={{
+              flexShrink: 0,
+              height: "56px",
+              display: "flex",
+              alignItems: "stretch",
+              width: "140px",
+            }}
+          >
+            {!scheduledFor && "runAt" in formValues ? (
+              <Button
+                size="large"
+                variant="text"
+                color="inherit"
+                fullWidth
+                onClick={() => {
+                  setScheduledFor(initScheduledFor);
+                }}
+              >
+                Reset
+              </Button>
+            ) : (
+              <Button
+                size="large"
+                fullWidth
+                variant="text"
+                color="inherit"
+                disabled={!scheduledFor}
+                onClick={() => {
+                  setScheduledFor(undefined);
+                }}
+                data-testid="unschedule"
+              >
+                Unschedule
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Box>
+      <Box display="flex" justifyContent="flex-end" gap={1} pt={2}>
+        <Button
+          variant="text"
+          onClick={() => {
+            onClose();
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          disabled={!canSubmit}
+          type="submit"
+          data-testid="submit"
+        >
+          Save
+        </Button>
+      </Box>
+    </Form>
+  );
+}
+
 export default function SchedulePage({
   schedule,
   runs,
+  editDetails,
 }: SerializeFrom<{
   schedule: PublicJobSchedule;
   runs: PublicJobRun[];
+  editDetails?: boolean;
 }>) {
   const lastRun = schedule.lastRun;
+  const navigate = useNavigate();
+  const goBack = () => {
+    navigate("../", { relative: "path", preventScrollReset: true });
+  };
 
   return (
     <Box>
@@ -43,16 +242,30 @@ export default function SchedulePage({
               Details
             </Typography>
             <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
-              {schedule.runAt ? (
-                <>
-                  <Typography color="text.secondary">Next run</Typography>
-                  <Typography color="text.primary">
-                    {formatDate(new Date(schedule.runAt), false).label}
-                  </Typography>
-                </>
-              ) : null}
+              <Typography color="text.secondary">Next run</Typography>
+              <Typography color="text.primary">
+                {schedule.runAt ? (
+                  formatDate(new Date(schedule.runAt), false).label
+                ) : (
+                  <>
+                    Not scheduled, click{" "}
+                    <MuiLink
+                      data-testid="no-run-at-edit"
+                      component={Link}
+                      to="edit-details"
+                      preventScrollReset
+                      underline="hover"
+                    >
+                      here
+                    </MuiLink>{" "}
+                    to schedule
+                  </>
+                )}
+              </Typography>
               <Typography color="text.secondary">Title</Typography>
-              <Typography color="text.primary">{schedule.title}</Typography>
+              <Typography color="text.primary" data-testid="schedule-title">
+                {schedule.title}
+              </Typography>
               <Typography color="text.secondary">Description</Typography>
               <Typography color="text.primary">
                 {schedule.description}
@@ -85,13 +298,36 @@ export default function SchedulePage({
                   : "-"}
               </Typography>
               <Typography color="text.secondary">Number of runs</Typography>
-              <Typography color="text.primary">{schedule.numRuns}</Typography>
+              <Typography color="text.primary" data-testid="number-of-runs">
+                {schedule.numRuns}
+              </Typography>
             </Box>
           </CardContent>
           <CardActions>
-            <Button>Update</Button>
+            <Button
+              component={Link}
+              LinkComponent={Link}
+              to="edit-details"
+              preventScrollReset
+              data-testid="edit-details"
+            >
+              Update
+            </Button>
           </CardActions>
         </Card>
+
+        <Dialog
+          onClose={() => {
+            goBack();
+          }}
+          open={!!editDetails}
+        >
+          <DialogTitle>Update details</DialogTitle>
+          <DialogContent>
+            <EditForm schedule={schedule} onClose={goBack} />
+          </DialogContent>
+        </Dialog>
+
         <Card
           sx={{
             flex: 1,
@@ -120,7 +356,7 @@ export default function SchedulePage({
             </Box>
           </CardContent>
           <CardActions>
-            <Button>Update</Button>
+            <Button>Save</Button>
           </CardActions>
         </Card>
       </Box>
@@ -130,10 +366,16 @@ export default function SchedulePage({
           <Box py={3}>
             <Typography variant="h5">Last run</Typography>
             <Typography variant="body1" color="text.secondary">
-              This is the last run, run number{" "}
-              {runs.findIndex((run) => run.id === lastRun.id) + 1}. To see
-              previous run click{" "}
-              <MuiLink component={Link} to="/" underline="hover">
+              This is the last run,{" "}
+              <MuiLink
+                component={Link}
+                to={`runs/${lastRun.id}`}
+                underline="hover"
+              >
+                Run #{lastRun.id}
+              </MuiLink>
+              . To see all previous runs click{" "}
+              <MuiLink component={Link} to="runs" underline="hover">
                 here
               </MuiLink>
               .
@@ -171,7 +413,7 @@ export function Actions({
             Run now
           </Button>
           <input type="hidden" name="action" value="run" />
-          <input type="hidden" name="redirect" value={runRedirect} />;
+          <input type="hidden" name="redirect" value={runRedirect} />
         </Form>
       </Box>
     </>

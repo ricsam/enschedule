@@ -4,6 +4,7 @@ import type {
   PublicJobRun,
   PublicJobSchedule,
   ScheduleJobOptions,
+  ScheduleUpdatePayload,
   SerializedRun,
 } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
@@ -132,7 +133,7 @@ class Schedule extends Model<
   declare createdAt: CreationOptional<Date>;
   declare title: string;
   declare description: string;
-  /** job definition target */
+  /** job definition target, i.e. the definition that the schedule executes */
   declare target: string;
   declare cronExpression?: CreationOptional<string> | null;
   declare eventId?: CreationOptional<string> | null;
@@ -604,14 +605,7 @@ export class PrivateBackend {
       },
       {
         limit: this.maxJobsPerTick,
-        returning: [
-          "id",
-          "target",
-          "data",
-          "cronExpression",
-          "runAt",
-          "numRuns",
-        ],
+        returning: true,
         where: {
           target: {
             [Op.any]: jobKeys,
@@ -682,6 +676,35 @@ export class PrivateBackend {
       },
     });
     return createPublicJobRun(run, schedule, this.getJobDef(schedule.target));
+  }
+
+  public async updateSchedule(updatePayload: ScheduleUpdatePayload) {
+    const schedule = await Schedule.findByPk(updatePayload.id);
+    if (!schedule) {
+      throw new Error("invalid id in ScheduleUpdatePayload");
+    }
+    let updated = false;
+    if (typeof updatePayload.description === "string") {
+      schedule.description = updatePayload.description;
+      updated = true;
+    }
+    if (typeof updatePayload.title === "string") {
+      schedule.title = updatePayload.title;
+      updated = true;
+    }
+    if (updatePayload.runAt === null) {
+      schedule.runAt = null;
+      schedule.claimed = true;
+      updated = true;
+    } else if (updatePayload.runAt instanceof Date) {
+      schedule.runAt = updatePayload.runAt;
+      schedule.claimed = false;
+      updated = true;
+    }
+    if (updated) {
+      await schedule.save();
+    }
+    return createPublicJobSchedule(schedule, this.getJobDef(schedule.target));
   }
 
   private async runDbSchedule(schedule: Schedule) {

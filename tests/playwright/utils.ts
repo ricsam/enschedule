@@ -29,3 +29,11 @@ export async function numRows(page: Page) {
     );
   }
 }
+
+export const sleep = async (ms: number) => {
+  await new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+};

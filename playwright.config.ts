@@ -24,7 +24,7 @@ export default defineConfig({
     process.env.SKIP_SETUP || process.env.TEST_HELM
       ? 1
       : process.env.CI
-      ? 4
+      ? 1
       : 10,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [

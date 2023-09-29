@@ -430,86 +430,99 @@ test.describe("Single schedule", () => {
   });
 });
 test.describe("Can update a schedule", () => {
-  test("Update title", async ({ page }) => {
-    await reset(page);
-    await createRun(page, 1);
-    await page.goto(`${setup.dashboardUrl}/schedules`);
-    await waitForNumRows(page, 1);
-    expect(await numRows(page)).toBe(1);
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByTestId("table-row-1").getByTestId("schedule-link")
-    );
-    expect(await page.getByTestId("schedule-title").innerText()).toBe(
-      "Test Title"
-    );
-    await page.getByTestId("edit-details").click();
-    await page
-      .getByTestId("edit-details-form")
-      .getByTestId("title-field")
-      .clear();
-    await page
-      .getByTestId("edit-details-form")
-      .getByTestId("title-field")
-      .click();
-    await page
-      .getByTestId("edit-details-form")
-      .getByTestId("title-field")
-      .type("hello");
-    await page.click(
-      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
-    );
-    await page.waitForURL(/\/\d+\/?$/);
-    await page.reload();
-    expect(await page.getByTestId("schedule-title").innerText()).toBe("hello");
-  });
-  test("Update runAt", async ({ page }) => {
-    await reset(page);
-    await createRun(page, 1);
-    await page.goto(`${setup.dashboardUrl}/schedules`);
-    await waitForNumRows(page, 1);
-    expect(await numRows(page)).toBe(1);
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByTestId("table-row-1").getByTestId("schedule-link")
-    );
-
-    let i = 0;
-    while (
-      (await page.getByTestId("number-of-runs").innerText()) !== "1" &&
-      i++ < 5
-    ) {
+  const updateScheduleTests = () => {
+    test("Update title", async ({ page }) => {
+      expect(await page.getByTestId("schedule-title").innerText()).toBe(
+        "Test Title"
+      );
+      await page.getByTestId("edit-details").click();
+      await page
+        .getByTestId("edit-details-form")
+        .getByTestId("title-field")
+        .clear();
+      await page
+        .getByTestId("edit-details-form")
+        .getByTestId("title-field")
+        .click();
+      await page
+        .getByTestId("edit-details-form")
+        .getByTestId("title-field")
+        .type("hello");
+      await page.click(
+        `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+      );
+      await page.waitForURL(/\/\d+\/?$/);
       await page.reload();
-      await sleep(5000);
-    }
-    expect(await page.getByTestId("number-of-runs").innerText()).toBe("1");
+      expect(await page.getByTestId("schedule-title").innerText()).toBe(
+        "hello"
+      );
+    });
+    test("Update runAt", async ({ page }) => {
+      let i = 0;
+      while (
+        (await page.getByTestId("number-of-runs").innerText()) !== "1" &&
+        i++ < 5
+      ) {
+        await page.reload();
+        await sleep(5000);
+      }
+      expect(await page.getByTestId("number-of-runs").innerText()).toBe("1");
 
-    await page.getByTestId("edit-details").click();
+      await page.getByTestId("edit-details").click();
 
-    const runAtField = page
-      .getByTestId("edit-details-form")
-      .getByTestId("runAt-field");
-    await runAtField.clear();
+      const runAtField = page
+        .getByTestId("edit-details-form")
+        .getByTestId("runAt-field");
+      await runAtField.clear();
 
-    const now = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
-    await runAtField.fill(now);
+      const now = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
+      await runAtField.fill(now);
 
-    await page.click(
-      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
-    );
-    await page.waitForURL(/\/\d+\/?$/);
-    await page.reload();
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByRole("tab", { name: "Runs" })
-    );
-    await waitForNumRows(page, 2);
-    expect(await numRows(page)).toBe(2);
-  });
-  test("Unschedule", async ({ page }) => {
+      await page.click(
+        `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+      );
+      await page.waitForURL(/\/\d+\/?$/);
+      await page.reload();
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByRole("tab", { name: "Runs" })
+      );
+      await waitForNumRows(page, 2);
+      expect(await numRows(page)).toBe(2);
+    });
+    test("Unschedule", async ({ page }) => {
+      await page.getByTestId("edit-details").click();
+
+      await page
+        .getByTestId("edit-details-form")
+        .getByTestId("unschedule")
+        .click();
+
+      await page.click(
+        `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+      );
+      await page.waitForURL(/\/\d+\/?$/);
+      await page.reload();
+      await page.getByTestId("no-run-at-edit").click();
+    });
+    test("Update data", async ({ page }) => {
+      await page.click(".mtk5.detected-link");
+
+      await page.keyboard.type("123");
+
+      expect(await page.innerText(".mtk5.detected-link")).toBe(
+        "http://loc123alhost:3000"
+      );
+      await page.getByTestId("submit-edit-data").click();
+      await page.waitForResponse(/edit-details/);
+      await page.reload();
+      expect(await page.innerText(".mtk5.detected-link")).toBe(
+        "http://loc123alhost:3000"
+      );
+    });
+  };
+  test.beforeEach(async ({ page }) => {
     await reset(page);
     await createRun(page, 1);
     await page.goto(`${setup.dashboardUrl}/schedules`);
@@ -520,59 +533,26 @@ test.describe("Can update a schedule", () => {
       page,
       page.getByTestId("table-row-1").getByTestId("schedule-link")
     );
-
-    await page.getByTestId("edit-details").click();
-
-    await page
-      .getByTestId("edit-details-form")
-      .getByTestId("unschedule")
-      .click();
-
-    await page.click(
-      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
-    );
-    await page.waitForURL(/\/\d+\/?$/);
-    await page.reload();
-    await page.getByTestId("no-run-at-edit").click();
   });
-  test("Update data", async ({ page }) => {
-    await reset(page);
-    await createRun(page, 1);
-    await page.goto(`${setup.dashboardUrl}/schedules`);
-    await waitForNumRows(page, 1);
-    expect(await numRows(page)).toBe(1);
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByTestId("table-row-1").getByTestId("schedule-link")
-    );
-
-    await page.click(".mtk5.detected-link");
-
-    await page.keyboard.type("123");
-
-    expect(await page.innerText(".mtk5.detected-link")).toBe(
-      "http://loc123alhost:3000"
-    );
-
-    await page.getByTestId("submit-edit-data").click();
-    await page.waitForResponse(/edit-details/);
-    await page.reload();
-    expect(await page.innerText(".mtk5.detected-link")).toBe(
-      "http://loc123alhost:3000"
-    );
-
-    // await page.getByTestId("edit-details").click();
-
-    // await page
-    //   .getByTestId("edit-details-form")
-    //   .getByTestId("unschedule")
-    //   .click();
-
-    // await page.click(
-    //   `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
-    // );
-    // await page.waitForURL(/\/\d+\/?$/);
-    // await page.getByTestId("no-run-at-edit").click();
+  test.describe("Can update on /schedules/$scheduleId", updateScheduleTests);
+  test.describe("Can update on /definitions/$definitionId/schedules/$scheduleId", () => {
+    test.beforeEach(async ({ page }) => {
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByTestId("definition-link")
+      );
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByRole("tab", { name: "Schedules" })
+      );
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByTestId("table-row-1").getByTestId("schedule-link")
+      );
+    });
+    updateScheduleTests();
   });
 });

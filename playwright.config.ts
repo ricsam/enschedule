@@ -12,15 +12,20 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/playwright",
   /* Run tests in files in parallel */
-  fullyParallel: process.env.TEST_HELM ? false : true,
+  fullyParallel: process.env.SKIP_SETUP || process.env.TEST_HELM ? false : true,
   // fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   // retries: 0, // fail if there are flakyness
-  retries: process.env.CI && process.env.TEST_HELM ? 3 : 0,
+  retries: process.env.CI && process.env.TEST_HELM ? 3 : 2,
   /* Opt out of parallel tests on CI. */
-  // workers: process.env.CI ? 1 : undefined,
+  workers:
+    process.env.SKIP_SETUP || process.env.TEST_HELM
+      ? 1
+      : process.env.CI
+      ? 4
+      : 10,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     [
@@ -39,7 +44,7 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     // trace: "on-first-retry",
-    trace: process.env.TEST_HELM ? "on-first-retry" : "on",
+    trace: "on-first-retry",
   },
 
   /* Configure projects for major browsers */

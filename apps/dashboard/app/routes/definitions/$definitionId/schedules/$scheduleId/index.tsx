@@ -53,11 +53,6 @@ export const useBreadcrumbs = (
 
 export { action } from "~/components/SchedulePage";
 
-export function Page() {
-  const { schedule, runs } = useLoaderData<LoaderData>();
-  return <SchedulePage schedule={schedule} runs={runs} />;
-}
-
 export const useNavbar = (action: string, runRedirect: string) => {
   const data = useData();
 
@@ -78,14 +73,15 @@ export const useNavbar = (action: string, runRedirect: string) => {
   };
 };
 
-export default function Schedule() {
+export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
+  const { schedule, runs } = useLoaderData<LoaderData>();
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
       navbar={useNavbar("", "")}
     >
-      <Page />
+      <SchedulePage schedule={schedule} runs={runs} editDetails={editDetails} />
     </RootLayout>
   );
 }

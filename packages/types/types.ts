@@ -117,6 +117,7 @@ export const scheduleUpdatePayloadSchema = z.object({
       return value;
     }),
   title: z.string().optional(),
+  data: z.string().optional(),
   description: z.string().optional(),
 });
 

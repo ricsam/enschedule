@@ -692,6 +692,10 @@ export class PrivateBackend {
       schedule.title = updatePayload.title;
       updated = true;
     }
+    if (typeof updatePayload.data === "string") {
+      schedule.data = updatePayload.data;
+      updated = true;
+    }
     if (updatePayload.runAt === null) {
       schedule.runAt = null;
       schedule.claimed = true;

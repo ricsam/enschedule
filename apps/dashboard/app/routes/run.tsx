@@ -227,7 +227,7 @@ export default function Run() {
       }
     }
   );
-  const getValueRef = React.useRef<undefined | (() => string)>(undefined);
+  const dataValueRef = React.useRef<undefined | (() => string)>(undefined);
   const [isValid, setIsValid] = React.useState(true);
   // const [data, setData] = React.useState<any>({
   //   url: 'http://localhost:3000',
@@ -788,15 +788,15 @@ the last Wednesday of the month:
               <Editor
                 jsonSchema={selectedDef.jsonSchema}
                 example={selectedDef.example}
-                getValueRef={getValueRef}
+                getValueRef={dataValueRef}
                 setIsValid={setIsValid}
               />
             </Box>
             <SendButton
               disabled={!isValid}
               onClick={() => {
-                const value = getValueRef.current
-                  ? getValueRef.current()
+                const value = dataValueRef.current
+                  ? dataValueRef.current()
                   : JSON.stringify(selectedDef.example, null, 2);
                 setData(JSON.parse(value));
               }}

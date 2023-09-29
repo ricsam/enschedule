@@ -12,11 +12,13 @@ export function Editor({
   example,
   getValueRef,
   setIsValid,
+  height,
 }: {
   jsonSchema: Record<string, unknown>;
   example: unknown;
   getValueRef: React.MutableRefObject<undefined | (() => string)>;
   setIsValid: (valid: boolean) => void;
+  height?: number;
 }) {
   const editorRef = React.useRef<
     ReturnType<Monaco["editor"]["create"]> | undefined
@@ -42,12 +44,12 @@ export function Editor({
     });
   }
   const [theme] = useTheme();
-  const height = initialValue.split("\n").length * 18;
+  const calculatedHeight = height ?? initialValue.split("\n").length * 18;
   return (
     <MonacoEditor
       language="json"
       theme={theme === Theme.LIGHT ? "light" : "vs-dark"}
-      height={`${height}px`}
+      height={`${calculatedHeight}px`}
       value={initialValue}
       beforeMount={handleEditorWillMount}
       onMount={(editor, monaco) => {

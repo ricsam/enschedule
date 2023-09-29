@@ -17,7 +17,7 @@ import format from "date-fns/format";
 import parseISO from "date-fns/parseISO";
 import React from "react";
 import { z } from "zod";
-import { ReadOnlyEditor } from "~/components/Editor";
+import { Editor, ReadOnlyEditor } from "~/components/Editor";
 import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
@@ -35,20 +35,26 @@ export const editDetailsAction: ActionFunction = async ({
     runAt: schedule.runAt ? normalizeDate(schedule.runAt.toJSON()) : "",
     description: schedule.description,
     title: schedule.title,
+    data: schedule.data,
   };
-  const runAt = z.string().parse(fd.get("runAt"));
-  const description = z.string().parse(fd.get("description"));
-  const title = z.string().parse(fd.get("title"));
+  const runAt = z.string().nullable().parse(fd.get("runAt"));
+  const description = z.string().nullable().parse(fd.get("description"));
+  const title = z.string().nullable().parse(fd.get("title"));
+  const data = z.string().nullable().parse(fd.get("data"));
   let updated = false;
-  if (init.runAt !== runAt) {
+  if (runAt !== null && init.runAt !== runAt) {
     scheduleUpdatePayload.runAt = runAt === "" ? null : runAt;
     updated = true;
   }
-  if (init.description !== description) {
+  if (description !== null && init.description !== description) {
     scheduleUpdatePayload.description = description;
     updated = true;
   }
-  if (init.title !== title) {
+  if (data !== null && init.data !== data) {
+    scheduleUpdatePayload.data = data;
+    updated = true;
+  }
+  if (title !== null && init.title !== title) {
     scheduleUpdatePayload.title = title;
     updated = true;
   }
@@ -328,37 +334,7 @@ export default function SchedulePage({
           </DialogContent>
         </Dialog>
 
-        <Card
-          sx={{
-            flex: 1,
-            minWidth: "fit-content",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <CardContent sx={{ flex: 1 }}>
-            <Typography variant="h5" gutterBottom>
-              Data
-            </Typography>
-            <Typography color="text.secondary">
-              This schedule will run{" "}
-              <MuiLink component={Link} to="/" underline="hover">
-                {schedule.jobDefinition.title}
-              </MuiLink>{" "}
-              with the following data:
-            </Typography>
-            <Box pb={1} />
-            <Box maxWidth="320px" overflow="hidden">
-              <ReadOnlyEditor
-                example={JSON.stringify(JSON.parse(schedule.data), null, 2)}
-                lang="json"
-              ></ReadOnlyEditor>
-            </Box>
-          </CardContent>
-          <CardActions>
-            <Button>Save</Button>
-          </CardActions>
-        </Card>
+        <DataCard schedule={schedule} />
       </Box>
 
       {lastRun ? (
@@ -385,6 +361,116 @@ export default function SchedulePage({
         </>
       ) : null}
     </Box>
+  );
+}
+
+interface Size {
+  width: number;
+  height: number;
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+export function useElementSize<T extends HTMLElement = HTMLDivElement>(): [
+  (node: T | null) => void,
+  Size | undefined
+] {
+  const [ref, setRef] = React.useState<T | null>(null);
+  const [size, setSize] = React.useState<Size | undefined>();
+
+  React.useEffect(() => {
+    const handleSize = () => {
+      if (ref) {
+        setSize({
+          width: ref.offsetWidth,
+          height: ref.offsetHeight,
+        });
+      } else {
+        setSize(undefined);
+      }
+    };
+    window.addEventListener("resize", handleSize);
+    return () => {
+      window.removeEventListener("resize", handleSize);
+    };
+  }, [ref]);
+
+  useIsomorphicLayoutEffect(() => {
+    if (ref) {
+      setSize({
+        width: ref.offsetWidth,
+        height: ref.offsetHeight,
+      });
+    } else {
+      setSize(undefined);
+    }
+  }, [ref]);
+
+  return [setRef, size];
+}
+
+function DataCard({
+  schedule,
+}: {
+  schedule: SerializeFrom<PublicJobSchedule>;
+}) {
+  const dataValueRef = React.useRef<undefined | (() => string)>(undefined);
+  const [isValid, setIsValid] = React.useState(true);
+  const [editorRef, size] = useElementSize();
+  const dataRef = React.useRef<HTMLInputElement | null>(null);
+  return (
+    <Card
+      sx={{
+        flex: 1,
+        minWidth: "fit-content",
+        display: "flex",
+        flexDirection: "column",
+      }}
+      component={Form}
+      method="post"
+      action="edit-details"
+    >
+      <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <Typography variant="h5" gutterBottom>
+          Data
+        </Typography>
+        <Typography color="text.secondary">
+          This schedule will run{" "}
+          <MuiLink component={Link} to="/" underline="hover">
+            {schedule.jobDefinition.title}
+          </MuiLink>{" "}
+          with the following data:
+        </Typography>
+        <Box pb={1} />
+        <Box maxWidth="600px" flex={1} ref={editorRef}>
+          {size && (
+            <Editor
+              jsonSchema={schedule.jobDefinition.jsonSchema}
+              example={JSON.parse(schedule.data)}
+              getValueRef={dataValueRef}
+              setIsValid={setIsValid}
+              height={size.height}
+            />
+          )}
+        </Box>
+      </CardContent>
+      <CardActions>
+        <input type="hidden" name="data" value="" ref={dataRef} />
+        <Button
+          disabled={!isValid}
+          type="submit"
+          data-testid="submit-edit-data"
+          onClick={() => {
+            if (dataValueRef.current) {
+              dataRef.current?.setAttribute("value", dataValueRef.current());
+            }
+          }}
+        >
+          Save
+        </Button>
+      </CardActions>
+    </Card>
   );
 }
 

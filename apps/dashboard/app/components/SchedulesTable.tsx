@@ -43,6 +43,9 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
   columnHelper.accessor("runAt", {
     cell: (info) => {
+      if (!info.getValue()) {
+        return "Not scheduled";
+      }
       const value = formatDate(new Date(info.getValue()), false);
       return value.label;
     },
@@ -141,9 +144,7 @@ export const action: ActionFunction = async ({ request }) => {
   const action = z
     .union([z.literal("delete"), z.literal("run")])
     .parse(fd.get("action"));
-  const selected = z
-    .array(z.number().int())
-    .parse(fd.getAll("id").map(Number));
+  const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
   if (action === "run") {
     await Promise.all(
       selected.map(async (id) => {

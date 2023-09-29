@@ -535,4 +535,44 @@ test.describe("Can update a schedule", () => {
     await page.reload();
     await page.getByTestId("no-run-at-edit").click();
   });
+  test("Update data", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRows(page, 1);
+    expect(await numRows(page)).toBe(1);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+
+    await page.click(".mtk5.detected-link");
+
+    await page.keyboard.type("123");
+
+    expect(await page.innerText(".mtk5.detected-link")).toBe(
+      "http://loc123alhost:3000"
+    );
+
+    await page.getByTestId("submit-edit-data").click();
+    await page.waitForResponse(/edit-details/);
+    await page.reload();
+    expect(await page.innerText(".mtk5.detected-link")).toBe(
+      "http://loc123alhost:3000"
+    );
+
+    // await page.getByTestId("edit-details").click();
+
+    // await page
+    //   .getByTestId("edit-details-form")
+    //   .getByTestId("unschedule")
+    //   .click();
+
+    // await page.click(
+    //   `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+    // );
+    // await page.waitForURL(/\/\d+\/?$/);
+    // await page.getByTestId("no-run-at-edit").click();
+  });
 });

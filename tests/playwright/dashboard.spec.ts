@@ -507,19 +507,25 @@ test.describe("Can update a schedule", () => {
       await page.getByTestId("no-run-at-edit").click();
     });
     test("Update data", async ({ page }) => {
-      await page.click(".mtk5.detected-link");
+      expect(
+        page.getByTestId("data-card").getByTestId("monaco-loading")
+      ).toHaveCount(0, {
+        timeout: 20000,
+      });
+
+      await page.click('[data-testid="data-card"] .mtk5.detected-link');
 
       await page.keyboard.type("123");
 
-      expect(await page.innerText(".mtk5.detected-link")).toBe(
-        "http://loc123alhost:3000"
-      );
+      expect(
+        await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
+      ).toBe("http://loc123alhost:3000");
       await page.getByTestId("submit-edit-data").click();
       await page.waitForResponse(/edit-details/);
       await page.reload();
-      expect(await page.innerText(".mtk5.detected-link")).toBe(
-        "http://loc123alhost:3000"
-      );
+      expect(
+        await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
+      ).toBe("http://loc123alhost:3000");
     });
   };
   test.beforeEach(async ({ page }) => {

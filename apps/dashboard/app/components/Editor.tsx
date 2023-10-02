@@ -55,6 +55,7 @@ export function Editor({
       onMount={(editor, monaco) => {
         editorRef.current = editor;
       }}
+      loading={<EditorLoading />}
       onChange={(value) => {
         if (value) {
           try {
@@ -73,6 +74,10 @@ export function Editor({
       }}
     />
   );
+}
+
+function EditorLoading() {
+  return <div data-testid="monaco-loading"></div>;
 }
 
 export function ReadOnlyEditor({
@@ -106,6 +111,7 @@ export function ReadOnlyEditor({
         theme={editorTheme}
         height={`${height}px`}
         value={example}
+        loading={<EditorLoading />}
         beforeMount={(monaco) => {
           monaco.languages.typescript.typescriptDefaults.addExtraLib(
             `

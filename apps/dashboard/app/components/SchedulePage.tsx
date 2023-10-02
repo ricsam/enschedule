@@ -430,6 +430,7 @@ function DataCard({
       component={Form}
       method="post"
       action="edit-details"
+      data-testid="data-card"
     >
       <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <Typography variant="h5" gutterBottom>

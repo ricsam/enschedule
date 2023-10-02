@@ -1,0 +1,6 @@
+{
+  "playwright.env": {
+    "SKIP_SETUP": true,
+    "DASHBOARD_URL": "http://localhost:3000"
+  }
+}

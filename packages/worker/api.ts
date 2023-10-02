@@ -202,9 +202,19 @@ export class Worker extends PrivateBackend {
     app.post("/schedules/:id/runs", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
-      this.runSchedule(validatedId)
-        .then((run) => {
-          res.json(run);
+      this.runScheduleNow(validatedId)
+        .then(() => {
+          res.json({ success: true });
+        })
+        .catch(next);
+    });
+
+    app.post("/runs-schedules", (req, res, next) => {
+      const idSchema = z.number().int().positive();
+      const validatedIds = z.array(idSchema).parse(req.body);
+      this.runSchedulesNow(validatedIds)
+        .then(() => {
+          res.json({ success: true });
         })
         .catch(next);
     });

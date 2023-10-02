@@ -148,6 +148,46 @@ describe("backends", () => {
     const run = runs[0];
     expect(run.stdout).toBe("comment\n");
   });
+  it("should be able to run jobs that have runNow: true", async () => {
+    const spy = jest.fn((data: { url: string }, console: Console) => {
+      console.log("comment");
+    });
+    backend.clearRegisteredJobs();
+    backend.registerJob(httpJobDeclaration(spy));
+
+    const createSchedule = async (id: string) => {
+      const [schedule] = await backend.createJobSchedule(
+        "http_request",
+        "title",
+        "description",
+        jobData,
+        {
+          eventId: id,
+        }
+      );
+      return schedule;
+    };
+    const schedule = await createSchedule("pre");
+    await backend.runOverdueJobs();
+    expect(spy).toHaveBeenCalledTimes(0);
+
+    await backend.runScheduleNow(schedule.id);
+    await backend.runOverdueJobs();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
+
+    const a = await createSchedule("a");
+    const b = await createSchedule("b");
+    await backend.runSchedulesNow([a.id, b.id]);
+    await a.reload();
+    await b.reload();
+    expect(a.runNow).toBe(true);
+    expect(b.runNow).toBe(true);
+    const result = await backend.runOverdueJobs();
+    expect(result.overdueJobs[0]).toBe(2);
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
   it("should log errors", async () => {
     const spy = jest.fn((data: { url: string }, console: Console) => {
       throw new Error("Error");

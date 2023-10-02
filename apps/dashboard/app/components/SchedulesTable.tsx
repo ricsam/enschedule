@@ -7,7 +7,6 @@ import { json } from "@remix-run/node";
 import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
-import assert from "assert";
 import { z } from "zod";
 import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
@@ -137,20 +136,12 @@ export default function SchedulesTable({
 
 export const action: ActionFunction = async ({ request }) => {
   const fd = await request.formData();
-  assert(
-    fd.has("schedule"),
-    "you must provide schedule field in the form data"
-  );
   const action = z
     .union([z.literal("delete"), z.literal("run")])
     .parse(fd.get("action"));
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
   if (action === "run") {
-    await Promise.all(
-      selected.map(async (id) => {
-        return scheduler.runSchedule(id);
-      })
-    );
+    await scheduler.runSchedulesNow(selected);
   } else if (action === "delete") {
     await scheduler.deleteSchedules(selected);
   }

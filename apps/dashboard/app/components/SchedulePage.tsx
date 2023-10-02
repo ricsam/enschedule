@@ -17,7 +17,7 @@ import format from "date-fns/format";
 import parseISO from "date-fns/parseISO";
 import React from "react";
 import { z } from "zod";
-import { Editor, ReadOnlyEditor } from "~/components/Editor";
+import { Editor } from "~/components/Editor";
 import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
@@ -526,7 +526,7 @@ export const action: ActionFunction = async (arg) => {
   const id = getScheduleId(params);
   if (action === "run") {
     const redirectTo = z.string().parse(fd.get("redirect"));
-    await scheduler.runSchedule(id);
+    await scheduler.runScheduleNow(id);
     return redirect(redirectTo);
   } else {
     await scheduler.deleteSchedule(id);

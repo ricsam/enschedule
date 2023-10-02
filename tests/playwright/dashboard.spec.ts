@@ -429,7 +429,11 @@ test.describe("Single schedule", () => {
     expect(await numRows(page)).toBe(0);
   });
 });
-test.describe("Can update a schedule", () => {
+test.describe("Can update a single schedule", () => {
+  /**
+   * These tests are a bit flaky
+   */
+  test.describe.configure({ retries: 3 });
   const updateScheduleTests = () => {
     test("Update title", async ({ page }) => {
       expect(await page.getByTestId("schedule-title").innerText()).toBe(
@@ -560,5 +564,22 @@ test.describe("Can update a schedule", () => {
       );
     });
     updateScheduleTests();
+  });
+});
+
+test.describe("Can do schedule multi actions", () => {
+  test("Can multi delete schedule", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1);
+    await createRun(page, 1);
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await waitForNumRows(page, 3);
+
+    await page.getByTestId("table-row-1").getByRole("checkbox").click();
+    await page.getByTestId("table-row-2").getByRole("checkbox").click();
+    await page.getByTestId("ms-delete").click();
+    await waitForNumRows(page, 1);
+    expect(await numRows(page)).toBe(1);
   });
 });

@@ -128,7 +128,14 @@ class Schedule extends Model<
   InferCreationAttributes<Schedule, { omit: "runs" | "lastRun" }>
 > {
   declare id: CreationOptional<number>;
+  /**
+   * Calculated field. When e.g. running a CRON job this field will update
+   */
   declare runAt?: CreationOptional<Date> | null;
+  /**
+   * When running a job "now" runNow is set to true so that it can be claimed by a worker
+   */
+  declare runNow: CreationOptional<boolean>;
   declare signature: string;
   declare createdAt: CreationOptional<Date>;
   declare title: string;
@@ -253,6 +260,10 @@ export class PrivateBackend {
         runAt: {
           type: DataTypes.DATE,
           allowNull: true,
+        },
+        runNow: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
         },
         target: {
           type: DataTypes.STRING(),
@@ -594,6 +605,33 @@ export class PrivateBackend {
     };
   }
 
+  public async runScheduleNow(scheduleId: number) {
+    const schedule = await Schedule.findByPk(scheduleId);
+    if (!schedule) {
+      throw new Error("invalid scheduleId");
+    }
+    schedule.runNow = true;
+    await schedule.save();
+  }
+
+  public async runSchedulesNow(scheduleIds: number[]) {
+    const result = await Schedule.update(
+      {
+        runNow: true,
+      },
+      {
+        returning: true,
+        where: {
+          id: {
+            [Op.in]: scheduleIds,
+          },
+        },
+      }
+    );
+    
+    return result;
+  }
+
   protected async claimUnclaimedOverdueJobs() {
     const jobKeys = Object.keys(this.definedJobs);
     if (jobKeys.length === 0) {
@@ -602,20 +640,36 @@ export class PrivateBackend {
     const overdueJobs = await Schedule.update(
       {
         claimed: true,
+        runNow: false,
       },
       {
         limit: this.maxJobsPerTick,
         returning: true,
         where: {
-          target: {
-            [Op.any]: jobKeys,
-          },
-          claimed: {
-            [Op.eq]: false,
-          },
-          runAt: {
-            [Op.lte]: new Date(),
-          },
+          [Op.and]: [
+            {
+              target: {
+                [Op.any]: jobKeys,
+              },
+              claimed: {
+                [Op.eq]: false,
+              },
+            },
+            {
+              [Op.or]: [
+                {
+                  runAt: {
+                    [Op.lte]: new Date(),
+                  },
+                },
+                {
+                  runNow: {
+                    [Op.eq]: true,
+                  },
+                },
+              ],
+            },
+          ],
         },
       }
     );
@@ -663,7 +717,7 @@ export class PrivateBackend {
     await this.runOverdueJobs();
   }
 
-  public async runSchedule(scheduleId: number) {
+  protected async runSchedule(scheduleId: number) {
     const schedule = await Schedule.findByPk(scheduleId);
     if (!schedule) {
       throw new Error("invalid scheduleId");
@@ -789,13 +843,7 @@ export class PrivateBackend {
       `${String(finishedAt.getTime() - startedAt.getTime())}ms`
     );
 
-    const runAt = schedule.runAt;
-
-    if (!runAt) {
-      throw new Error(
-        "The schedule has no runAt attribute, so there is no way to figure out when it should run"
-      );
-    }
+    const runAt = schedule.runAt ?? new Date();
 
     const run = await schedule.createRun({
       scheduledToRunAt: runAt,
@@ -898,6 +946,9 @@ export class TestBackend extends PrivateBackend {
   }
   public async getDbRuns() {
     return super.getDbRuns();
+  }
+  public async runSchedule(scheduleId: number) {
+    return super.runSchedule(scheduleId);
   }
   public claimUnclaimedOverdueJobs() {
     return super.claimUnclaimedOverdueJobs();

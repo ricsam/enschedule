@@ -8,11 +8,12 @@ import type {
   PublicJobRun,
   PublicJobSchedule,
   ScheduleJobOptions,
-  ScheduleUpdatePayload} from "@enschedule/types";
+  ScheduleUpdatePayload,
+} from "@enschedule/types";
 import {
   publicJobDefinitionSchema,
   publicJobRunSchema,
-  publicJobScheduleSchema
+  publicJobScheduleSchema,
 } from "@enschedule/types";
 import { debug } from "debug";
 import { z } from "zod";
@@ -241,8 +242,11 @@ export class WorkerAPI {
     await this.request("DELETE", `/`);
   }
 
-  async runSchedule(id: number): Promise<PublicJobRun> {
-    const run = await this.request("POST", `/schedules/${id}/runs`);
-    return publicJobRunSchema.parse(run);
+  async runScheduleNow(id: number): Promise<void> {
+    await this.request("POST", `/schedules/${id}/runs`);
+  }
+
+  async runSchedulesNow(ids: number[]): Promise<void> {
+    await this.request("POST", `/runs-schedules`, ids);
   }
 }

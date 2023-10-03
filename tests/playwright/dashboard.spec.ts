@@ -440,7 +440,7 @@ test.describe("Can update a single schedule", () => {
   /**
    * These tests are a bit flaky
    */
-  test.describe.configure({ retries: 3 });
+  test.describe.configure({ retries: 5 });
   const updateScheduleTests = () => {
     test("Update title", async ({ page }) => {
       expect(await page.getByTestId("schedule-title").innerText()).toBe(

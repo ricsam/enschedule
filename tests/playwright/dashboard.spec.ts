@@ -575,18 +575,70 @@ test.describe("Can update a single schedule", () => {
 });
 
 test.describe("Can do schedule multi actions", () => {
-  test("Can multi delete schedule", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await reset(page);
     await createRun(page, 1);
     await createRun(page, 1);
     await createRun(page, 1);
     await page.goto(`${setup.dashboardUrl}/schedules`);
     await waitForNumRows(page, 3);
-
+  });
+  const testMsAction = async (page: Page, btn: string) => {
     await page.getByTestId("table-row-1").getByRole("checkbox").click();
     await page.getByTestId("table-row-2").getByRole("checkbox").click();
-    await page.getByTestId("ms-delete").click();
+    await page.getByTestId(btn).click();
+  };
+  const testMsDelete = async ({ page }: { page: Page }) => {
+    await testMsAction(page, "ms-delete");
     await waitForNumRows(page, 1);
     expect(await numRows(page)).toBe(1);
+  };
+  const testMsRun = async ({ page }: { page: Page }) => {
+    const expectRunRuns = (row: number) => {
+      return expect.poll(
+        async () => {
+          await page.reload();
+          return page
+            .getByTestId("table-row-" + row)
+            .getByTestId("num-runs")
+            .innerText();
+        },
+        {
+          timeout: 10000,
+        }
+      );
+    };
+    await page.getByText("Number of runs").click();
+    await page.getByText("Number of runs").click();
+    await page.waitForURL(/\?sorting=numRuns\.desc/);
+    await expectRunRuns(1).toBe("1");
+    await expectRunRuns(2).toBe("1");
+    await testMsAction(page, "ms-run");
+    await expectRunRuns(1).toBe("2");
+    await expectRunRuns(2).toBe("2");
+  };
+
+  test("Can multi delete schedule on /schedules", testMsDelete);
+  test("Can multi run schedule on /schedules", testMsRun);
+  test.describe("/definitions/$definitionId/schedules", () => {
+    test.beforeEach(async ({ page }) => {
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByTestId("table-row-1").getByTestId("schedule-link")
+      );
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByTestId("schedule-details").getByTestId("definition-link")
+      );
+      await navigate(
+        setup.dashboardUrl,
+        page,
+        page.getByRole("tab", { name: "Schedules" })
+      );
+    });
+    test("Can multi delete schedule", testMsDelete);
+    test("Can multi run schedule", testMsRun);
   });
 });

@@ -1,4 +1,5 @@
 import type { PublicJobSchedule } from "@enschedule/types";
+import { Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import MuiLink from "@mui/material/Link";
@@ -64,11 +65,16 @@ const columns: ColumnDef<RowData, any>[] = [
         return value.label;
       },
       header: "Last run",
+      id: "last-run",
     }
   ),
   columnHelper.accessor("numRuns", {
     cell: (info) => {
-      return info.getValue();
+      return (
+        <Typography variant="inherit" data-testid="num-runs">
+          {info.getValue()}
+        </Typography>
+      );
     },
     header: "Number of runs",
   }),
@@ -94,6 +100,7 @@ const { ToolbarWrapper, MsButtons } = createMsButtons({
         <Button
           variant="text"
           color="inherit"
+          data-testid="ms-run"
           onClick={() => {
             submit("run");
           }}

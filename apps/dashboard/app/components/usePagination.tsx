@@ -1,21 +1,22 @@
 import { useSearchParams } from "@remix-run/react";
-import { OnChangeFn, SortingState } from "@tanstack/react-table";
+import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import React from "react";
-
 
 export const usePagination = (defaultSorting?: SortingState) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const getSorting = (): SortingState => {
-    return (searchParams.getAll("sorting") ?? defaultSorting ?? []).map(
-      (value) => {
+    const urlSorting = searchParams.getAll("sorting");
+    if (urlSorting) {
+      return searchParams.getAll("sorting").map((value) => {
         const [id, sorting] = value.split(".");
         return {
           id,
           desc: sorting === "desc",
         };
-      }
-    );
+      });
+    }
+    return defaultSorting ?? [];
   };
 
   const stringifySorting = (sorting: SortingState) => {
@@ -43,9 +44,10 @@ export const usePagination = (defaultSorting?: SortingState) => {
   const rowsPerPage: number = Number(searchParams.get("rowsPerPage")) || 25;
 
   const setSorting: OnChangeFn<SortingState> = (newSortingFn) => {
-    let newSorting = typeof newSortingFn === "function"
-      ? newSortingFn(sortingRef.current)
-      : newSortingFn;
+    let newSorting =
+      typeof newSortingFn === "function"
+        ? newSortingFn(sortingRef.current)
+        : newSortingFn;
 
     setSearchParams(
       (prevParams) => {

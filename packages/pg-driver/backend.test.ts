@@ -177,6 +177,11 @@ describe("backends", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
 
+    await backend.runScheduleNow(schedule.id);
+    await backend.runOverdueJobs();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+
     const a = await createSchedule("a");
     const b = await createSchedule("b");
     await backend.runSchedulesNow([a.id, b.id]);
@@ -186,7 +191,7 @@ describe("backends", () => {
     expect(b.runNow).toBe(true);
     const result = await backend.runOverdueJobs();
     expect(result.overdueJobs[0]).toBe(2);
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenCalledTimes(4);
   });
   it("should log errors", async () => {
     const spy = jest.fn((data: { url: string }, console: Console) => {

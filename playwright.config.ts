@@ -18,7 +18,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   // retries: 0, // fail if there are flakyness
-  retries: process.env.CI && process.env.TEST_HELM ? 3 : 2,
+  // retries: process.env.CI && process.env.TEST_HELM ? 3 : 2,
+  retries: 3,
   /* Opt out of parallel tests on CI. */
   workers:
     process.env.SKIP_SETUP || process.env.TEST_HELM

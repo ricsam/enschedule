@@ -611,6 +611,7 @@ export class PrivateBackend {
       throw new Error("invalid scheduleId");
     }
     schedule.runNow = true;
+    schedule.claimed = false;
     await schedule.save();
   }
 
@@ -618,6 +619,7 @@ export class PrivateBackend {
     const result = await Schedule.update(
       {
         runNow: true,
+        claimed: false,
       },
       {
         returning: true,
@@ -628,7 +630,7 @@ export class PrivateBackend {
         },
       }
     );
-    
+
     return result;
   }
 

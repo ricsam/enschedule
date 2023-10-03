@@ -1,5 +1,6 @@
 import type { PublicJobRun, PublicJobSchedule } from "@enschedule/types";
-import { DialogContent, TextField } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import { DialogContent, IconButton, Snackbar, TextField } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -12,7 +13,7 @@ import Typography from "@mui/material/Typography";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { Form, Link, useNavigate } from "@remix-run/react";
+import { Form, Link, useNavigate, useNavigation } from "@remix-run/react";
 import format from "date-fns/format";
 import parseISO from "date-fns/parseISO";
 import React from "react";
@@ -482,8 +483,37 @@ export function Actions({
   action: string;
   runRedirect: string;
 }) {
+  const navigation = useNavigation();
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (navigation.formData) {
+      if (navigation.formData.get("action") === "run") {
+        setSnackbarOpen(true);
+      }
+    }
+  }, [navigation.formData]);
   return (
     <>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => {
+          setSnackbarOpen(false);
+        }}
+        data-testid="run-now-snackbar"
+        message="This job has been marked to be claimed by a worker. It will run on the next tick."
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={() => {
+              setSnackbarOpen(false);
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+      />
       <Box display="flex" gap={2}>
         <Form method="post" action={action}>
           <Button

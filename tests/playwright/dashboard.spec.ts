@@ -338,13 +338,20 @@ test.describe("Single schedule", () => {
       );
 
       // run now works
-      await page.getByTestId("run-now").click();
-      await page.getByTestId("run-now").click();
-      await page.getByTestId("run-now").click();
+      let numRuns = 1;
+      await waitForNumRows(page, numRuns);
 
-      // make sure filtering works in the table
-      await waitForNumRows(page, 4);
-      expect(await numRows(page)).toBe(4);
+      const run = async () => {
+        numRuns += 1;
+        await page.getByTestId("run-now").click();
+        await page.getByTestId("run-now-snackbar").isVisible();
+        await waitForNumRows(page, numRuns);
+        expect(await numRows(page)).toBe(numRuns);
+      };
+
+      await run();
+      await run();
+      await run();
     };
     await createRuns(1);
     await createRuns(2);
@@ -379,7 +386,7 @@ test.describe("Single schedule", () => {
 
     // make sure run button works under the definition hierarchy as well
     await page.getByTestId("run-now").click();
-
+    await page.getByTestId("run-now-snackbar").isVisible();
     // make sure filtering works in the table
     await waitForNumRows(page, 5);
     expect(await numRows(page)).toBe(5);

@@ -634,6 +634,24 @@ export class PrivateBackend {
     return result;
   }
 
+  public async unschedule(scheduleIds: number[]) {
+    const result = await Schedule.update(
+      {
+        runAt: null,
+        claimed: false,
+        runNow: false,
+      },
+      {
+        where: {
+          id: {
+            [Op.in]: scheduleIds,
+          },
+        },
+      }
+    );
+    return result;
+  }
+
   protected async claimUnclaimedOverdueJobs() {
     const jobKeys = Object.keys(this.definedJobs);
     if (jobKeys.length === 0) {

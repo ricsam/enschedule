@@ -165,6 +165,10 @@ export class WorkerAPI {
     return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
   }
 
+  async unschedule(ids: number[]): Promise<void> {
+    await this.request("POST", "/unschedule", ids);
+  }
+
   async getJobDefinition(id: string): Promise<PublicJobDefinition> {
     const definition = await this.request("GET", `/job-definitions/${id}`);
     return publicJobDefinitionSchema.parse(definition);

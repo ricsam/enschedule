@@ -219,6 +219,16 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
+    app.post("/unschedule", (req, res, next) => {
+      const idSchema = z.number().int().positive();
+      const validatedIds = z.array(idSchema).parse(req.body);
+      this.unschedule(validatedIds)
+        .then(() => {
+          res.json({ success: true });
+        })
+        .catch(next);
+    });
+
     app.delete("/", (req, res, next) => {
       this.reset()
         .then(() => {

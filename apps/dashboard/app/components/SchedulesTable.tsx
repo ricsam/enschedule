@@ -41,16 +41,29 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Description",
   }),
-  columnHelper.accessor("runAt", {
-    cell: (info) => {
-      if (!info.getValue()) {
-        return "Not scheduled";
-      }
-      const value = formatDate(new Date(info.getValue()), false);
-      return value.label;
+  columnHelper.accessor(
+    (data) => {
+      return data.runAt
+        ? formatDate(new Date(data.runAt), false).label
+        : "Not scheduled";
     },
-    header: "Next scheduled run",
-  }),
+    {
+      cell: (info) => {
+        return (
+          <Typography variant="inherit" data-testid="runAt">
+            {info.getValue()}
+          </Typography>
+        );
+      },
+      header: "Next scheduled run",
+      id: "runAt",
+      sortingFn: (a, b) => {
+        const ad = a.original.runAt ? new Date(a.original.runAt).getTime() : 0;
+        const bd = b.original.runAt ? new Date(b.original.runAt).getTime() : 0;
+        return ad - bd;
+      },
+    }
+  ),
   columnHelper.accessor(
     (data) => {
       return data.lastRun?.startedAt ?? "-";
@@ -91,10 +104,14 @@ const { ToolbarWrapper, MsButtons } = createMsButtons({
   Buttons: ({ submit }) => {
     return (
       <>
-        <Button variant="text" color="inherit">
-          Edit data
-        </Button>
-        <Button variant="text" color="inherit">
+        <Button
+          variant="text"
+          color="inherit"
+          data-testid="ms-unschedule"
+          onClick={() => {
+            submit("unschedule");
+          }}
+        >
           Unschedule
         </Button>
         <Button
@@ -144,13 +161,15 @@ export default function SchedulesTable({
 export const action: ActionFunction = async ({ request }) => {
   const fd = await request.formData();
   const action = z
-    .union([z.literal("delete"), z.literal("run")])
+    .union([z.literal("delete"), z.literal("run"), z.literal("unschedule")])
     .parse(fd.get("action"));
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
   if (action === "run") {
     await scheduler.runSchedulesNow(selected);
   } else if (action === "delete") {
     await scheduler.deleteSchedules(selected);
+  } else if (action === "unschedule") {
+    await scheduler.unschedule(selected);
   }
   return json({ success: true });
 };

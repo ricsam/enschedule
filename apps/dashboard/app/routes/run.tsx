@@ -15,6 +15,7 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
+import type { IconButtonProps } from "@mui/material/IconButton";
 import IconButton from "@mui/material/IconButton";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import TextField from "@mui/material/TextField";
@@ -158,20 +159,13 @@ export const loader: LoaderFunction = async () => {
   return json<LoaderData>(await getLoaderData());
 };
 
-const SendButton = ({
-  onClick,
-  disabled,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-}) => (
+const SendButton = (props: IconButtonProps) => (
   <Box pl={1}>
     <IconButton
       color="primary"
-      disabled={disabled}
-      onClick={onClick}
       edge="end"
       sx={{ transform: "rotate(-45deg)" }}
+      {...props}
     >
       <Send />
     </IconButton>
@@ -236,11 +230,11 @@ export default function Run() {
   const [isCron, setIsCron] = React.useState<boolean | undefined>(undefined);
 
   const [runLater, setRunLater] = React.useState(
-    format(new Date(), "yyyy-MM-dd'T'HH:00")
+    format(new Date(), "yyyy-MM-dd'T'HH:mm:ss")
   );
   const [acceptRunLater, setAcceptRunLater] = React.useState(false);
 
-  const parsedRunLater = parse(runLater, "yyyy-MM-dd'T'HH:00", new Date());
+  const parsedRunLater = parse(runLater, "yyyy-MM-dd'T'HH:mm:ss", new Date());
 
   const [whenToSend, setWhenToSend] = React.useState<
     undefined | "now" | "later" | "manual"
@@ -607,6 +601,7 @@ export default function Run() {
                                 onClick={() => {
                                   setIsCron(false);
                                 }}
+                                data-testid="repeat-no"
                               >
                                 No
                               </Button>
@@ -617,6 +612,7 @@ export default function Run() {
                                 onClick={() => {
                                   setIsCron(true);
                                 }}
+                                data-testid="repeat-yes"
                               >
                                 Yes
                               </Button>
@@ -740,7 +736,8 @@ the last Wednesday of the month:
                                   inputProps={{
                                     type: "datetime-local",
                                     pattern:
-                                      "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}",
+                                      "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}",
+                                    "data-testid": "runAt-input",
                                   }}
                                   value={runLater}
                                   onChange={(ev) => {
@@ -748,6 +745,7 @@ the last Wednesday of the month:
                                   }}
                                 ></TextField>
                                 <SendButton
+                                  data-testid="submit-runAt"
                                   onClick={() => {
                                     setAcceptRunLater(true);
                                   }}

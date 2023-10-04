@@ -2,7 +2,7 @@ import { test, expect, Page } from "@playwright/test";
 import { navigate, numRows, sleep } from "./utils";
 import { Setup } from "./setup";
 import format from "date-fns/format";
-import parseISO from "date-fns/parseISO";
+import addDays from "date-fns/addDays";
 
 const setup = new Setup();
 
@@ -14,7 +14,13 @@ test.afterEach(async () => {
   await setup.teardown();
 });
 
-const createRun = async (page: Page, definitionNumber: number) => {
+const createRun = async (
+  page: Page,
+  definitionNumber: number,
+  options?: {
+    runTomorrow?: boolean;
+  }
+) => {
   await page.goto(`${setup.dashboardUrl}/run`);
 
   // Select a job definition from the dropdown
@@ -26,7 +32,22 @@ const createRun = async (page: Page, definitionNumber: number) => {
   await page.keyboard.press("Enter"); // Press the enter key
   await page.getByTestId("SendIcon").click();
 
-  await page.getByTestId("run-now").click();
+  if (!options?.runTomorrow) {
+    await page.getByTestId("run-now").click();
+  } else {
+    await page.getByTestId("run-later").click();
+    await page.getByTestId("repeat-no").click();
+
+    const runAtField = page.getByTestId("runAt-input");
+    await runAtField.clear();
+
+    const tomorrow = addDays(new Date(), 1);
+
+    const now = format(tomorrow, "yyyy-MM-dd'T'HH:mm:ss");
+    await runAtField.fill(now);
+
+    await page.getByTestId("submit-runAt").click();
+  }
 
   // Type in title and description
   await page.getByTestId("title-input").fill("Test Title");
@@ -577,9 +598,9 @@ test.describe("Can update a single schedule", () => {
 test.describe("Can do schedule multi actions", () => {
   test.beforeEach(async ({ page }) => {
     await reset(page);
-    await createRun(page, 1);
-    await createRun(page, 1);
-    await createRun(page, 1);
+    await createRun(page, 1, { runTomorrow: true });
+    await createRun(page, 1, { runTomorrow: true });
+    await createRun(page, 1, { runTomorrow: true });
     await page.goto(`${setup.dashboardUrl}/schedules`);
     await waitForNumRows(page, 3);
   });
@@ -594,7 +615,7 @@ test.describe("Can do schedule multi actions", () => {
     expect(await numRows(page)).toBe(1);
   };
   const testMsRun = async ({ page }: { page: Page }) => {
-    const expectRunRuns = (row: number) => {
+    const expectNumRuns = (row: number) => {
       return expect.poll(
         async () => {
           await page.reload();
@@ -611,15 +632,40 @@ test.describe("Can do schedule multi actions", () => {
     await page.getByText("Number of runs").click();
     await page.getByText("Number of runs").click();
     await page.waitForURL(/\?sorting=numRuns\.desc/);
-    await expectRunRuns(1).toBe("1");
-    await expectRunRuns(2).toBe("1");
+    await expectNumRuns(1).toBe("0");
+    await expectNumRuns(2).toBe("0");
     await testMsAction(page, "ms-run");
-    await expectRunRuns(1).toBe("2");
-    await expectRunRuns(2).toBe("2");
+    await expectNumRuns(1).toBe("1");
+    await expectNumRuns(2).toBe("1");
+  };
+
+  const testUnschedule = async ({ page }: { page: Page }) => {
+    const expectRunAt = (row: number) => {
+      return expect.poll(
+        async () => {
+          await page.reload();
+          return page
+            .getByTestId("table-row-" + row)
+            .getByTestId("runAt")
+            .innerText();
+        },
+        {
+          timeout: 10000,
+        }
+      );
+    };
+    await page.getByText("Next scheduled run").click();
+    await page.waitForURL(/\?sorting=runAt\.asc/);
+    await expectRunAt(1).toBe("in 23 hours");
+    await expectRunAt(2).toBe("in 23 hours");
+    await testMsAction(page, "ms-unschedule");
+    await expectRunAt(1).toBe("Not scheduled");
+    await expectRunAt(2).toBe("Not scheduled");
   };
 
   test("Can multi delete schedule on /schedules", testMsDelete);
   test("Can multi run schedule on /schedules", testMsRun);
+  test("Can multi unschedule on /schedules", testUnschedule);
   test.describe("/definitions/$definitionId/schedules", () => {
     test.beforeEach(async ({ page }) => {
       await navigate(
@@ -640,5 +686,6 @@ test.describe("Can do schedule multi actions", () => {
     });
     test("Can multi delete schedule", testMsDelete);
     test("Can multi run schedule", testMsRun);
+    test("Can multi unschedule", testUnschedule);
   });
 });

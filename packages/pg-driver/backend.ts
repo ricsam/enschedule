@@ -877,7 +877,7 @@ export class PrivateBackend {
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
     schedule.numRuns += 1;
-    void schedule.setLastRun(run);
+    await schedule.setLastRun(run);
     await schedule.save();
     return run;
   }

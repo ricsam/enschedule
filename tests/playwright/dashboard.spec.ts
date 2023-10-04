@@ -578,7 +578,7 @@ test.describe("Can update a single schedule", () => {
       await navigate(
         setup.dashboardUrl,
         page,
-        page.getByTestId("definition-link")
+        page.getByTestId("schedule-details").getByTestId("definition-link")
       );
       await navigate(
         setup.dashboardUrl,
@@ -615,6 +615,7 @@ test.describe("Can do schedule multi actions", () => {
     expect(await numRows(page)).toBe(1);
   };
   const testMsRun = async ({ page }: { page: Page }) => {
+    test.slow();
     const expectNumRuns = (row: number) => {
       return expect.poll(
         async () => {

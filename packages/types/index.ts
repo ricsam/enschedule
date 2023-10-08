@@ -1,4 +1,5 @@
 export type {
+  RunDefinition,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,

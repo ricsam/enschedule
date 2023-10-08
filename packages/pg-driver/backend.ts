@@ -1,8 +1,10 @@
 import stream from "node:stream";
+import * as cp from "node:child_process";
 import type {
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
+  RunDefinition,
   ScheduleJobOptions,
   ScheduleUpdatePayload,
   SerializedRun,
@@ -32,7 +34,8 @@ import type {
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
-import type { z, ZodType } from "zod";
+import type { ZodType } from "zod";
+import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
 import { log } from "./log";
@@ -42,7 +45,7 @@ interface JobDefinition<T extends ZodType = ZodType> {
   id: string;
   title: string;
   description: string;
-  job: (data: z.infer<T>, console: Console) => Promise<void> | void;
+  job: (data: z.infer<T>) => Promise<void> | void;
   example: z.infer<T>;
 }
 
@@ -117,6 +120,12 @@ export const createPublicJobRun = (
     data: run.data,
   };
 };
+
+export interface StreamHandle {
+  stdout: stream.PassThrough;
+  stderr: stream.PassThrough;
+  toggleBuffering: (on: boolean) => void;
+}
 
 type ScheduleAttributes = InferAttributes<
   Schedule,
@@ -362,7 +371,7 @@ export class PrivateBackend {
     });
     return jobs;
   }
-  private getJobDef(id: string): JobDefinition {
+  protected getJobDef(id: string): JobDefinition {
     const def = this.definedJobs[id];
     if (!def) {
       throw new Error("invalid id");
@@ -789,10 +798,15 @@ export class PrivateBackend {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
     const definition = this.getJobDef(schedule.target);
     const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
-    const { Console } = console;
+    return this.runDefinition({ definitionId: schedule.target, data });
+    /* eslint-enable */
+  }
+
+  public async runDefinition(runMessage: RunDefinition) {
     const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
     const stdoutStream = new stream.PassThrough();
     const stderrStream = new stream.PassThrough();
+    let buffering = false;
     const bufferStream = (
       pipeStream: stream.PassThrough,
       key: "stderr" | "stdout"
@@ -800,7 +814,9 @@ export class PrivateBackend {
       const buffer = output[key];
       let _resolve: undefined | ((data: string) => void);
       pipeStream.on("data", (chunk) => {
-        buffer.push(chunk);
+        if (buffering) {
+          buffer.push(chunk);
+        }
       });
       pipeStream.on("finish", () => {
         if (_resolve) {
@@ -812,12 +828,9 @@ export class PrivateBackend {
       });
     };
 
-    const _console = new Console({
-      stdout: stdoutStream,
-      stderr: stderrStream,
-      ignoreErrors: true,
-      colorMode: false,
-    });
+    const toggleBuffering = (newBuffering: boolean) => {
+      buffering = newBuffering;
+    };
 
     const promises = [
       bufferStream(stdoutStream, "stdout"),
@@ -829,16 +842,145 @@ export class PrivateBackend {
       stderrStream.pipe(process.stderr, { end: false });
     }
 
+    const streamHandle: StreamHandle = {
+      stdout: stdoutStream,
+      stderr: stderrStream,
+      toggleBuffering,
+    };
+
+    const _console = this.createConsole(stdoutStream, stderrStream);
+    let exitSignal = "0";
     try {
-      await definition.job(data, _console);
+      log("Creating a worker process to run", runMessage.definitionId);
+      exitSignal = await this.fork(runMessage, streamHandle);
     } catch (err) {
       _console.error(err);
+      exitSignal = "1";
     }
     stdoutStream.end();
     stderrStream.end();
     const [stdout, stderr] = await Promise.all(promises);
-    return { stdout, stderr };
-    /* eslint-enable */
+    return { stdout, stderr, exitSignal };
+  }
+
+  protected createConsole(
+    stdoutStream: stream.PassThrough,
+    stderrStream: stream.PassThrough
+  ) {
+    return new console.Console({
+      stdout: stdoutStream,
+      stderr: stderrStream,
+      ignoreErrors: true,
+      colorMode: false,
+    });
+  }
+
+  protected async fork(
+    runMessage: RunDefinition,
+    { stdout, stderr, toggleBuffering }: StreamHandle
+  ) {
+    return new Promise<string>((resolve, reject) => {
+      log("Launching", ...process.execArgv, ...process.argv);
+      const child = cp.fork(process.argv[1], process.argv.slice(2), {
+        env: { ...process.env, ENSCHEDULE_CHILD_WORKER: "true" },
+        stdio: "pipe",
+      });
+
+      child.on("close", (code, signal) => {
+        const exitCode = code !== null ? String(code) : signal ?? "0";
+        log("closing child process", exitCode);
+        resolve(exitCode);
+      });
+
+      child.on("error", (err) =>
+        log("There was an error with the child process", err)
+      );
+      child.stdout?.pipe(stdout);
+      child.stderr?.pipe(stderr);
+      child.on("message", (msg) => {
+        if (msg === "initialize") {
+          toggleBuffering(true);
+          child.send(runMessage, (err) => {
+            if (err) {
+              log(
+                "There was an error when sending the data to the child process"
+              );
+              reject(err);
+            }
+          });
+        }
+        // optional
+        if (msg === "done") {
+          toggleBuffering(false);
+          child.send("done", (err) => {
+            log(
+              'There was an error when sending the "done" signal to the child process'
+            );
+            if (err) {
+              log(err);
+            }
+          });
+        }
+      });
+
+      child.on("spawn", () => {
+        log("Spawned child process for job");
+      });
+    });
+  }
+
+  public async listenForIncomingRuns(): Promise<boolean> {
+    const ps = process.send?.bind(process);
+    if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
+      return new Promise<boolean>((resolve) => {
+        process.once("message", (message) => {
+          const { definitionId, data } = z
+            .object({
+              definitionId: z.string(),
+              data: z.unknown(),
+            })
+            .parse(message);
+          const definition = this.getJobDef(definitionId);
+          (async () => {
+            try {
+              await definition.job(data);
+            } catch (err) {
+              console.error(err);
+              return true;
+            }
+            return false;
+          })()
+            .then((hadError) => {
+              const promise = new Promise<boolean>((resolveClose) => {
+                process.once("message", (doneMessage) => {
+                  if (doneMessage === "done") {
+                    resolveClose(hadError);
+                  }
+                });
+              });
+              ps("done");
+              return promise;
+            })
+            .then((hadError) => {
+              if (hadError) {
+                log("exiting with 1 because job errored");
+                process.exit(1);
+              }
+              return Promise.resolve();
+            })
+            .catch(() => {
+              // ignore
+            })
+            .finally(() => {
+              log("job fn done");
+              resolve(true);
+            });
+        });
+        log("Child process is ready");
+        ps("initialize");
+      });
+    }
+    return false;
   }
 
   private async scheduleSingleRun(schedule: Schedule) {
@@ -966,6 +1108,18 @@ export class TestBackend extends PrivateBackend {
   }
   public async getDbRuns() {
     return super.getDbRuns();
+  }
+  public getJobDef(id: string) {
+    return super.getJobDef(id);
+  }
+  public createConsole(
+    stdoutStream: stream.PassThrough,
+    stderrStream: stream.PassThrough
+  ) {
+    return super.createConsole(stdoutStream, stderrStream);
+  }
+  public async fork(runMessage: RunDefinition, streamHandle: StreamHandle) {
+    return super.fork(runMessage, streamHandle);
   }
   public async runSchedule(scheduleId: number) {
     return super.runSchedule(scheduleId);

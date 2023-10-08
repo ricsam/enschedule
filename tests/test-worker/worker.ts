@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Worker } from "@enschedule/worker";
-import { z } from "zod";
 import add from "date-fns/add";
+import { z } from "zod";
 
 if (!process.env.PGUSER) {
   throw new Error("The environment variable PGUSER must be defined");
@@ -34,7 +34,7 @@ const httpRequestJob = worker.registerJob({
   dataSchema: z.object({
     url: z.string(),
   }),
-  job: (data, console) => {
+  job: (data) => {
     console.log("pretending to fetch", data.url);
   },
   description: "Provide HTTP parameters as data to send a request",
@@ -48,7 +48,7 @@ worker.registerJob({
   dataSchema: z.object({
     message: z.string(),
   }),
-  job: (data, console) => {
+  job: (data) => {
     console.log(data.message);
   },
   description: "Will print the message on the server",
@@ -76,7 +76,7 @@ worker.registerJob({
   dataSchema: z.object({
     message: z.string(),
   }),
-  job: (data, console) => {
+  job: (data) => {
     console.log("Will throw an error now");
     throw new Error(data.message);
   },
@@ -87,6 +87,11 @@ worker.registerJob({
 });
 
 void (async () => {
+  const ranJob = await worker.listenForIncomingRuns();
+  if (ranJob) {
+    return;
+  }
+
   if (process.env.ENSCHEDULE_API) {
     console.log("Starting the API");
     worker.serve({

@@ -2,8 +2,10 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
 
+import { RunDefinition } from "@enschedule/types";
+import stream from "stream";
 import { z } from "zod";
-import { TestBackend, createJobDefinition } from "./backend";
+import { TestBackend, createJobDefinition, StreamHandle } from "./backend";
 
 const backend = new TestBackend({
   pgUser: process.env.PGUSER!,
@@ -12,6 +14,31 @@ const backend = new TestBackend({
   pgDatabase: process.env.PGDATABASE!,
   pgPort: process.env.PGPORT!,
 });
+const Console = console.Console;
+
+backend.fork = async function (
+  runMessage: RunDefinition,
+  streamHandle: StreamHandle
+) {
+  const definition = backend.getJobDef(runMessage.definitionId);
+  const origConsole = console;
+  global.console = backend.createConsole(
+    streamHandle.stdout,
+    streamHandle.stderr
+  );
+  global.console.Console = Console;
+  let exitSignal = "0";
+  streamHandle.toggleBuffering(true);
+  try {
+    await definition.job(runMessage.data);
+  } catch (err) {
+    console.error(err);
+    exitSignal = "1";
+  }
+  streamHandle.toggleBuffering(false);
+  global.console = origConsole;
+  return exitSignal;
+}.bind(backend);
 
 afterAll(async () => {
   await backend.sequelize.drop({});
@@ -26,7 +53,7 @@ afterEach(async () => {
 });
 
 const httpJobDeclaration = (
-  cb: (data: { url: string }, console: Console) => void = (data) => {}
+  cb: (data: { url: string }) => void = (data) => {}
 ) =>
   createJobDefinition({
     id: "http_request",
@@ -118,11 +145,12 @@ describe("backends", () => {
     ).toEqual([0, 1]);
   });
   it("should be able to run overdue jobs", async () => {
-    const spy = jest.fn((data: { url: string }, console: Console) => {
+    const jobFn = jest.fn((data: { url: string }) => {
       console.log("comment");
     });
     backend.clearRegisteredJobs();
-    backend.registerJob(httpJobDeclaration(spy));
+    backend.registerJob(httpJobDeclaration(jobFn));
+
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
@@ -134,22 +162,22 @@ describe("backends", () => {
     );
     jest.useFakeTimers().setSystemTime(10);
     await backend.runOverdueJobs();
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
-
-    await backend.runOverdueJobs();
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
-    await job.reload();
-    const runs = await job.getRuns({
-      limit: 1,
-    });
+    let runs = await job.getRuns();
+    expect(jobFn).toHaveBeenCalledTimes(1);
+    expect(jobFn).toHaveBeenLastCalledWith(jobData);
     expect(runs).toHaveLength(1);
     const run = runs[0];
+    expect(run.stderr).toBe("");
     expect(run.stdout).toBe("comment\n");
+
+    await backend.runOverdueJobs();
+    runs = await job.getRuns();
+    expect(jobFn).toHaveBeenCalledTimes(1);
+    expect(jobFn).toHaveBeenLastCalledWith(jobData);
+    expect(runs).toHaveLength(1);
   });
   it("should be able to run jobs that have runNow: true", async () => {
-    const spy = jest.fn((data: { url: string }, console: Console) => {
+    const spy = jest.fn((data: { url: string }) => {
       console.log("comment");
     });
     backend.clearRegisteredJobs();
@@ -175,7 +203,7 @@ describe("backends", () => {
     await backend.runOverdueJobs();
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
+    expect(spy).toHaveBeenLastCalledWith(jobData);
 
     await backend.runScheduleNow(schedule.id);
     await backend.runOverdueJobs();
@@ -194,7 +222,7 @@ describe("backends", () => {
     expect(spy).toHaveBeenCalledTimes(4);
   });
   it("should log errors", async () => {
-    const spy = jest.fn((data: { url: string }, console: Console) => {
+    const spy = jest.fn((data: { url: string }) => {
       throw new Error("Error");
     });
     backend.clearRegisteredJobs();
@@ -211,15 +239,13 @@ describe("backends", () => {
     jest.useFakeTimers().setSystemTime(10);
     await backend.runOverdueJobs();
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
+    expect(spy).toHaveBeenLastCalledWith(jobData);
 
     await backend.runOverdueJobs();
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenLastCalledWith(jobData, expect.any(console.Console));
+    expect(spy).toHaveBeenLastCalledWith(jobData);
     await job.reload();
-    const runs = await job.getRuns({
-      limit: 1,
-    });
+    const runs = await job.getRuns();
     expect(runs).toHaveLength(1);
     const run = runs[0];
     expect(run.stdout).toBe("");
@@ -232,10 +258,13 @@ describe("backends", () => {
         )
         .join("\n")
         .replace(/\(\/[^)]*\)/g, "(backend.test.ts)")
+        .split("\n")
+        .slice(0, 3)
+        .join("\n")
     ).toMatchInlineSnapshot(`
       "Error: Error
           at Object.<anonymous> (backend.test.ts)
-      "
+          at TestBackend.<anonymous> (backend.test.ts)"
     `);
   });
 
@@ -304,7 +333,7 @@ describe("backends", () => {
 
 describe("cron", () => {
   it("should register cron job", async () => {
-    const spy = jest.fn((data: { url: string }, console: Console) => {
+    const spy = jest.fn((data: { url: string }) => {
       console.log("Hello!");
     });
     jest.useFakeTimers().setSystemTime(0);

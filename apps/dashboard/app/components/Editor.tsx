@@ -120,7 +120,7 @@ export function ReadOnlyEditor({
               id: string;
               title: string;
               description: string;
-              job: (data: { url: string }, console: Console) => Promise<void> | void;
+              job: (data: { url: string }) => Promise<void> | void;
               example: { url: string };
             };
             declare const scheduler: {

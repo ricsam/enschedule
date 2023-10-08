@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export interface RunDefinition {
+  definitionId: string;
+  data: unknown;
+}
+
 export const publicJobDefinitionSchema = z.object({
   id: z.string(),
   description: z.string(),

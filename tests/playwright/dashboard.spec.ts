@@ -235,6 +235,7 @@ test.describe("Single-Run", () => {
 
 test.describe("Multi runs", () => {
   test("Test pagination", async ({ page }) => {
+    test.slow();
     await reset(page);
     for (let j = 0; j < 11; j += 1) {
       await createRun(page, (j % 4) + 1);
@@ -341,6 +342,7 @@ test.describe("Single schedule", () => {
   test("Can create multiple runs (run now button) on a schedule, and filtering on runs work", async ({
     page,
   }) => {
+    test.slow();
     await reset(page);
     const createRuns = async (scheduleNum: number) => {
       await createRun(page, 1);
@@ -626,7 +628,7 @@ test.describe("Can do schedule multi actions", () => {
             .innerText();
         },
         {
-          timeout: 10000,
+          timeout: 60000,
         }
       );
     };

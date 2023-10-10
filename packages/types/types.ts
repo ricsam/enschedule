@@ -25,6 +25,7 @@ export const serializedRunSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   createdAt: DateSchema,
+  exitSignal: z.string(),
   finishedAt: DateSchema,
   startedAt: DateSchema,
   scheduledToRunAt: DateSchema,
@@ -35,6 +36,9 @@ export const publicJobScheduleSchema = z.object({
   id: z.number(),
   description: z.string(),
   title: z.string(),
+  retryFailedJobs: z.boolean(),
+  retries: z.number(),
+  maxRetries: z.number(),
   runAt: OptionalDateSchema,
   cronExpression: z.string().optional(),
   lastRun: serializedRunSchema.optional(),
@@ -64,6 +68,11 @@ export interface PublicJobSchedule {
   id: number;
   description: string;
   title: string;
+
+  retryFailedJobs: boolean;
+  maxRetries: number;
+  retries: number;
+
   runAt?: Date;
   cronExpression?: string;
   lastRun?: SerializedRun;
@@ -79,6 +88,7 @@ export interface SerializedRun {
   stdout: string;
   stderr: string;
   createdAt: Date;
+  exitSignal: string;
   finishedAt: Date;
   startedAt: Date;
   scheduledToRunAt: Date;
@@ -94,6 +104,9 @@ export interface ScheduleJobOptions {
   eventId?: string;
   title: string;
   description: string;
+  retryFailedJobs?: boolean;
+  retries?: number;
+  maxRetries?: number;
 }
 
 export const scheduleUpdatePayloadSchema = z.object({

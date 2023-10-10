@@ -556,3 +556,95 @@ describe("get single run", () => {
     expect(run).toEqual(await backend.getRun(run.id));
   });
 });
+describe("can retry", () => {
+  const orig = backend.retryStrategy;
+  beforeEach(() => {
+    backend.retryStrategy = function (schedule) {
+      return 5000;
+    };
+  });
+  afterEach(() => {
+    backend.retryStrategy = orig;
+  });
+  const retryTest = async (config: { maxRetries?: number } = {}) => {
+    backend.clearRegisteredJobs();
+    const spy = jest.fn((data: { url: string }) => {
+      throw new Error("failed job");
+    });
+    jest.useFakeTimers().setSystemTime(0);
+    backend.registerJob(httpJobDeclaration(spy));
+
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      jobData,
+      {
+        runAt: new Date(0),
+        retryFailedJobs: true,
+        maxRetries: config.maxRetries,
+      }
+    );
+
+    let schedules = await backend.getDbSchedules();
+    expect(schedules[0].runAt!.getTime()).toBe(0);
+
+    jest.useFakeTimers().setSystemTime(backend.tickDuration);
+
+    await backend.tick();
+
+    schedules = await backend.getDbSchedules();
+    let runs = await backend.getDbRuns();
+    expect(schedules).toHaveLength(1);
+    expect(runs).toHaveLength(1);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(runs[0].exitSignal).toBe("1");
+    expect(schedules[0].runAt!.getTime()).toBe(backend.tickDuration + 5000);
+
+    const tick = async (n: number) => {
+      expect(runs).toHaveLength(
+        Math.min(
+          1 + n,
+          config.maxRetries ? config.maxRetries + 1 : Number.POSITIVE_INFINITY
+        )
+      );
+      jest
+        .useFakeTimers()
+        .setSystemTime((backend.tickDuration + 5000) * (n + 1));
+      await backend.tick();
+      runs = await backend.getDbRuns();
+      expect(runs).toHaveLength(
+        Math.min(
+          2 + n,
+          config.maxRetries ? config.maxRetries + 1 : Number.POSITIVE_INFINITY
+        )
+      );
+    };
+    for (let n = 0; n < 10; n += 1) {
+      await tick(n);
+    }
+    await schedules[0].reload();
+    expect(schedules[0].retries).toBe(
+      config.maxRetries ? config.maxRetries : 11
+    );
+    expect(spy).toHaveBeenCalledTimes(
+      config.maxRetries ? config.maxRetries + 1 : 11
+    );
+  };
+  it("should work when retryFailedJobs is true", async () => {
+    await retryTest();
+  });
+  it("should work with a maxRetries ", async () => {
+    await retryTest({ maxRetries: 5 });
+    const schedules = await backend.getDbSchedules();
+    let runs = await backend.getDbRuns();
+    expect(schedules).toHaveLength(1);
+    expect(runs).toHaveLength(6);
+    expect(runs[5].exitSignal).toBe("1");
+    const schedule = schedules[0];
+    const noMaxRetries = schedule.maxRetries === -1;
+    expect(noMaxRetries || schedule.retries < schedule.maxRetries).toBe(false);
+    expect(schedules[0].runAt?.getTime()).toBeLessThan(Date.now());
+    expect(schedules[0].claimed).toBe(true);
+  });
+});

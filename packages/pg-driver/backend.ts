@@ -1,5 +1,3 @@
-import stream from "node:stream";
-import * as cp from "node:child_process";
 import type {
   PublicJobDefinition,
   PublicJobRun,
@@ -10,6 +8,8 @@ import type {
   SerializedRun,
 } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
+import * as cp from "node:child_process";
+import stream from "node:stream";
 import { pascalCase } from "pascal-case";
 import type {
   Association,
@@ -77,6 +77,7 @@ export const serializeRun = (run: Run): SerializedRun => {
     stdout: run.stdout,
     stderr: run.stderr,
     createdAt: run.createdAt,
+    exitSignal: run.exitSignal,
     finishedAt: run.finishedAt,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
@@ -92,6 +93,9 @@ export const createPublicJobSchedule = (
     id: schedule.id,
     title: schedule.title,
     description: schedule.description,
+    retryFailedJobs: schedule.retryFailedJobs,
+    retries: schedule.retries,
+    maxRetries: schedule.maxRetries,
     runAt: schedule.runAt || undefined,
     cronExpression: schedule.cronExpression || undefined,
     lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
@@ -113,6 +117,7 @@ export const createPublicJobRun = (
     stdout: run.stdout,
     stderr: run.stderr,
     createdAt: run.createdAt,
+    exitSignal: run.exitSignal,
     finishedAt: run.finishedAt,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
@@ -125,6 +130,15 @@ export interface StreamHandle {
   stdout: stream.PassThrough;
   stderr: stream.PassThrough;
   toggleBuffering: (on: boolean) => void;
+}
+
+export interface CreateJobScheduleOptions {
+  cronExpression?: string;
+  eventId?: string;
+  runAt?: Date;
+  retries?: number;
+  retryFailedJobs?: boolean;
+  maxRetries?: number;
 }
 
 type ScheduleAttributes = InferAttributes<
@@ -153,6 +167,9 @@ class Schedule extends Model<
   declare target: string;
   declare cronExpression?: CreationOptional<string> | null;
   declare eventId?: CreationOptional<string> | null;
+  declare retryFailedJobs: CreationOptional<boolean>;
+  declare retries: CreationOptional<number>;
+  declare maxRetries: CreationOptional<number>;
   declare claimed: CreationOptional<boolean>;
   declare data: string;
   declare numRuns: CreationOptional<number>;
@@ -190,6 +207,8 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare finishedAt: Date;
   declare startedAt: Date;
   declare scheduledToRunAt: Date;
+
+  declare exitSignal: string;
 
   declare scheduleId: ForeignKey<Schedule["id"]>;
 
@@ -253,6 +272,21 @@ export class PrivateBackend {
         eventId: {
           type: DataTypes.STRING,
           allowNull: true,
+        },
+        retries: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 0,
+        },
+        maxRetries: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: -1,
+        },
+        retryFailedJobs: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
         },
         title: {
           type: DataTypes.STRING,
@@ -318,6 +352,10 @@ export class PrivateBackend {
         },
         createdAt: {
           type: DataTypes.DATE,
+          allowNull: false,
+        },
+        exitSignal: {
+          type: DataTypes.TEXT,
           allowNull: false,
         },
         finishedAt: {
@@ -519,13 +557,20 @@ export class PrivateBackend {
     title: string,
     description: string,
     data: unknown,
-    options: { cronExpression?: string; eventId?: string; runAt?: Date } = {}
+    options: CreateJobScheduleOptions = {}
   ) {
     const def = this.definedJobs[defId];
     if (!def) {
       throw new Error("You must create a JobDefinition first");
     }
-    const { cronExpression, eventId, runAt } = options;
+    const {
+      cronExpression,
+      eventId,
+      runAt,
+      retries,
+      retryFailedJobs,
+      maxRetries,
+    } = options;
     const signature = this.createSignature(defId, runAt, data, cronExpression);
     const where: WhereOptions<ScheduleAttributes> = eventId
       ? {
@@ -539,6 +584,9 @@ export class PrivateBackend {
     return Schedule.findOrCreate({
       where,
       defaults: {
+        retries,
+        retryFailedJobs,
+        maxRetries,
         target: defId,
         // normalize the cron expression
         cronExpression: cronExpression
@@ -588,6 +636,8 @@ export class PrivateBackend {
       runAt = parseExpression(cronExpression).next().toDate();
     }
 
+    const { retryFailedJobs, retries, maxRetries } = options;
+
     const [dbSchedule] = await this.createJobSchedule(
       defId,
       options.title,
@@ -597,21 +647,15 @@ export class PrivateBackend {
         eventId: options.eventId,
         runAt,
         cronExpression,
+        retryFailedJobs,
+        retries,
+        maxRetries,
       }
     );
-    return {
-      id: Number(dbSchedule.id),
-      title: dbSchedule.title,
-      description: dbSchedule.description,
-      target: dbSchedule.target,
-      jobDefinition: this.getJobDefinition(dbSchedule.target),
-      lastRun: undefined,
-      runAt: dbSchedule.runAt || undefined,
-      cronExpression: dbSchedule.cronExpression || undefined,
-      createdAt: dbSchedule.createdAt,
-      numRuns: dbSchedule.numRuns,
-      data: dbSchedule.data,
-    };
+    return createPublicJobSchedule(
+      dbSchedule,
+      this.getJobDef(dbSchedule.target)
+    );
   }
 
   public async runScheduleNow(scheduleId: number) {
@@ -803,6 +847,7 @@ export class PrivateBackend {
   }
 
   public async runDefinition(runMessage: RunDefinition) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
     const stdoutStream = new stream.PassThrough();
     const stderrStream = new stream.PassThrough();
@@ -993,7 +1038,7 @@ export class PrivateBackend {
       "schedule"
     );
     const startedAt = new Date();
-    const { stderr, stdout } = await this.runDbSchedule(schedule);
+    const { stderr, stdout, exitSignal } = await this.runDbSchedule(schedule);
     const finishedAt = new Date();
     log(
       "Finished running",
@@ -1005,6 +1050,9 @@ export class PrivateBackend {
       `${String(finishedAt.getTime() - startedAt.getTime())}ms`
     );
 
+    /**
+     * It is new Date if the runNow: true was used on the schedule
+     */
     const runAt = schedule.runAt ?? new Date();
 
     const run = await schedule.createRun({
@@ -1014,6 +1062,7 @@ export class PrivateBackend {
       stdout,
       finishedAt,
       data: schedule.data,
+      exitSignal,
     });
     log(
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
@@ -1022,6 +1071,10 @@ export class PrivateBackend {
     await schedule.setLastRun(run);
     await schedule.save();
     return run;
+  }
+
+  public retryStrategy(schedule: PublicJobSchedule) {
+    return Math.min(60000 * 2 ** schedule.retries, 5 * 60 * 1000);
   }
 
   protected async runOverdueJobs() {
@@ -1041,8 +1094,30 @@ export class PrivateBackend {
     }
     await Promise.all(
       overdueJobs.map(async (schedule) => {
-        await this.scheduleSingleRun(schedule);
+        const run = await this.scheduleSingleRun(schedule);
 
+        if (schedule.retryFailedJobs === true) {
+          if (run.exitSignal !== "0") {
+            const noMaxRetries = schedule.maxRetries === -1;
+
+            const shouldRetry =
+              noMaxRetries || schedule.retries < schedule.maxRetries;
+
+            if (shouldRetry) {
+              const nextRun = this.retryStrategy(
+                createPublicJobSchedule(
+                  schedule,
+                  this.getJobDef(schedule.target)
+                )
+              );
+              schedule.runAt = new Date(Date.now() + nextRun);
+              schedule.claimed = false;
+              schedule.retries += 1;
+              await schedule.save();
+              return;
+            }
+          }
+        }
         if (schedule.cronExpression) {
           const runAt = parseExpression(schedule.cronExpression)
             .next()
@@ -1096,7 +1171,7 @@ export class TestBackend extends PrivateBackend {
     title: string,
     description: string,
     data: unknown,
-    options: { cronId?: string; eventId?: string; runAt?: Date } = {}
+    options: CreateJobScheduleOptions = {}
   ) {
     return super.createJobSchedule(jobId, title, description, data, options);
   }

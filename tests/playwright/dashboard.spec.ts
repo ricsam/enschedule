@@ -523,6 +523,32 @@ test.describe("Can do schedule multi actions", () => {
     test("Can multi unschedule", testUnschedule);
   });
 });
-// test.describe("Can retry", () => {
-//   test("maxRetries", () => {});
-// });
+
+test.describe("Can retry", () => {
+  test("maxRetries", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 3, {
+      retry: true,
+    });
+    const expectPage = () => {
+      return expect.poll(
+        async () => {
+          await page.reload();
+          return Promise.all([
+            page.getByTestId("num-retries").innerText(),
+            page.getByTestId("number-of-runs").innerText(),
+            page.getByTestId("next-run").innerText(),
+          ]);
+        },
+        {
+          timeout: 60000,
+        }
+      );
+    };
+    expect(page.getByTestId("retry-failed-jobs")).toHaveText("Yes");
+    await expectPage().toEqual(["None", "0", "just now"]);
+    expect(page.title).toBeTruthy();
+    await expectPage().toEqual(["0", "1", "in less than a minute"]);
+    await expectPage().toEqual(["1", "2", "less than a minute ago"]);
+  });
+});

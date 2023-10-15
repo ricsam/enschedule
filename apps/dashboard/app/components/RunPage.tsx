@@ -82,6 +82,10 @@ export default function RunPage({
                 <Typography color="text.primary">
                   {formatDate(new Date(run.scheduledToRunAt), false).label}
                 </Typography>
+                <Typography color="text.secondary">Exit signal</Typography>
+                <Typography color="text.primary">
+                  {run.exitSignal}
+                </Typography>
                 <Typography color="text.secondary">Has stdout</Typography>
                 <Typography color="text.primary">
                   {String(!!run.stdout)}

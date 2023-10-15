@@ -1,6 +1,9 @@
 import http from "node:http";
 import { PrivateBackend } from "@enschedule/pg-driver";
-import type { ScheduleUpdatePayload } from "@enschedule/types";
+import {
+  ScheduleJobOptionsSchema,
+  ScheduleUpdatePayload,
+} from "@enschedule/types";
 import {
   OptionalDateSchema,
   ScheduleUpdatePayloadSchema,
@@ -85,15 +88,7 @@ export class Worker extends PrivateBackend {
       const ScheduleSchema = z.object({
         jobId: z.string(),
         data: z.unknown(),
-        options: z
-          .object({
-            cronExpression: z.string().optional(),
-            runAt: OptionalDateSchema,
-            eventId: z.string().optional(),
-            title: z.string(),
-            description: z.string(),
-          })
-          .optional(),
+        options: ScheduleJobOptionsSchema,
       });
       const { jobId, data, options } = ScheduleSchema.parse(req.body);
       this.scheduleJob(jobId, data, options)

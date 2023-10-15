@@ -7,7 +7,7 @@ import type {
   RunDefinition,
   ScheduleJobOptions,
   ScheduleUpdatePayload,
-  SerializedRun
+  SerializedRun,
 } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
 import { pascalCase } from "pascal-case";
@@ -31,7 +31,7 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   NonAttribute,
-  WhereOptions
+  WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
 import type { ZodType } from "zod";
@@ -132,15 +132,23 @@ export interface StreamHandle {
   toggleBuffering: (on: boolean) => void;
 }
 
-export interface CreateJobScheduleOptions {
+interface CreateJobScheduleOptions {
   cronExpression?: string;
   eventId?: string;
   runAt?: Date;
-  retries?: number;
   retryFailedJobs?: boolean;
   maxRetries?: number;
   failureTrigger?: number;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const assert = <T, U extends T>() => {
+  //
+};
+assert<
+  // omit desc and title because they are passed as argumnets to createJobSchedule
+  Omit<ScheduleJobOptions, "description" | "title">,
+  CreateJobScheduleOptions
+>();
 
 type ScheduleAttributes = InferAttributes<
   Schedule,
@@ -169,7 +177,13 @@ export class Schedule extends Model<
   declare cronExpression?: CreationOptional<string> | null;
   declare eventId?: CreationOptional<string> | null;
   declare retryFailedJobs: CreationOptional<boolean>;
+  /**
+   * defaults to -1, indicating no retries
+   */
   declare retries: CreationOptional<number>;
+  /**
+   * -1 is infinite retries. Will stop retrying when `retires >= maxRetries`
+   */
   declare maxRetries: CreationOptional<number>;
   declare claimed: CreationOptional<boolean>;
   declare data: string;
@@ -285,7 +299,7 @@ export class PrivateBackend {
         retries: {
           type: DataTypes.INTEGER,
           allowNull: false,
-          defaultValue: 0,
+          defaultValue: -1,
         },
         maxRetries: {
           type: DataTypes.INTEGER,
@@ -584,7 +598,6 @@ export class PrivateBackend {
       cronExpression,
       eventId,
       runAt,
-      retries,
       retryFailedJobs,
       maxRetries,
       failureTrigger,
@@ -602,7 +615,6 @@ export class PrivateBackend {
     return Schedule.findOrCreate({
       where,
       defaults: {
-        retries,
         retryFailedJobs,
         maxRetries,
         target: defId,
@@ -655,7 +667,7 @@ export class PrivateBackend {
       runAt = parseExpression(cronExpression).next().toDate();
     }
 
-    const { retryFailedJobs, retries, maxRetries, failureTrigger } = options;
+    const { retryFailedJobs, maxRetries, failureTrigger } = options;
 
     const [dbSchedule] = await this.createJobSchedule(
       defId,
@@ -667,7 +679,6 @@ export class PrivateBackend {
         runAt,
         cronExpression,
         retryFailedJobs,
-        retries,
         maxRetries,
         failureTrigger,
       }
@@ -1115,14 +1126,13 @@ export class PrivateBackend {
     await Promise.all(
       overdueJobs.map(async (schedule) => {
         const run = await this.scheduleSingleRun(schedule);
+        const noMaxRetries = schedule.maxRetries === -1;
+
+        const shouldRetry =
+          noMaxRetries || schedule.retries < schedule.maxRetries - 1;
 
         if (schedule.retryFailedJobs === true) {
           if (run.exitSignal !== "0") {
-            const noMaxRetries = schedule.maxRetries === -1;
-
-            const shouldRetry =
-              noMaxRetries || schedule.retries < schedule.maxRetries;
-
             if (shouldRetry) {
               const nextRun = this.retryStrategy(
                 createPublicJobSchedule(
@@ -1148,8 +1158,17 @@ export class PrivateBackend {
             .toDate();
           schedule.runAt = runAt;
           schedule.claimed = false;
-          await schedule.save();
         }
+        if (schedule.retryFailedJobs === true) {
+          if (run.exitSignal === "0") {
+            // success reset the retries:
+            schedule.retries = -1;
+          } else if (schedule.retries >= schedule.maxRetries - 1) {
+            // we will not retry anymore
+            schedule.retries = schedule.maxRetries;
+          }
+        }
+        await schedule.save();
       })
     );
     return claimed;

@@ -24,6 +24,9 @@ export const formatDate = (
     }
   }
   const value = format(date, "yyyy-MM-dd:HH:mm:ss");
+  /**
+   * if close in time (< 1000ms), time is empty string
+   */
   let time = formatDuration(duration, {
     format: unit,
   });

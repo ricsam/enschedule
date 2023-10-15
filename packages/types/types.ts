@@ -83,7 +83,6 @@ export const ScheduleJobOptionsSchema = z.object({
   title: z.string(),
   description: z.string(),
   retryFailedJobs: z.boolean().optional(),
-  retries: z.number().optional(),
   maxRetries: z.number().optional(),
   failureTrigger: z.number().optional(),
 });

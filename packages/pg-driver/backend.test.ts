@@ -636,7 +636,7 @@ describe("can retry", () => {
       await tick(n);
     }
     await schedule.reload();
-    expect(schedule.retries).toBe(config.maxRetries ? config.maxRetries : 11);
+    expect(schedule.retries).toBe(config.maxRetries ? config.maxRetries : 10);
     return [schedule, notifySchedule, spy];
   };
   it("should work when retryFailedJobs is true", async () => {

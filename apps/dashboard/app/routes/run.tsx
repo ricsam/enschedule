@@ -612,6 +612,7 @@ export default function Run() {
                         fullWidth
                       />
                       <SendButton
+                        data-testid="submit-max-retries"
                         disabled={
                           Number.isNaN(parsedMaxRetriesEntry) ||
                           parsedMaxRetriesEntry < -1

@@ -74,6 +74,13 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Scheduled for",
   }),
+  columnHelper.accessor("exitSignal", {
+    cell: (info) => {
+      const value = info.getValue();
+      return value;
+    },
+    header: "Exit signal",
+  }),
   columnHelper.accessor("stdout", {
     cell: (info) => {
       const value = info.getValue();

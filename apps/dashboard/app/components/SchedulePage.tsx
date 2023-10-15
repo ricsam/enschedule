@@ -250,7 +250,7 @@ export default function SchedulePage({
             </Typography>
             <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
               <Typography color="text.secondary">Next run</Typography>
-              <Typography color="text.primary">
+              <Typography color="text.primary" data-testid="next-run">
                 {schedule.runAt ? (
                   formatDate(new Date(schedule.runAt), false).label
                 ) : (
@@ -308,6 +308,24 @@ export default function SchedulePage({
               <Typography color="text.primary" data-testid="number-of-runs">
                 {schedule.numRuns}
               </Typography>
+              <Typography color="text.secondary">Retry failed jobs</Typography>
+              <Typography color="text.primary" data-testid="retry-failed-jobs">
+                {schedule.retryFailedJobs ? "Yes" : "No"}
+              </Typography>
+              {schedule.retryFailedJobs && (
+                <>
+                  <Typography color="text.secondary">Max retries</Typography>
+                  <Typography color="text.primary" data-testid="max-retries">
+                    {schedule.maxRetries === -1
+                      ? "Unlimited"
+                      : schedule.maxRetries}
+                  </Typography>
+                  <Typography color="text.secondary">Num retries</Typography>
+                  <Typography color="text.primary" data-testid="num-retries">
+                    {schedule.retries === -1 ? 'None' : schedule.retries}
+                  </Typography>
+                </>
+              )}
             </Box>
           </CardContent>
           <CardActions>

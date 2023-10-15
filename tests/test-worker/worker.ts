@@ -27,6 +27,7 @@ const worker = new Worker({
   pgPort: process.env.PGPORT,
 });
 worker.logJobs = true;
+worker.retryStrategy = () => 5000;
 
 const httpRequestJob = worker.registerJob({
   id: "send-http-request",
@@ -63,6 +64,9 @@ worker.registerJob({
     message: z.string(),
   }),
   job: (data) => {
+    if (data.message === "no error") {
+      return;
+    }
     throw new Error(data.message);
   },
   description: "Will throw the message as an error",

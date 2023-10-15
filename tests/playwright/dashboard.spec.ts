@@ -54,6 +54,9 @@ const createRun = async (
   await page.getByTestId("description-input").fill("Test Description");
   await page.getByTestId("SendIcon").click();
 
+  await page.getByTestId("retry-no").click();
+  await page.getByTestId("trigger-no").click();
+
   // Click the send button next to the title and description
   await page.getByTestId("submit-button").click();
 

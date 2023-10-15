@@ -1,3 +1,5 @@
+import * as cp from "node:child_process";
+import stream from "node:stream";
 import type {
   PublicJobDefinition,
   PublicJobRun,
@@ -5,11 +7,9 @@ import type {
   RunDefinition,
   ScheduleJobOptions,
   ScheduleUpdatePayload,
-  SerializedRun,
+  SerializedRun
 } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
-import * as cp from "node:child_process";
-import stream from "node:stream";
 import { pascalCase } from "pascal-case";
 import type {
   Association,
@@ -31,7 +31,7 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   NonAttribute,
-  WhereOptions,
+  WhereOptions
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
 import type { ZodType } from "zod";
@@ -139,6 +139,7 @@ export interface CreateJobScheduleOptions {
   retries?: number;
   retryFailedJobs?: boolean;
   maxRetries?: number;
+  failureTrigger?: number;
 }
 
 type ScheduleAttributes = InferAttributes<
@@ -146,7 +147,7 @@ type ScheduleAttributes = InferAttributes<
   { omit: "runs" | "lastRun" }
 >;
 
-class Schedule extends Model<
+export class Schedule extends Model<
   ScheduleAttributes,
   InferCreationAttributes<Schedule, { omit: "runs" | "lastRun" }>
 > {
@@ -191,6 +192,14 @@ class Schedule extends Model<
 
   declare lastRun?: NonAttribute<Run> | null;
   declare runs?: NonAttribute<Run[]>;
+
+  declare failureTriggerId: ForeignKey<Schedule["id"]>;
+
+  declare getFailureTrigger: HasOneGetAssociationMixin<Schedule | null>; // Note the null assertions!
+  declare setFailureTrigger: HasOneSetAssociationMixin<Schedule, number>;
+  declare createFailureTrigger: HasOneCreateAssociationMixin<Schedule>;
+
+  declare failureTrigger: NonAttribute<Schedule>;
 
   declare static associations: {
     runs: Association<Schedule, Run>;
@@ -392,6 +401,14 @@ export class PrivateBackend {
       as: "lastRun",
     });
 
+    Schedule.belongsTo(Schedule, {
+      foreignKey: {
+        name: "failureTriggerId",
+        allowNull: true,
+      },
+      as: "failureTrigger",
+    });
+
     this.Run = Run;
     this.Schedule = Schedule;
   }
@@ -570,6 +587,7 @@ export class PrivateBackend {
       retries,
       retryFailedJobs,
       maxRetries,
+      failureTrigger,
     } = options;
     const signature = this.createSignature(defId, runAt, data, cronExpression);
     const where: WhereOptions<ScheduleAttributes> = eventId
@@ -597,6 +615,7 @@ export class PrivateBackend {
         signature,
         title,
         description,
+        failureTriggerId: failureTrigger,
       },
     });
   }
@@ -636,7 +655,7 @@ export class PrivateBackend {
       runAt = parseExpression(cronExpression).next().toDate();
     }
 
-    const { retryFailedJobs, retries, maxRetries } = options;
+    const { retryFailedJobs, retries, maxRetries, failureTrigger } = options;
 
     const [dbSchedule] = await this.createJobSchedule(
       defId,
@@ -650,6 +669,7 @@ export class PrivateBackend {
         retryFailedJobs,
         retries,
         maxRetries,
+        failureTrigger,
       }
     );
     return createPublicJobSchedule(
@@ -1115,6 +1135,10 @@ export class PrivateBackend {
               schedule.retries += 1;
               await schedule.save();
               return;
+            }
+            const trigger = await schedule.getFailureTrigger();
+            if (trigger) {
+              await this.runScheduleNow(trigger.id);
             }
           }
         }

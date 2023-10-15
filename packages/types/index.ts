@@ -16,4 +16,5 @@ export {
   OptionalDateSchema,
   DateSchema,
   scheduleUpdatePayloadSchema as ScheduleUpdatePayloadSchema,
+  ScheduleJobOptionsSchema,
 } from "./types";

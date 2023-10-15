@@ -1,5 +1,8 @@
-import type { PublicJobSchedule, ScheduleJobOptions } from "@enschedule/types";
-import { publicJobScheduleSchema } from "@enschedule/types";
+import type { PublicJobDefinition, PublicJobSchedule } from "@enschedule/types";
+import {
+  publicJobScheduleSchema,
+  ScheduleJobOptionsSchema,
+} from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
 import type { SxProps } from "@mui/material";
 import {
@@ -23,6 +26,7 @@ import type {
   ActionFunction,
   LinksFunction,
   LoaderFunction,
+  SerializeFrom,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -42,32 +46,30 @@ import icon from "~/icon.svg";
 import { scheduler } from "~/scheduler.server";
 import { getLoaderData } from "./runLoader.server";
 
-const SerializedJobEventSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  data: z.string(),
-  runAt: z.string().optional(),
-  cronExpression: z.string().optional(),
-  target: z.string(),
-});
-
-type SerializedJobEvent = z.infer<typeof SerializedJobEventSchema>;
+const SerializedJobEventSchema = z.intersection(
+  z.object({
+    data: z.string(),
+    target: z.string(),
+    runAt: z.string().optional(),
+  }),
+  ScheduleJobOptionsSchema.omit({ runAt: true })
+);
 
 export const action: ActionFunction = async ({ request }) => {
   const body = await request.formData();
-  const serializedEv = SerializedJobEventSchema.parse(Object.fromEntries(body));
+  const jsonString = z.string().parse(body.get("jsonData"));
+
+  const jsonValue = JSON.parse(jsonString);
+  const serializedEv = SerializedJobEventSchema.parse(jsonValue);
 
   const data = JSON.parse(serializedEv.data);
   const target = serializedEv.target;
 
-  const options: ScheduleJobOptions = {
-    runAt: serializedEv.runAt ? new Date(serializedEv.runAt) : undefined,
-    cronExpression: serializedEv.cronExpression,
-    title: serializedEv.title,
-    description: serializedEv.description,
-  };
-
-  const response = await scheduler.scheduleJob(target, data, options);
+  const response = await scheduler.scheduleJob(
+    target,
+    data,
+    ScheduleJobOptionsSchema.parse(serializedEv)
+  );
 
   return json(response);
 };
@@ -184,9 +186,8 @@ const FormattedJson = ({ data }: { data: any }) => {
   );
 };
 
-export type Definition =
-  | LoaderData[number]
-  | ReturnType<typeof useLoaderData<LoaderData[number]>>;
+export type Definition = SerializeFrom<PublicJobDefinition>;
+export type Schedule = SerializeFrom<PublicJobSchedule>;
 
 const InputArea = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -208,11 +209,14 @@ const InputArea = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function Run() {
-  const definitions = useLoaderData<LoaderData>();
+  const { definitions, schedules } = useLoaderData<LoaderData>();
   const fetcher = useFetcher<PublicJobSchedule>();
   const qps: { def?: string } = Object.fromEntries(
     useSearchParams()[0].entries()
   );
+  const [selectedSchedule, setSelectedSchedule] = React.useState<
+    Schedule | undefined
+  >(undefined);
   const [selectedDef, setSelectedJob] = React.useState<Definition | undefined>(
     () => {
       if (qps.def) {
@@ -241,6 +245,11 @@ export default function Run() {
   >();
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [retryFailedJobs, setRetryFailedJobs] = React.useState<
+    undefined | boolean
+  >(undefined);
+  const [maxRetriesEntry, setMaxRetriesEntry] = React.useState("-1");
+  const [maxRetries, setMaxRetries] = React.useState<undefined | number>();
   const [submitTitleAndDescription, setSubmitTitleAndDescription] =
     React.useState(false);
   const [cronExpression, setCronExpression] = React.useState("");
@@ -259,6 +268,162 @@ export default function Run() {
   if (hasSaved.current === undefined && fetcher.data) {
     hasSaved.current = publicJobScheduleSchema.parse(fetcher.data);
   }
+
+  const saveJob = selectedDef && (
+    <>
+      <EnscheduleBotMessage
+        message={`Do you want to save this ${
+          whenToSend === "manual" ? "job" : "schedule"
+        }?`}
+      />
+
+      {!hasSubmitted.current ? (
+        <Box display="flex" alignItems="flex-end" justifyContent="flex-end">
+          <>
+            <Button
+              variant="outlined"
+              color="primary"
+              data-testid="submit-button"
+              onClick={() => {
+                const job: z.input<typeof SerializedJobEventSchema> = {
+                  title,
+                  description,
+                  target: selectedDef.id,
+                  data: JSON.stringify(data),
+                  retryFailedJobs,
+                  maxRetries,
+                  failureTrigger: selectedSchedule
+                    ? selectedSchedule.id
+                    : undefined,
+                };
+
+                if (whenToSend === "now") {
+                  job.runAt = new Date().toJSON();
+                } else if (whenToSend === "later") {
+                  if (cronDefined) {
+                    job.cronExpression = parsedCron;
+                  } else {
+                    job.runAt = parsedRunLater.toJSON();
+                  }
+                }
+                fetcher.submit(
+                  { jsonData: JSON.stringify(job) },
+                  { method: "post" }
+                );
+              }}
+            >
+              Yes
+            </Button>
+          </>
+        </Box>
+      ) : (
+        <>
+          <MyMessage message="Yes" />
+
+          <EnscheduleBotMessage message="Saving the job to the database..." />
+        </>
+      )}
+
+      {hasSaved.current && (
+        <>
+          <EnscheduleBotMessage
+            message={
+              <div>
+                Successfully saved the job to the database! Click{" "}
+                <MuiLink
+                  data-testid="schedule-link"
+                  to={`/schedules/${hasSaved.current.id}`}
+                  component={Link}
+                >
+                  here
+                </MuiLink>{" "}
+                to view the newly created schedule.
+              </div>
+            }
+          />
+        </>
+      )}
+    </>
+  );
+
+  const parsedMaxRetriesEntry = parseInt(maxRetriesEntry, 10);
+
+  const [trigger, setTrigger] = React.useState<undefined | boolean>(undefined);
+
+  const onError = (
+    <>
+      <EnscheduleBotMessage
+        message={"If the job fails, would you like to trigger another job?"}
+      />
+      {trigger === undefined ? (
+        <InputArea>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => {
+              setTrigger(false);
+            }}
+            data-testid="trigger-no"
+          >
+            No
+          </Button>
+          <Box pr={1} />
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => {
+              setTrigger(true);
+            }}
+            data-testid="trigger-yes"
+          >
+            Yes
+          </Button>
+        </InputArea>
+      ) : (
+        <>
+          <MyMessage message={trigger ? "Yes" : "No"} />
+          {trigger ? (
+            <>
+              <EnscheduleBotMessage message="Which schedule would you like to trigger?" />
+              {!selectedSchedule ? (
+                <>
+                  <InputArea>
+                    <Autocomplete
+                      data-testid="schedule-autocomplete"
+                      disablePortal
+                      options={schedules}
+                      getOptionLabel={(schedule) => schedule.title}
+                      value={selectedSchedule ?? null}
+                      onChange={(ev, value) => {
+                        if (value) {
+                          setSelectedSchedule(value);
+                        }
+                      }}
+                      fullWidth
+                      renderInput={(params) => (
+                        <TextField {...params} label="Select a schedule" />
+                      )}
+                    />
+                    <SendButton onClick={() => {}} />
+                  </InputArea>
+                </>
+              ) : (
+                <>
+                  <MyMessage message={selectedSchedule.title} />
+                  <EnscheduleBotMessage
+                    message={`Will trigger the job associated with the schedule: "${selectedSchedule.title}"`}
+                  />
+                  {saveJob}
+                </>
+              )}
+            </>
+          ) : (
+            saveJob
+          )}
+        </>
+      )}
+    </>
+  );
 
   const describeJob = selectedDef && (
     <>
@@ -393,66 +558,85 @@ export default function Run() {
           </Box>
 
           <EnscheduleBotMessage
-            message={`Do you want to save this ${
-              whenToSend === "manual" ? "job" : "schedule"
-            }?`}
+            message={"Would you like this job to retry on error?"}
           />
-
-          {!hasSubmitted.current ? (
-            <Box display="flex" alignItems="flex-end" justifyContent="flex-end">
-              <>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  data-testid="submit-button"
-                  onClick={() => {
-                    const job: SerializedJobEvent = {
-                      title,
-                      description,
-                      target: selectedDef.id,
-                      data: JSON.stringify(data),
-                    };
-                    if (whenToSend === "now") {
-                      job.runAt = new Date().toJSON();
-                    } else if (whenToSend === "later") {
-                      if (cronDefined) {
-                        job.cronExpression = parsedCron;
-                      } else {
-                        job.runAt = parsedRunLater.toJSON();
-                      }
-                    }
-                    fetcher.submit(job, { method: "post" });
-                  }}
-                >
-                  Yes
-                </Button>
-              </>
-            </Box>
+          {retryFailedJobs === undefined ? (
+            <InputArea>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => {
+                  setRetryFailedJobs(false);
+                }}
+                data-testid="retry-no"
+              >
+                No
+              </Button>
+              <Box pr={1} />
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => {
+                  setRetryFailedJobs(true);
+                }}
+                data-testid="retry-yes"
+              >
+                Yes
+              </Button>
+            </InputArea>
           ) : (
             <>
-              <MyMessage message="Yes" />
-
-              <EnscheduleBotMessage message="Saving the job to the database..." />
-            </>
-          )}
-
-          {hasSaved.current && (
-            <>
-              <EnscheduleBotMessage
-                message={
-                  <div>
-                    Successfully saved the job to the database! Click{" "}
-                    <MuiLink
-                      data-testid="schedule-link"
-                      to={`/schedules/${hasSaved.current.id}`}
-                      component={Link}
-                    >
-                      here
-                    </MuiLink>{" "}
-                    to view the newly created schedule.
-                  </div>
-                }
-              />
+              <MyMessage message={retryFailedJobs ? "Yes" : "No"} />
+              {retryFailedJobs ? (
+                <>
+                  <EnscheduleBotMessage
+                    message={
+                      "The default grace period between retries is 5 seconds. You can configure this with the scheduler.retryStrategy to for example implement an exponential backoff."
+                    }
+                  />
+                  <EnscheduleBotMessage
+                    message={
+                      "How many times would you like retry the job? (-1 is infinite retries until succeeds)"
+                    }
+                  />
+                  {maxRetries === undefined ? (
+                    <InputArea>
+                      <OutlinedInput
+                        inputProps={{
+                          "data-testid": "max-retries-input",
+                        }}
+                        value={maxRetriesEntry}
+                        onChange={(ev) => {
+                          setMaxRetriesEntry(ev.target.value);
+                        }}
+                        fullWidth
+                      />
+                      <SendButton
+                        disabled={
+                          Number.isNaN(parsedMaxRetriesEntry) ||
+                          parsedMaxRetriesEntry < -1
+                        }
+                        onClick={() => {
+                          setMaxRetries(parsedMaxRetriesEntry);
+                        }}
+                      />
+                    </InputArea>
+                  ) : (
+                    <>
+                      <MyMessage
+                        message={
+                          parsedMaxRetriesEntry === -1
+                            ? "Until the job succeeds"
+                            : `max ${parsedMaxRetriesEntry} times`
+                        }
+                      />
+                      {parsedMaxRetriesEntry === -1 ? saveJob : onError}
+                    </>
+                  )}
+                </>
+              ) : (
+                onError
+              )}
             </>
           )}
         </>

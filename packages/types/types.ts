@@ -1,24 +1,24 @@
 import { z } from "zod";
 
-export interface RunDefinition {
-  definitionId: string;
-  data: unknown;
-}
-
-export const publicJobDefinitionSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  title: z.string(),
-  example: z.unknown(),
-  codeBlock: z.string(),
-  jsonSchema: z.record(z.unknown()),
+//#region Schemas
+export const DateSchema = z.union([z.string(), z.date()]).transform((val) => {
+  if (typeof val === "string") {
+    return new Date(val);
+  }
+  return val;
 });
-
-export const DateSchema = z.string().transform((val) => new Date(val));
 export const OptionalDateSchema = z
-  .string()
+  .union([z.string(), z.date()])
   .optional()
-  .transform((val) => (val ? new Date(val) : undefined));
+  .transform((val) => {
+    if (val) {
+      if (typeof val === "string") {
+        return new Date(val);
+      }
+      return val;
+    }
+    return undefined;
+  });
 
 export const serializedRunSchema = z.object({
   id: z.number(),
@@ -31,7 +31,21 @@ export const serializedRunSchema = z.object({
   scheduledToRunAt: DateSchema,
   data: z.string(),
 });
+//#endregion
 
+//#region PublicJobDefinition
+export const publicJobDefinitionSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  title: z.string(),
+  example: z.unknown(),
+  codeBlock: z.string(),
+  jsonSchema: z.record(z.unknown()),
+});
+export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>;
+//#endregion
+
+//#region PublicJobSchedule
 export const publicJobScheduleSchema = z.object({
   id: z.number(),
   description: z.string(),
@@ -43,72 +57,40 @@ export const publicJobScheduleSchema = z.object({
   cronExpression: z.string().optional(),
   lastRun: serializedRunSchema.optional(),
   createdAt: DateSchema,
+  /** job definition target */
   target: z.string(),
   jobDefinition: publicJobDefinitionSchema,
   numRuns: z.number(),
   data: z.string(),
 });
+export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
+//#endregion
 
+//#region PublicJobRun
 export const publicJobRunSchema = serializedRunSchema.and(
   z.object({
     jobSchedule: publicJobScheduleSchema,
   })
 );
+export type PublicJobRun = z.infer<typeof publicJobRunSchema>;
+//#endregion
 
-export interface PublicJobDefinition {
-  id: string;
-  description: string;
-  title: string;
-  example?: unknown;
-  codeBlock: string;
-  jsonSchema: Record<string, unknown>;
-}
+//#region ScheduleJobOptions
+export const ScheduleJobOptionsSchema = z.object({
+  cronExpression: z.string().optional(),
+  runAt: OptionalDateSchema,
+  eventId: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  retryFailedJobs: z.boolean().optional(),
+  retries: z.number().optional(),
+  maxRetries: z.number().optional(),
+  failureTrigger: z.number().optional(),
+});
+export type ScheduleJobOptions = z.output<typeof ScheduleJobOptionsSchema>;
+//#endregion
 
-export interface PublicJobSchedule {
-  id: number;
-  description: string;
-  title: string;
-
-  retryFailedJobs: boolean;
-  maxRetries: number;
-  retries: number;
-
-  runAt?: Date;
-  cronExpression?: string;
-  lastRun?: SerializedRun;
-  createdAt: Date;
-  /** job definition target */
-  target: string;
-  jobDefinition: PublicJobDefinition;
-  numRuns: number;
-  data: string;
-}
-export interface SerializedRun {
-  id: number;
-  stdout: string;
-  stderr: string;
-  createdAt: Date;
-  exitSignal: string;
-  finishedAt: Date;
-  startedAt: Date;
-  scheduledToRunAt: Date;
-  data: string;
-}
-export type PublicJobRun = SerializedRun & {
-  jobSchedule: PublicJobSchedule;
-};
-
-export interface ScheduleJobOptions {
-  cronExpression?: string;
-  runAt?: Date;
-  eventId?: string;
-  title: string;
-  description: string;
-  retryFailedJobs?: boolean;
-  retries?: number;
-  maxRetries?: number;
-}
-
+//#region ScheduleUpdatePayload
 export const scheduleUpdatePayloadSchema = z.object({
   id: z.number().int().positive(),
   runAt: z
@@ -138,5 +120,24 @@ export const scheduleUpdatePayloadSchema = z.object({
   data: z.string().optional(),
   description: z.string().optional(),
 });
-
 export type ScheduleUpdatePayload = z.infer<typeof scheduleUpdatePayloadSchema>;
+//#endregion
+
+//#region Interfaces
+export interface SerializedRun {
+  id: number;
+  stdout: string;
+  stderr: string;
+  createdAt: Date;
+  exitSignal: string;
+  finishedAt: Date;
+  startedAt: Date;
+  scheduledToRunAt: Date;
+  data: string;
+}
+
+export interface RunDefinition {
+  definitionId: string;
+  data: unknown;
+}
+//#endregion

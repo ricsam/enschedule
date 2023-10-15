@@ -1,6 +1,7 @@
-import { scheduler } from '~/scheduler.server';
+import { scheduler } from "~/scheduler.server";
 
 export async function getLoaderData() {
-  const defs = scheduler.getJobDefinitions();
-  return defs;
+  const definitions = await scheduler.getJobDefinitions();
+  const schedules = await scheduler.getSchedules();
+  return { definitions, schedules };
 }

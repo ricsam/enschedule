@@ -21,6 +21,7 @@ test.describe("Single-Run", () => {
       await createRun(page, i);
     }
 
+    await page.goto(`${baseURL}/runs`);
     await waitForNumRows(page, 4);
 
     // There should be 4 runs / schedules in the tables

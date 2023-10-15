@@ -1,8 +1,7 @@
-import { test, expect, Page } from "@playwright/test";
-import { navigate, numRows, sleep } from "./utils";
-import { Setup } from "./setup";
+import { expect, Page, test } from "@playwright/test";
 import format from "date-fns/format";
-import addDays from "date-fns/addDays";
+import { Setup } from "./setup";
+import { navigate, numRows, sleep, utils, waitForNumRows } from "./utils";
 
 const setup = new Setup();
 
@@ -14,178 +13,7 @@ test.afterEach(async () => {
   await setup.teardown();
 });
 
-const createRun = async (
-  page: Page,
-  definitionNumber: number,
-  options?: {
-    runTomorrow?: boolean;
-  }
-) => {
-  await page.goto(`${setup.dashboardUrl}/run`);
-
-  // Select a job definition from the dropdown
-  await page.getByTestId("definition-autocomplete").click();
-
-  for (let i = 0; i < definitionNumber; i += 1) {
-    await page.keyboard.press("ArrowDown"); // Press the arrow down key
-  }
-  await page.keyboard.press("Enter"); // Press the enter key
-  await page.getByTestId("SendIcon").click();
-
-  if (!options?.runTomorrow) {
-    await page.getByTestId("run-now").click();
-  } else {
-    await page.getByTestId("run-later").click();
-    await page.getByTestId("repeat-no").click();
-
-    const runAtField = page.getByTestId("runAt-input");
-    await runAtField.clear();
-
-    const tomorrow = addDays(new Date(), 1);
-
-    const now = format(tomorrow, "yyyy-MM-dd'T'HH:mm:ss");
-    await runAtField.fill(now);
-
-    await page.getByTestId("submit-runAt").click();
-  }
-
-  // Type in title and description
-  await page.getByTestId("title-input").fill("Test Title");
-  await page.getByTestId("description-input").fill("Test Description");
-  await page.getByTestId("SendIcon").click();
-
-  await page.getByTestId("retry-no").click();
-  await page.getByTestId("trigger-no").click();
-
-  // Click the send button next to the title and description
-  await page.getByTestId("submit-button").click();
-
-  const link = page.getByTestId("schedule-link");
-
-  await navigate(setup.dashboardUrl, page, link);
-
-  await page.waitForURL("**/schedules/*");
-
-  const details = await page.waitForSelector("div#SchedulePage");
-
-  // Then I should see the SchedulePage
-  expect(details).toBeTruthy();
-};
-
-const visitRunPages = async (page: Page) => {
-  const runPageUrls: string[] = [];
-  const runsTableUrls: string[] = [];
-
-  const clickOnFirstRow = async () => {
-    runPageUrls.push(
-      await navigate(
-        setup.dashboardUrl,
-        page,
-        page.getByTestId("table-row-1").getByTestId("run-link")
-      )
-    );
-  };
-
-  // Given I visit the Runs page /runs
-  runsTableUrls.push(`${setup.dashboardUrl}/runs`);
-  await page.goto(`${setup.dashboardUrl}/runs`);
-  expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-
-  // Click on the first row and navigate to the RunPage /runs/$runId
-  await clickOnFirstRow();
-  expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
-
-  // Click on the schedules link /schedules/$scheduleId
-  await navigate(setup.dashboardUrl, page, page.getByTestId("schedule-link"));
-  expect(await page.waitForSelector("div#SchedulePage")).toBeTruthy();
-
-  // Click on the runs tab to navigate to the RunsTable /schedules/$scheduleId/runs
-  runsTableUrls.push(
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByRole("tab", { name: "Runs" })
-    )
-  );
-  expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
-
-  // Click on the first row and navigate to the RunPage /schedules/$scheduleId/runs/$runId
-  await clickOnFirstRow();
-  expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
-
-  // Click on the definitions link /definitions/$definitionId
-  await navigate(setup.dashboardUrl, page, page.getByTestId("definition-link"));
-  expect(await page.waitForSelector("div#DefinitionPage")).toBeTruthy();
-
-  // Click on the schedules tab to navigate to the RunsTable /definitions/$definitionId/schedules
-  await navigate(
-    setup.dashboardUrl,
-    page,
-    page.getByRole("tab", { name: "Schedules" })
-  );
-  expect(await page.waitForSelector("div#SchedulesTable")).toBeTruthy();
-
-  // Click on the first row and navigate to the SchedulePage /definitions/$definitionId/schedules/$scheduleId
-  await navigate(
-    setup.dashboardUrl,
-    page,
-    page.getByTestId("table-row-1").getByTestId("schedule-link")
-  );
-  expect(await page.waitForSelector("div#SchedulePage")).toBeTruthy();
-
-  // Click on the runs tab to navigate to the RunsTable /definitions/$definitionId/schedules/$scheduleId/runs
-  runsTableUrls.push(
-    await navigate(
-      setup.dashboardUrl,
-      page,
-      page.getByRole("tab", { name: "Runs" })
-    )
-  );
-  expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
-
-  // Click on the first row and navigate to the RunPage /definitions/$definitionId/schedules/$scheduleId/runs/$runId
-  await clickOnFirstRow();
-  expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
-
-  return { runPageUrls, runsTableUrls };
-};
-
-const reset = async (page: Page) => {
-  await page.goto(`${setup.dashboardUrl}/settings`);
-
-  // reset enschedule
-  await page.getByTestId("reset-enschedule").click();
-  await page.getByTestId("confirm-reset-enschedule").click();
-
-  // make sure tables are empty
-  await page.goto(`${setup.dashboardUrl}/runs`);
-  expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-  expect(await numRows(page)).toBe(0);
-
-  await page.goto(`${setup.dashboardUrl}/schedules`);
-  expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
-  expect(await numRows(page)).toBe(0);
-};
-
-const waitForNumRows = async (page: Page, num: number) => {
-  const TIMEOUT = 20000;
-  const RETRY_DURATION = 5000;
-  if ((await numRows(page)) !== num) {
-    let i = 0;
-    const maxIter = Math.floor(TIMEOUT / RETRY_DURATION);
-    do {
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          resolve();
-        }, RETRY_DURATION);
-      });
-      await page.reload();
-    } while ((await numRows(page)) !== num && i++ < maxIter);
-    if (i >= maxIter) {
-      throw new Error("Timed out waiting for the runs to show up in the table");
-    }
-  }
-};
+const { reset, createRun, visitRunPages } = utils(() => setup.dashboardUrl);
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot, and then test the delete", async ({
@@ -695,3 +523,6 @@ test.describe("Can do schedule multi actions", () => {
     test("Can multi unschedule", testUnschedule);
   });
 });
+// test.describe("Can retry", () => {
+//   test("maxRetries", () => {});
+// });

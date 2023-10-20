@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+//#region Enums
+export enum ScheduleStatus {
+  RETRYING = "RETRYING",
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+  UNSCHEDULED = "UNSCHEDULED",
+  SCHEDULED = "SCHEDULED",
+}
+//#endregion
+
 //#region Schemas
 export const DateSchema = z.union([z.string(), z.date()]).transform((val) => {
   if (typeof val === "string") {
@@ -62,6 +72,7 @@ export const publicJobScheduleSchema = z.object({
   jobDefinition: publicJobDefinitionSchema,
   numRuns: z.number(),
   data: z.string(),
+  status: z.nativeEnum(ScheduleStatus),
 });
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion
@@ -118,6 +129,8 @@ export const scheduleUpdatePayloadSchema = z.object({
   title: z.string().optional(),
   data: z.string().optional(),
   description: z.string().optional(),
+  retryFailedJobs: z.boolean().optional(),
+  maxRetries: z.number().optional(),
 });
 export type ScheduleUpdatePayload = z.infer<typeof scheduleUpdatePayloadSchema>;
 //#endregion

@@ -8,7 +8,7 @@ import type {
   PublicJobRun,
   PublicJobSchedule,
   ScheduleJobOptions,
-  ScheduleUpdatePayload,
+  scheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import {
   publicJobDefinitionSchema,
@@ -215,7 +215,7 @@ export class WorkerAPI {
   }
 
   async updateSchedule(
-    updatePayload: ScheduleUpdatePayload
+    updatePayload: z.input<typeof scheduleUpdatePayloadSchema>
   ): Promise<PublicJobSchedule> {
     const schedule = await this.request(
       "PUT",

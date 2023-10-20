@@ -46,6 +46,7 @@ const createRun = async (
   options: {
     runTomorrow?: boolean;
     retry?: boolean;
+    maxRetry?: number;
   } = {}
 ) => {
   await page.goto(`${baseUrl()}/run`);
@@ -83,13 +84,17 @@ const createRun = async (
 
   if (options.retry) {
     await page.getByTestId("retry-yes").click();
-    await page.getByTestId('max-retries-input').fill('1');
+    await page
+      .getByTestId("max-retries-input")
+      .fill(options.maxRetry ? String(options.maxRetry) : "1");
     await page.getByTestId("submit-max-retries").click();
   } else {
     await page.getByTestId("retry-no").click();
   }
 
-  await page.getByTestId("trigger-no").click();
+  if (options.maxRetry !== -1) {
+    await page.getByTestId("trigger-no").click();
+  }
 
   // Click the send button next to the title and description
   await page.getByTestId("submit-button").click();

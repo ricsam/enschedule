@@ -572,7 +572,11 @@ describe("can retry", () => {
     backend.retryStrategy = orig;
   });
   const retryTest = async (
-    config: { maxRetries?: number; notify?: boolean } = {}
+    config: {
+      maxRetries?: number;
+      notify?: boolean;
+      succeedAfter?: number;
+    } = {}
   ): Promise<
     [Schedule, Schedule, jest.Mock<void, [data: { url: string }], any>]
   > => {
@@ -634,19 +638,28 @@ describe("can retry", () => {
     };
     for (let n = 0; n < 10; n += 1) {
       await tick(n);
+      if (config.succeedAfter && config.succeedAfter >= n) {
+        spy.mockImplementation((data: { url: string }) => {
+          console.log("no crash");
+        });
+      }
     }
     await schedule.reload();
-    expect(schedule.retries).toBe(config.maxRetries ? config.maxRetries : 10);
+    expect(schedule.retries).toBe(
+      config.succeedAfter ? -1 : config.maxRetries ? config.maxRetries : 10
+    );
     return [schedule, notifySchedule, spy];
   };
   it("should work when retryFailedJobs is true", async () => {
     const [, , spy] = await retryTest();
+    // run + 10 retries
     expect(spy).toHaveBeenCalledTimes(11);
   });
   it("should work with a maxRetries ", async () => {
     const [schedule, , spy] = await retryTest({ maxRetries: 5 });
     expect(spy).toHaveBeenCalledTimes(6);
     let runs = await backend.getDbRuns();
+    // run + 5 retries
     expect(runs).toHaveLength(6);
     expect(runs[5].exitSignal).toBe("1");
     await schedule.reload();
@@ -660,6 +673,7 @@ describe("can retry", () => {
       maxRetries: 5,
       notify: true,
     });
+    // run + 5 retries + triggerd job
     expect(spy).toHaveBeenCalledTimes(7);
     let runs = await backend.getDbRuns();
     expect(runs).toHaveLength(7);
@@ -668,5 +682,20 @@ describe("can retry", () => {
     expect(notifyJob.numRuns).toBe(1);
     await schedule.reload();
     expect(schedule.numRuns).toBe(6);
+  });
+  it("should not continue to retry if succeeds", async () => {
+    const [schedule, , spy] = await retryTest({
+      maxRetries: 5,
+      notify: true,
+      succeedAfter: 2,
+    });
+    // run + 2 retries
+    expect(spy).toHaveBeenCalledTimes(3);
+    let runs = await backend.getDbRuns();
+    expect(runs).toHaveLength(3);
+    expect(runs[0].exitSignal).toBe("0");
+    expect(runs[1].exitSignal).toBe("1");
+    expect(runs[2].exitSignal).toBe("1");
+    expect(schedule.numRuns).toBe(3);
   });
 });

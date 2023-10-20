@@ -1,6 +1,17 @@
-import type { PublicJobRun, PublicJobSchedule } from "@enschedule/types";
+import type {
+  PublicJobRun,
+  PublicJobSchedule,
+  scheduleUpdatePayloadSchema,
+} from "@enschedule/types";
 import CloseIcon from "@mui/icons-material/Close";
-import { DialogContent, IconButton, Snackbar, TextField } from "@mui/material";
+import {
+  DialogContent,
+  FormControlLabel,
+  IconButton,
+  Snackbar,
+  Switch,
+  TextField,
+} from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -31,17 +42,27 @@ export const editDetailsAction: ActionFunction = async ({
   const scheduleId = getScheduleId(params);
   const schedule = await scheduler.getSchedule(scheduleId);
   const fd = await request.formData();
-  const scheduleUpdatePayload: Record<string, null | string> = {};
+  const scheduleUpdatePayload: z.input<typeof scheduleUpdatePayloadSchema> = {
+    id: scheduleId,
+  };
   const init = {
     runAt: schedule.runAt ? normalizeDate(schedule.runAt.toJSON()) : "",
     description: schedule.description,
     title: schedule.title,
     data: schedule.data,
+    retryFailedJobs: schedule.retryFailedJobs,
+    maxRetries: schedule.maxRetries,
   };
-  const runAt = z.string().nullable().parse(fd.get("runAt"));
-  const description = z.string().nullable().parse(fd.get("description"));
-  const title = z.string().nullable().parse(fd.get("title"));
-  const data = z.string().nullable().parse(fd.get("data"));
+
+  const p = (k: string) => z.string().nullable().parse(fd.get(k));
+
+  const runAt = p("runAt");
+  const description = p("description");
+  const title = p("title");
+  const data = p("data");
+  const retryFailedJobs = p("retryFailedJobs");
+  const maxRetries = p("maxRetries");
+
   let updated = false;
   if (runAt !== null && init.runAt !== runAt) {
     scheduleUpdatePayload.runAt = runAt === "" ? null : runAt;
@@ -59,11 +80,24 @@ export const editDetailsAction: ActionFunction = async ({
     scheduleUpdatePayload.title = title;
     updated = true;
   }
+  if (retryFailedJobs !== null) {
+    if (["true", "false"].includes(retryFailedJobs)) {
+      const value = retryFailedJobs === "true";
+      if (value !== init.retryFailedJobs) {
+        scheduleUpdatePayload.retryFailedJobs = value;
+        updated = true;
+      }
+    }
+  }
+  if (maxRetries !== null) {
+    const parsed = parseInt(maxRetries, 10);
+    if (!Number.isNaN(parsed) && parsed >= -1 && parsed !== init.maxRetries) {
+      scheduleUpdatePayload.maxRetries = parsed;
+      updated = true;
+    }
+  }
   if (updated) {
-    await scheduler.updateSchedule({
-      id: scheduleId,
-      ...scheduleUpdatePayload,
-    });
+    await scheduler.updateSchedule(scheduleUpdatePayload);
   }
   return redirect(getParentUrl(request.url));
 };
@@ -99,6 +133,12 @@ function EditForm({
     ? normalizeDate(schedule.runAt)
     : undefined;
   const [scheduledFor, setScheduledFor] = React.useState(initScheduledFor);
+  const [retryFailedJobs, setRetryFailedJobs] = React.useState(
+    schedule.retryFailedJobs
+  );
+  const [maxRetries, setMaxRetries] = React.useState(
+    String(schedule.maxRetries)
+  );
   const dateInputValue = scheduledFor ? dateToLocal(scheduledFor) : "";
 
   const formValues: Record<string, string | null> = {};
@@ -110,6 +150,15 @@ function EditForm({
   }
   if (scheduledFor !== initScheduledFor) {
     formValues.runAt = scheduledFor ?? null;
+  }
+  if (retryFailedJobs !== schedule.retryFailedJobs) {
+    formValues.retryFailedJobs = String(retryFailedJobs);
+  }
+  if (
+    parseInt(maxRetries, 10) !== schedule.maxRetries &&
+    parseInt(maxRetries, 10) >= -1
+  ) {
+    formValues.maxRetries = maxRetries;
   }
   const canSubmit = Object.values(formValues).length > 0;
 
@@ -194,6 +243,28 @@ function EditForm({
             )}
           </Box>
         </Box>
+        {!retryFailedJobs && (
+          <input type="hidden" value="false" name="retryFailedJobs" />
+        )}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={retryFailedJobs}
+              onChange={(ev, checked) => setRetryFailedJobs(checked)}
+              name="retryFailedJobs"
+              value={"true"}
+            />
+          }
+          label="Retry failed jobs"
+        />
+        <TextField
+          label="Max retries"
+          fullWidth
+          disabled={!retryFailedJobs}
+          value={retryFailedJobs ? maxRetries : ""}
+          onChange={(ev) => setMaxRetries(ev.target.value)}
+          name="maxRetries"
+        ></TextField>
       </Box>
       <Box display="flex" justifyContent="flex-end" gap={1} pt={2}>
         <Button
@@ -322,7 +393,7 @@ export default function SchedulePage({
                   </Typography>
                   <Typography color="text.secondary">Num retries</Typography>
                   <Typography color="text.primary" data-testid="num-retries">
-                    {schedule.retries === -1 ? 'None' : schedule.retries}
+                    {schedule.retries === -1 ? "None" : schedule.retries}
                   </Typography>
                 </>
               )}

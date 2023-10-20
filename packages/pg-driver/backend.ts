@@ -9,6 +9,7 @@ import type {
   ScheduleUpdatePayload,
   SerializedRun,
 } from "@enschedule/types";
+import { ScheduleStatus } from "@enschedule/types/types";
 import { parseExpression } from "cron-parser";
 import { pascalCase } from "pascal-case";
 import type {
@@ -89,6 +90,25 @@ export const createPublicJobSchedule = (
   schedule: Schedule,
   jobDef: JobDefinition
 ): PublicJobSchedule => {
+  let status = ScheduleStatus.UNSCHEDULED;
+  if (schedule.runAt) {
+    status = ScheduleStatus.SCHEDULED;
+  }
+  if (schedule.lastRun) {
+    if (schedule.lastRun.exitSignal !== "0") {
+      status = ScheduleStatus.FAILED;
+      if (schedule.retryFailedJobs === true) {
+        if (
+          schedule.runAt &&
+          (schedule.maxRetries === -1 || schedule.retries < schedule.maxRetries)
+        ) {
+          status = ScheduleStatus.RETRYING;
+        }
+      }
+    } else {
+      status = ScheduleStatus.SUCCESS;
+    }
+  }
   return {
     id: schedule.id,
     title: schedule.title,
@@ -104,6 +124,7 @@ export const createPublicJobSchedule = (
     jobDefinition: createPublicJobDefinition(jobDef),
     numRuns: schedule.numRuns,
     data: schedule.data,
+    status,
   };
 };
 
@@ -428,11 +449,14 @@ export class PrivateBackend {
   }
 
   protected async getDbRuns() {
-    const runs = await Run.findAll();
+    const runs = await Run.findAll({
+      order: [["createdAt", "DESC"]],
+    });
     return runs;
   }
   protected async getDbSchedules() {
     const jobs = await Schedule.findAll({
+      order: [["createdAt", "DESC"]],
       include: {
         model: Run,
         as: "lastRun",
@@ -841,31 +865,29 @@ export class PrivateBackend {
     if (!schedule) {
       throw new Error("invalid id in ScheduleUpdatePayload");
     }
-    let updated = false;
     if (typeof updatePayload.description === "string") {
       schedule.description = updatePayload.description;
-      updated = true;
     }
     if (typeof updatePayload.title === "string") {
       schedule.title = updatePayload.title;
-      updated = true;
     }
     if (typeof updatePayload.data === "string") {
       schedule.data = updatePayload.data;
-      updated = true;
     }
     if (updatePayload.runAt === null) {
       schedule.runAt = null;
       schedule.claimed = true;
-      updated = true;
     } else if (updatePayload.runAt instanceof Date) {
       schedule.runAt = updatePayload.runAt;
       schedule.claimed = false;
-      updated = true;
     }
-    if (updated) {
-      await schedule.save();
+    if (typeof updatePayload.retryFailedJobs === "boolean") {
+      schedule.retryFailedJobs = updatePayload.retryFailedJobs;
     }
+    if (typeof updatePayload.maxRetries === "number") {
+      schedule.maxRetries = updatePayload.maxRetries;
+    }
+    await schedule.save();
     return createPublicJobSchedule(schedule, this.getJobDef(schedule.target));
   }
 

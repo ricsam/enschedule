@@ -1,13 +1,15 @@
 import type { PublicJobSchedule } from "@enschedule/types";
-import { Typography } from "@mui/material";
+import { ScheduleStatus } from "@enschedule/types";
+import { Tooltip, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import MuiLink from "@mui/material/Link";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Link as RemixLink } from "@remix-run/react";
+import { Form, Link as RemixLink, useHref } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
+import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { scheduler } from "~/scheduler.server";
 import { formatDate } from "~/utils/formatDate";
@@ -19,6 +21,30 @@ export type RowData = SerializeFrom<PublicJobSchedule>;
 const columnHelper = createColumnHelper<RowData>();
 
 const columns: ColumnDef<RowData, any>[] = [
+  columnHelper.accessor("status", {
+    cell: (info) => {
+      const s: ScheduleStatus = info.getValue();
+      const icons: { [key in ScheduleStatus]: string } = {
+        [ScheduleStatus.FAILED]: "⚠️",
+        [ScheduleStatus.SCHEDULED]: "📅",
+        [ScheduleStatus.UNSCHEDULED]: "🤷‍♂️",
+        [ScheduleStatus.RETRYING]: "🔄",
+        [ScheduleStatus.SUCCESS]: "✅",
+      };
+      return (
+        <Tooltip title={sentenceCase(s)} disableInteractive>
+          <Typography
+            variant="inherit"
+            data-testid="status"
+            sx={{ cursor: "default" }}
+          >
+            {icons[s]}
+          </Typography>
+        </Tooltip>
+      );
+    },
+    header: "Status",
+  }),
   columnHelper.accessor("title", {
     cell: (info) => {
       const scheduleId = info.row.original.id;
@@ -90,6 +116,49 @@ const columns: ColumnDef<RowData, any>[] = [
       );
     },
     header: "Number of runs",
+  }),
+  columnHelper.accessor("retryFailedJobs", {
+    cell: (info) => {
+      return info.getValue() ? "Yes" : "No";
+    },
+    header: "Retry failed jobs",
+  }),
+  columnHelper.accessor("maxRetries", {
+    cell: (info) => {
+      if (!info.row.getValue("retryFailedJobs")) {
+        return "-";
+      }
+      if (info.getValue() === -1) {
+        return (
+          <Typography
+            variant="inherit"
+            component="div"
+            display="flex"
+            gap={0.5}
+            alignItems="center"
+          >
+            Unlimited
+            {info.row.getValue("status") === ScheduleStatus.RETRYING && (
+              <>
+                {" "}
+                <CancelRetryForm id={info.row.original.id} />
+              </>
+            )}
+          </Typography>
+        );
+      }
+      return info.getValue();
+    },
+    header: "Max retries",
+  }),
+  columnHelper.accessor("retries", {
+    cell: (info) => {
+      if (!info.row.getValue("retryFailedJobs")) {
+        return "-";
+      }
+      return info.getValue();
+    },
+    header: "Num retries",
   }),
   columnHelper.accessor("jobDefinition.title", {
     cell: (info) => {
@@ -173,3 +242,25 @@ export const action: ActionFunction = async ({ request }) => {
   }
   return json({ success: true });
 };
+
+function CancelRetryForm({ id }: { id: number }) {
+  const url = useHref("");
+  return (
+    <Form
+      action={`${id}/edit-details?parentUrl=${encodeURIComponent(url)}`}
+      method="post"
+      style={{ display: "contents" }}
+    >
+      <input type="hidden" value="false" name="retryFailedJobs" />
+      <input type="hidden" value={""} name="runAt" />
+      <MuiLink
+        component="button"
+        data-testid="stop-unlimited-retries"
+        type="submit"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        (stop)
+      </MuiLink>
+    </Form>
+  );
+}

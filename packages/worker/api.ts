@@ -1,17 +1,14 @@
 import http from "node:http";
 import { PrivateBackend } from "@enschedule/pg-driver";
+import type { ScheduleUpdatePayload } from "@enschedule/types";
 import {
   ScheduleJobOptionsSchema,
-  ScheduleUpdatePayload,
-} from "@enschedule/types";
-import {
-  OptionalDateSchema,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
+import { json as parseJsonBody } from "body-parser";
+import { debug } from "debug";
 import express from "express";
 import { z } from "zod";
-import { debug } from "debug";
-import { json as parseJsonBody } from "body-parser";
 
 const log = debug("worker");
 

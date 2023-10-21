@@ -36,6 +36,7 @@ const columns: ColumnDef<RowData, any>[] = [
           <Typography
             variant="inherit"
             data-testid="status"
+            data-status={s}
             sx={{ cursor: "default" }}
           >
             {icons[s]}

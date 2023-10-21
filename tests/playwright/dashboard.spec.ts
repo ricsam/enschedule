@@ -1,4 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
+import { ScheduleStatus } from "@enschedule/types";
 import format from "date-fns/format";
 import { Setup } from "./setup";
 import { navigate, numRows, sleep, utils, waitForNumRows } from "./utils";
@@ -208,7 +209,7 @@ test.describe("Single schedule", () => {
       await run();
     };
     await createRuns(1);
-    await createRuns(2);
+    await createRuns(1);
     await page.goto(`${setup.dashboardUrl}/runs`);
     // main runs page should have 8 runs
     await waitForNumRows(page, 8);
@@ -566,5 +567,22 @@ test.describe("Can retry", () => {
       retry: true,
       maxRetry: -1,
     });
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+
+    const expectStatus = () => {
+      return expect.poll(
+        async () => {
+          await page.reload();
+          return page.getByTestId("status").getAttribute("data-status");
+        },
+        {
+          timeout: 20000,
+        }
+      );
+    };
+
+    await expectStatus().toBe(ScheduleStatus.RETRYING);
+    await page.getByTestId("stop-unlimited-retries").click();
+    await expectStatus().toBe(ScheduleStatus.FAILED);
   });
 });

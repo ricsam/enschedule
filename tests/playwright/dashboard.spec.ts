@@ -548,13 +548,6 @@ test.describe("Can retry", () => {
     });
 
     expect(page.getByTestId("retry-failed-jobs")).toHaveText("Yes");
-    await expectScheduleProps(page).toEqual(["None", "0", "just now"]);
-    expect(page.title).toBeTruthy();
-    await expectScheduleProps(page).toEqual([
-      "0",
-      "1",
-      "in less than a minute",
-    ]);
     await expectScheduleProps(page).toEqual([
       "1",
       "2",

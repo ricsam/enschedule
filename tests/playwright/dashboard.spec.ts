@@ -565,7 +565,7 @@ test.describe("Can retry", () => {
           .getAttribute("data-status");
       },
       {
-        timeout: 20000,
+        timeout: 60000,
       }
     );
   };

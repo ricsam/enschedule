@@ -554,6 +554,21 @@ test.describe("Can retry", () => {
       "less than a minute ago",
     ]);
   });
+
+  const expectStatus = (page: Page, rowNum = 1) => {
+    return expect.poll(
+      async () => {
+        await page.reload();
+        return page
+          .getByTestId("table-row-" + rowNum)
+          .getByTestId("status")
+          .getAttribute("data-status");
+      },
+      {
+        timeout: 20000,
+      }
+    );
+  };
   test("unlimited retries", async ({ page }) => {
     await reset(page);
     await createRun(page, 3, {
@@ -562,20 +577,23 @@ test.describe("Can retry", () => {
     });
     await page.goto(`${setup.dashboardUrl}/schedules`);
 
-    const expectStatus = () => {
-      return expect.poll(
-        async () => {
-          await page.reload();
-          return page.getByTestId("status").getAttribute("data-status");
-        },
-        {
-          timeout: 20000,
-        }
-      );
-    };
-
-    await expectStatus().toBe(ScheduleStatus.RETRYING);
+    await expectStatus(page).toBe(ScheduleStatus.RETRYING);
     await page.getByTestId("stop-unlimited-retries").click();
-    await expectStatus().toBe(ScheduleStatus.FAILED);
+    await expectStatus(page).toBe(ScheduleStatus.FAILED);
+  });
+  test("trigger job", async ({ page }) => {
+    await reset(page);
+    await createRun(page, 1, {
+      manual: true,
+    });
+
+    await createRun(page, 3, {
+      retry: true,
+      trigger: true,
+    });
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+
+    await expectStatus(page, 1).toBe(ScheduleStatus.FAILED);
+    await expectStatus(page, 2).toBe(ScheduleStatus.SUCCESS);
   });
 });

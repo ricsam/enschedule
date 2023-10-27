@@ -9,7 +9,7 @@ import type {
   ScheduleUpdatePayload,
   SerializedRun,
 } from "@enschedule/types";
-import { ScheduleStatus } from "@enschedule/types/types";
+import { ScheduleStatus } from "@enschedule/types";
 import { parseExpression } from "cron-parser";
 import { pascalCase } from "pascal-case";
 import type {

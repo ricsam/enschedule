@@ -47,6 +47,8 @@ const createRun = async (
     runTomorrow?: boolean;
     retry?: boolean;
     maxRetry?: number;
+    trigger?: boolean;
+    manual?: boolean;
   } = {}
 ) => {
   await page.goto(`${baseUrl()}/run`);
@@ -61,7 +63,11 @@ const createRun = async (
   await page.getByTestId("SendIcon").click();
 
   if (!options?.runTomorrow) {
-    await page.getByTestId("run-now").click();
+    if (options.manual) {
+      await page.getByTestId("run-manual").click();
+    } else {
+      await page.getByTestId("run-now").click();
+    }
   } else {
     await page.getByTestId("run-later").click();
     await page.getByTestId("repeat-no").click();
@@ -93,7 +99,15 @@ const createRun = async (
   }
 
   if (options.maxRetry !== -1) {
-    await page.getByTestId("trigger-no").click();
+    if (options.trigger) {
+      await page.getByTestId("trigger-yes").click();
+      await page.pause();
+      await page.getByTestId("schedule-autocomplete").click();
+      await page.keyboard.press("ArrowDown"); // Press the arrow down key
+      await page.keyboard.press("Enter"); // Press the enter key
+    } else {
+      await page.getByTestId("trigger-no").click();
+    }
   }
 
   // Click the send button next to the title and description

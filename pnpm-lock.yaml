@@ -190,6 +190,9 @@ importers:
 
   packages/pg-driver:
     dependencies:
+      '@enschedule/types':
+        specifier: workspace:*
+        version: link:../types
       cron-parser:
         specifier: ^4.6.0
         version: 4.9.0
@@ -221,9 +224,6 @@ importers:
         specifier: ~1.1.1
         version: 1.1.4(typescript@4.9.5)(zod@3.22.2)
     devDependencies:
-      '@enschedule/types':
-        specifier: workspace:*
-        version: link:../types
       '@turbo/gen':
         specifier: ^1.10.12
         version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)

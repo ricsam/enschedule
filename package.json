@@ -4,6 +4,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev -F 'test-worker' -F '@enschedule/dashboard'",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "playwright": "playwright",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },

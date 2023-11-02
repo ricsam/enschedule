@@ -37,14 +37,14 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      - name: Run unit tests
-        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium --with-deps
       - name: Start postgres for testing
         run: docker compose up -d
       - name: Wait for postgres to be up
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
+      - name: Run unit tests
+        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
       - name: Build all packages
         run: NODE_ENV=production pnpm run build
       - name: All playwright tests

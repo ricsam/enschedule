@@ -9,7 +9,12 @@
     "test": "jest",
     "build": "tsc -p ./tsconfig.json"
   },
-  "files": ["index.ts", "backend.ts", "log.ts", "dist"],
+  "files": [
+    "index.ts",
+    "backend.ts",
+    "log.ts",
+    "dist"
+  ],
   "dependencies": {
     "cron-parser": "^4.6.0",
     "pg": "^8.8.0",

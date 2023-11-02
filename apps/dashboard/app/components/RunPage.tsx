@@ -23,8 +23,12 @@ export default function RunPage({
   const scheduleLink = useHref("../../../../schedules/" + schedule.id, {
     relative: "path",
   });
+  const jobDefinitionId =
+    typeof schedule.jobDefinition === "string"
+      ? schedule.jobDefinition
+      : schedule.jobDefinition.id;
   const definitionLink = useHref(
-    "../../../../../../definitions/" + schedule.jobDefinition.id,
+    "../../../../../../definitions/" + jobDefinitionId,
     {
       relative: "path",
     }
@@ -56,14 +60,20 @@ export default function RunPage({
                   {schedule.title}
                 </MuiLink>
                 <Typography color="text.secondary">Definition</Typography>
-                <MuiLink
-                  underline="hover"
-                  component={Link}
-                  to={definitionLink}
-                  data-testid="definition-link"
-                >
-                  {schedule.jobDefinition.title}
-                </MuiLink>
+                {typeof schedule.jobDefinition === "string" ? (
+                  <Typography component="span">
+                    Job not defined on the server ({schedule.jobDefinition})
+                  </Typography>
+                ) : (
+                  <MuiLink
+                    underline="hover"
+                    component={Link}
+                    to={definitionLink}
+                    data-testid="definition-link"
+                  >
+                    {schedule.jobDefinition.title}
+                  </MuiLink>
+                )}
                 <Typography color="text.secondary">Started</Typography>
                 <Typography color="text.primary">
                   {formatDate(new Date(run.startedAt), false).label}
@@ -83,9 +93,7 @@ export default function RunPage({
                   {formatDate(new Date(run.scheduledToRunAt), false).label}
                 </Typography>
                 <Typography color="text.secondary">Exit signal</Typography>
-                <Typography color="text.primary">
-                  {run.exitSignal}
-                </Typography>
+                <Typography color="text.primary">{run.exitSignal}</Typography>
                 <Typography color="text.secondary">Has stdout</Typography>
                 <Typography color="text.primary">
                   {String(!!run.stdout)}
@@ -110,11 +118,21 @@ export default function RunPage({
                 Job
               </Typography>
               <Typography color="text.secondary">
-                This run ran the{" "}
-                <MuiLink component={Link} to="/" underline="hover">
-                  {schedule.jobDefinition.title}
-                </MuiLink>{" "}
-                definition with the following data:
+                This run ran{" "}
+                {typeof schedule.jobDefinition === "string" ? (
+                  <Typography component="span">
+                    a job that currently is not defined on the server ({schedule.jobDefinition})
+                  </Typography>
+                ) : (
+                  <>
+                    the{" "}
+                    <MuiLink component={Link} to="/" underline="hover">
+                      {schedule.jobDefinition.title}
+                    </MuiLink>{" "}
+                    definition
+                  </>
+                )}
+                {' '}with the following data:
               </Typography>
               <Box pb={1} />
               <Box maxWidth="320px" overflow="hidden">

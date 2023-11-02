@@ -12,7 +12,7 @@ import { useBreadcrumbs as useParentBreadcrumbs } from "..";
 
 const getLoaderData = async (params: Params) => {
   const runId = Number(params.runId);
-  if (isNaN(runId)) {
+  if (Number.isNaN(runId)) {
     throw new Error("Invalid runId provided");
   }
 
@@ -20,7 +20,6 @@ const getLoaderData = async (params: Params) => {
   if (!run) {
     throw new Error("Run not found");
   }
-
   return run;
 };
 

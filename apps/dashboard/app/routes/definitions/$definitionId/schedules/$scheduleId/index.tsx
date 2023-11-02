@@ -56,17 +56,21 @@ export { action } from "~/components/SchedulePage";
 export const useNavbar = (action: string, runRedirect: string) => {
   const data = useData();
 
+  const def = data.schedule.jobDefinition;
+
+  const definitionId = typeof def === 'string' ? def : def.id;
+
   return {
     title: data.schedule.title,
     subTitle: data.schedule.description,
     tabs: [
       {
         label: "Details",
-        to: `/definitions/${data.schedule.jobDefinition.id}/schedules/${data.schedule.id}`,
+        to: `/definitions/${definitionId}/schedules/${data.schedule.id}`,
       },
       {
         label: "Runs",
-        to: `/definitions/${data.schedule.jobDefinition.id}/schedules/${data.schedule.id}/runs`,
+        to: `/definitions/${definitionId}/schedules/${data.schedule.id}/runs`,
       },
     ],
     actions: <Actions action={action} runRedirect={runRedirect} />,

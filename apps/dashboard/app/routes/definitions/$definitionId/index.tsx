@@ -12,12 +12,18 @@ import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from "..";
 
 export const useBreadcrumbs = (
-  jobDefinition: SerializeFrom<PublicJobDefinition>
+  jobDefinition: SerializeFrom<PublicJobDefinition> | string
 ): Breadcrumb[] => {
   const parentBreadcrumbs = useParentBreadcrumbs();
 
   return extendBreadcrumbs(parentBreadcrumbs, [
-    { href: `/${jobDefinition.id}`, title: jobDefinition.title },
+    {
+      href: `/${
+        typeof jobDefinition === "string" ? jobDefinition : jobDefinition.id
+      }`,
+      title:
+        typeof jobDefinition === "string" ? jobDefinition : jobDefinition.title,
+    },
   ]);
 };
 

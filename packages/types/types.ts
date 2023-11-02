@@ -80,7 +80,7 @@ export const publicJobScheduleSchema = z.object({
   createdAt: DateSchema,
   /** job definition target */
   target: z.string(),
-  jobDefinition: publicJobDefinitionSchema,
+  jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
   numRuns: z.number(),
   data: z.string(),
   status: z.nativeEnum(ScheduleStatus),

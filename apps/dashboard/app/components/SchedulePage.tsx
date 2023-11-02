@@ -353,14 +353,20 @@ export default function SchedulePage({
                 {schedule.description}
               </Typography>
               <Typography color="text.secondary">Definition</Typography>
-              <MuiLink
-                underline="hover"
-                component={Link}
-                data-testid="definition-link"
-                to={"/definitions/" + schedule.jobDefinition.id}
-              >
-                {schedule.jobDefinition.title}
-              </MuiLink>
+              {typeof schedule.jobDefinition === "string" ? (
+                <Typography component="span">
+                  Job not defined on the server ({schedule.jobDefinition})
+                </Typography>
+              ) : (
+                <MuiLink
+                  underline="hover"
+                  component={Link}
+                  data-testid="definition-link"
+                  to={"/definitions/" + schedule.jobDefinition.id}
+                >
+                  {schedule.jobDefinition.title}
+                </MuiLink>
+              )}
               {schedule.cronExpression ? (
                 <>
                   <Typography color="text.secondary">CRON</Typography>
@@ -532,23 +538,36 @@ function DataCard({
         </Typography>
         <Typography color="text.secondary">
           This schedule will run{" "}
-          <MuiLink component={Link} to="/" underline="hover">
-            {schedule.jobDefinition.title}
-          </MuiLink>{" "}
-          with the following data:
-        </Typography>
-        <Box pb={1} />
-        <Box maxWidth="600px" flex={1} ref={editorRef}>
-          {size && (
-            <Editor
-              jsonSchema={schedule.jobDefinition.jsonSchema}
-              example={JSON.parse(schedule.data)}
-              getValueRef={dataValueRef}
-              setIsValid={setIsValid}
-              height={size.height}
-            />
+          {typeof schedule.jobDefinition === "string" ? (
+            <Typography component="span">
+              a job that currently is not defined on the server (
+              {schedule.jobDefinition})
+            </Typography>
+          ) : (
+            <>
+              <MuiLink component={Link} to="/" underline="hover">
+                {schedule.jobDefinition.title}
+              </MuiLink>
+              {" with the following data:"}
+            </>
           )}
-        </Box>
+        </Typography>
+        {typeof schedule.jobDefinition !== "string" && (
+          <>
+            <Box pb={1} />
+            <Box maxWidth="600px" flex={1} ref={editorRef}>
+              {size && (
+                <Editor
+                  jsonSchema={schedule.jobDefinition.jsonSchema}
+                  example={JSON.parse(schedule.data)}
+                  getValueRef={dataValueRef}
+                  setIsValid={setIsValid}
+                  height={size.height}
+                />
+              )}
+            </Box>
+          </>
+        )}
       </CardContent>
       <CardActions>
         <input type="hidden" name="data" value="" ref={dataRef} />

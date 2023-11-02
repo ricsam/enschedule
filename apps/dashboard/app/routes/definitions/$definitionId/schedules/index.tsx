@@ -41,7 +41,7 @@ export function Page() {
 }
 
 export const useBreadcrumbs = (
-  jobDefinition: SerializeFrom<PublicJobDefinition>
+  jobDefinition: SerializeFrom<PublicJobDefinition> | string
 ): Breadcrumb[] => {
   const parentBreadcrumbs = useParentBreadcrumbs(jobDefinition);
   return extendBreadcrumbs(parentBreadcrumbs, [

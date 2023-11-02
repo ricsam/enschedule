@@ -89,7 +89,7 @@ export const serializeRun = (run: Run): SerializedRun => {
 
 export const createPublicJobSchedule = (
   schedule: Schedule,
-  jobDef: JobDefinition
+  jobDef: JobDefinition | string
 ): PublicJobSchedule => {
   let status = ScheduleStatus.UNSCHEDULED;
   if (schedule.runAt) {
@@ -122,7 +122,8 @@ export const createPublicJobSchedule = (
     lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
     target: schedule.target,
     createdAt: schedule.createdAt,
-    jobDefinition: createPublicJobDefinition(jobDef),
+    jobDefinition:
+      typeof jobDef === "string" ? jobDef : createPublicJobDefinition(jobDef),
     numRuns: schedule.numRuns,
     data: schedule.data,
     status,
@@ -132,7 +133,7 @@ export const createPublicJobSchedule = (
 export const createPublicJobRun = (
   run: Run,
   schedule: Schedule,
-  jobDef: JobDefinition
+  jobDef: JobDefinition | string
 ): PublicJobRun => {
   return {
     id: Number(run.id),
@@ -494,8 +495,11 @@ export class PrivateBackend {
       });
       return runs.map((run) => {
         const jobSchedule = run.schedule;
-        const jobDef = this.getJobDef(jobSchedule.target);
-        return createPublicJobRun(run, jobSchedule, jobDef);
+        return createPublicJobRun(
+          run,
+          jobSchedule,
+          this.definedJobs[jobSchedule.target] || jobSchedule.target
+        );
       });
     }
 
@@ -504,8 +508,13 @@ export class PrivateBackend {
       throw new Error("invalid jobScheduleId");
     }
     const runs = await jobSchedule.getRuns({ limit, order, offset });
-    const jobDef = this.getJobDef(jobSchedule.target);
-    return runs.map((run) => createPublicJobRun(run, jobSchedule, jobDef));
+    return runs.map((run) =>
+      createPublicJobRun(
+        run,
+        jobSchedule,
+        this.definedJobs[jobSchedule.target] || jobSchedule.target
+      )
+    );
   }
   public async getRun(runId: number): Promise<PublicJobRun> {
     const run = await Run.findByPk(runId);
@@ -518,10 +527,7 @@ export class PrivateBackend {
         as: "lastRun",
       },
     });
-    const definition = this.definedJobs[schedule.target];
-    if (!definition) {
-      throw new Error("invalid target");
-    }
+    const definition = this.definedJobs[schedule.target] || schedule.target;
     return createPublicJobRun(run, schedule, definition);
   }
 
@@ -564,8 +570,10 @@ export class PrivateBackend {
     if (!schedule) {
       return;
     }
-    const jobDef = this.getJobDef(schedule.target);
-    return createPublicJobSchedule(schedule, jobDef);
+    return createPublicJobSchedule(
+      schedule,
+      this.definedJobs[schedule.target] || schedule.target
+    );
   }
   public getDefinitions(): PublicJobDefinition[] {
     return Object.values(this.definedJobs)
@@ -587,7 +595,7 @@ export class PrivateBackend {
         return Boolean(this.definedJobs[schedule.target]);
       })
       .map((schedule) => {
-        const jobDef = this.getJobDef(schedule.target);
+        const jobDef = this.definedJobs[schedule.target] || schedule.target;
         return createPublicJobSchedule(schedule, jobDef);
       });
   }
@@ -709,7 +717,7 @@ export class PrivateBackend {
     );
     return createPublicJobSchedule(
       dbSchedule,
-      this.getJobDef(dbSchedule.target)
+      this.definedJobs[dbSchedule.target] || dbSchedule.target
     );
   }
 
@@ -761,6 +769,7 @@ export class PrivateBackend {
   }
 
   protected async claimUnclaimedOverdueJobs() {
+    // only fetch jobs for a server that has a job definition for the schedule target
     const jobKeys = Object.keys(this.definedJobs);
     if (jobKeys.length === 0) {
       throw new Error("You have no registered jobs on this client");
@@ -857,7 +866,11 @@ export class PrivateBackend {
         as: "lastRun",
       },
     });
-    return createPublicJobRun(run, schedule, this.getJobDef(schedule.target));
+    return createPublicJobRun(
+      run,
+      schedule,
+      this.definedJobs[schedule.target] || schedule.target
+    );
   }
 
   public async updateSchedule(
@@ -890,7 +903,10 @@ export class PrivateBackend {
       schedule.maxRetries = updatePayload.maxRetries;
     }
     await schedule.save();
-    return createPublicJobSchedule(schedule, this.getJobDef(schedule.target));
+    return createPublicJobSchedule(
+      schedule,
+      this.definedJobs[schedule.target] || schedule.target
+    );
   }
 
   private async runDbSchedule(schedule: Schedule) {

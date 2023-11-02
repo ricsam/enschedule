@@ -4,13 +4,15 @@
 import http from "node:http";
 import https from "node:https";
 import type {
+  ListRunsOptions,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
   ScheduleJobOptions,
-  scheduleUpdatePayloadSchema,
+  ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import {
+  ListRunsOptionsSerialize,
   publicJobDefinitionSchema,
   publicJobRunSchema,
   publicJobScheduleSchema,
@@ -160,7 +162,7 @@ export class WorkerAPI {
     }
   }
 
-  async getJobDefinitions(): Promise<PublicJobDefinition[]> {
+  async getDefinitions(): Promise<PublicJobDefinition[]> {
     const jobDefinitions = await this.request("GET", "/job-definitions");
     return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
   }
@@ -209,18 +211,27 @@ export class WorkerAPI {
     return z.array(z.number()).parse(response);
   }
 
-  async getRuns(scheduleId?: number): Promise<PublicJobRun[]> {
-    const runs = await this.request("GET", "/runs", { scheduleId });
+  async getRuns(options: ListRunsOptions): Promise<PublicJobRun[]> {
+    const runs = await this.request(
+      "GET",
+      "/runs",
+      ListRunsOptionsSerialize(options)
+    );
     return z.array(publicJobRunSchema).parse(runs);
   }
 
   async updateSchedule(
-    updatePayload: z.input<typeof scheduleUpdatePayloadSchema>
+    updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
   ): Promise<PublicJobSchedule> {
     const schedule = await this.request(
       "PUT",
       `/schedules/${updatePayload.id}`,
-      updatePayload
+      {
+        ...updatePayload,
+        runAt: updatePayload.runAt
+          ? updatePayload.runAt.toJSON()
+          : updatePayload.runAt,
+      }
     );
     return publicJobScheduleSchema.parse(schedule);
   }

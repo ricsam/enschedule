@@ -6,6 +6,7 @@ export type {
   ScheduleJobOptions,
   SerializedRun,
   ScheduleUpdatePayload,
+  ListRunsOptions,
 } from "./types";
 
 export {
@@ -15,8 +16,10 @@ export {
   publicJobRunSchema,
   OptionalDateSchema,
   DateSchema,
-  scheduleUpdatePayloadSchema as ScheduleUpdatePayloadSchema,
+  ScheduleUpdatePayloadSchema,
   ScheduleJobOptionsSchema,
   ScheduleStatus,
-  scheduleUpdatePayloadSchema,
+  ListRunsOptionsSerialize,
+  ListRunsOptionsSerializedSchema,
+  DateStringSchema,
 } from "./types";

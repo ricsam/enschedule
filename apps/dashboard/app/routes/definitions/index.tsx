@@ -7,7 +7,7 @@ import { scheduler } from '~/scheduler.server';
 import type { Breadcrumb } from '~/types';
 
 async function getLoaderData() {
-  const definitions = scheduler.getJobDefinitions();
+  const definitions = scheduler.getDefinitions();
   return definitions;
 }
 

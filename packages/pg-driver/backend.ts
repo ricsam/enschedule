@@ -1,12 +1,13 @@
 import * as cp from "node:child_process";
 import stream from "node:stream";
 import type {
+  ListRunsOptions,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
   RunDefinition,
   ScheduleJobOptions,
-  ScheduleUpdatePayload,
+  ScheduleUpdatePayloadSchema,
   SerializedRun,
 } from "@enschedule/types";
 import { ScheduleStatus } from "@enschedule/types";
@@ -273,6 +274,7 @@ export interface BackendOptions {
   pgHost: string;
   pgPort: string;
   pgDatabase: string;
+  forkArgv?: string[];
 }
 
 export class PrivateBackend {
@@ -282,9 +284,12 @@ export class PrivateBackend {
   protected sequelize: Sequelize;
   protected Run: typeof Run;
   protected Schedule: typeof Schedule;
+  private forkArgv: string[] | undefined;
 
   constructor(backendOptions: BackendOptions) {
-    const { pgUser, pgPassword, pgHost, pgPort, pgDatabase } = backendOptions;
+    const { pgUser, pgPassword, pgHost, pgPort, pgDatabase, forkArgv } =
+      backendOptions;
+    this.forkArgv = forkArgv;
     const sequelize = new Sequelize(
       `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`,
       {
@@ -476,12 +481,7 @@ export class PrivateBackend {
     order,
     limit,
     offset,
-  }: {
-    scheduleId?: number;
-    order?: [string, "DESC" | "ASC"][];
-    limit?: number;
-    offset?: number;
-  }): Promise<PublicJobRun[]> {
+  }: ListRunsOptions): Promise<PublicJobRun[]> {
     if (scheduleId === undefined) {
       const runs = await Run.findAll({
         limit,
@@ -860,7 +860,9 @@ export class PrivateBackend {
     return createPublicJobRun(run, schedule, this.getJobDef(schedule.target));
   }
 
-  public async updateSchedule(updatePayload: ScheduleUpdatePayload) {
+  public async updateSchedule(
+    updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
+  ) {
     const schedule = await Schedule.findByPk(updatePayload.id);
     if (!schedule) {
       throw new Error("invalid id in ScheduleUpdatePayload");
@@ -979,7 +981,8 @@ export class PrivateBackend {
   ) {
     return new Promise<string>((resolve, reject) => {
       log("Launching", ...process.execArgv, ...process.argv);
-      const child = cp.fork(process.argv[1], process.argv.slice(2), {
+      const argv = this.forkArgv ?? process.argv.slice(1);
+      const child = cp.fork(argv[0], argv.slice(1), {
         env: { ...process.env, ENSCHEDULE_CHILD_WORKER: "true" },
         stdio: "pipe",
       });

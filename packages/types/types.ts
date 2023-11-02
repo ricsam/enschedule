@@ -10,15 +10,26 @@ export enum ScheduleStatus {
 }
 //#endregion
 
-//#region Schemas
-export const DateSchema = z.union([z.string(), z.date()]).transform((val) => {
-  if (typeof val === "string") {
-    return new Date(val);
-  }
-  return val;
+export const DateStringSchema = z.string().refine((dateString) => {
+  return (
+    dateString.includes("Z") ||
+    dateString.includes("+") ||
+    dateString.includes("−") || // https://en.wikipedia.org/wiki/Minus_sign
+    dateString.includes("-") //    https://en.wikipedia.org/wiki/Hyphen-minus
+  );
 });
+
+//#region Schemas
+export const DateSchema = z
+  .union([DateStringSchema, z.date()])
+  .transform((val) => {
+    if (typeof val === "string") {
+      return new Date(val);
+    }
+    return val;
+  });
 export const OptionalDateSchema = z
-  .union([z.string(), z.date()])
+  .union([DateStringSchema, z.date()])
   .optional()
   .transform((val) => {
     if (val) {
@@ -101,20 +112,10 @@ export type ScheduleJobOptions = z.output<typeof ScheduleJobOptionsSchema>;
 //#endregion
 
 //#region ScheduleUpdatePayload
-export const scheduleUpdatePayloadSchema = z.object({
+export const ScheduleUpdatePayloadSchema = z.object({
   id: z.number().int().positive(),
   runAt: z
-    .union([
-      z.date(),
-      z.string().refine((dateString) => {
-        return (
-          dateString.includes("Z") ||
-          dateString.includes("+") ||
-          dateString.includes("−") || // https://en.wikipedia.org/wiki/Minus_sign
-          dateString.includes("-") //    https://en.wikipedia.org/wiki/Hyphen-minus
-        );
-      }),
-    ])
+    .union([z.date(), DateStringSchema])
     .optional()
     .nullable()
     .transform((value) => {
@@ -132,7 +133,7 @@ export const scheduleUpdatePayloadSchema = z.object({
   retryFailedJobs: z.boolean().optional(),
   maxRetries: z.number().optional(),
 });
-export type ScheduleUpdatePayload = z.infer<typeof scheduleUpdatePayloadSchema>;
+export type ScheduleUpdatePayload = z.infer<typeof ScheduleUpdatePayloadSchema>;
 //#endregion
 
 //#region Interfaces
@@ -153,3 +154,80 @@ export interface RunDefinition {
   data: unknown;
 }
 //#endregion
+
+const StringToOptionalPositiveIntSchema = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    if (typeof value === "undefined") {
+      return undefined;
+    }
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Not a number",
+      });
+      return z.NEVER;
+    }
+    if (parsed <= 0 || !Number.isInteger(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Not a postive integer",
+      });
+      return z.NEVER;
+    }
+    return parsed;
+  });
+
+export type ListRunsOptions = z.output<typeof ListRunsOptionsSerializedSchema>;
+
+export const ListRunsOptionsSerializedSchema = z.object({
+  scheduleId: StringToOptionalPositiveIntSchema,
+  order: z
+    .string()
+    .optional()
+    .transform((value, ctx): [string, "DESC" | "ASC"][] | undefined => {
+      if (typeof value === "undefined") {
+        return undefined;
+      }
+      const matches = /^(?:[^-]+-(?:ASC|DESC),?)*$/g;
+      const result = matches.exec(value.replace(/,$/, ""));
+      if (!result) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid order format",
+        });
+        return z.NEVER;
+      }
+      if (result[0] === "") {
+        return [];
+      }
+      return result[0].split(",").map((colValue) => {
+        const [colId, order] = colValue.split("-");
+        return [
+          colId,
+          z.union([z.literal("ASC"), z.literal("DESC")]).parse(order),
+        ];
+      });
+    }),
+  limit: StringToOptionalPositiveIntSchema,
+  offset: StringToOptionalPositiveIntSchema,
+});
+
+export const ListRunsOptionsSerialize = (
+  ob: ListRunsOptions
+): z.input<typeof ListRunsOptionsSerializedSchema> => {
+  return {
+    scheduleId: ob.scheduleId ? String(ob.scheduleId) : undefined,
+    order: ob.order
+      ? ob.order
+          .map(([id, sorting]) => {
+            return `${id}-${sorting}`;
+          })
+          .join(",")
+      : undefined,
+    limit: ob.limit ? String(ob.limit) : undefined,
+    offset: ob.offset ? String(ob.offset) : undefined,
+  };
+};

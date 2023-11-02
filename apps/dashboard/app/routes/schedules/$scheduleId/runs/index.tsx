@@ -27,7 +27,7 @@ export const getLoaderData = async (params: Params) => {
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await scheduler.getRuns(schedule.id);
+  const runs = await scheduler.getRuns({ scheduleId: schedule.id });
 
   return { schedule, runs };
 };

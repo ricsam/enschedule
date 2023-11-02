@@ -33,6 +33,12 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install
+      - name: Lint
+        run: turbo lint
+      - name: Typecheck
+        run: turbo typecheck
+      - name: Run unit tests
+        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
       - name: Start postgres for testing
@@ -49,9 +55,6 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 1
-      - name: Run unit tests
-        run: pnpm run --filter=@enschedule/pg-driver test
-
       - name: Build images
         run: infrastructure/build-images.sh
       - name: start minikube

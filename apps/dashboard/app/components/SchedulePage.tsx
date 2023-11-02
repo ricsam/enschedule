@@ -1,8 +1,9 @@
 import type {
   PublicJobRun,
   PublicJobSchedule,
-  scheduleUpdatePayloadSchema,
+  ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
+import { DateSchema } from "@enschedule/types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   DialogContent,
@@ -41,8 +42,11 @@ export const editDetailsAction: ActionFunction = async ({
 }) => {
   const scheduleId = getScheduleId(params);
   const schedule = await scheduler.getSchedule(scheduleId);
+  if (!schedule) {
+    throw new Error("Invalid scheduleId");
+  }
   const fd = await request.formData();
-  const scheduleUpdatePayload: z.input<typeof scheduleUpdatePayloadSchema> = {
+  const scheduleUpdatePayload: z.output<typeof ScheduleUpdatePayloadSchema> = {
     id: scheduleId,
   };
   const init = {
@@ -65,7 +69,7 @@ export const editDetailsAction: ActionFunction = async ({
 
   let updated = false;
   if (runAt !== null && init.runAt !== runAt) {
-    scheduleUpdatePayload.runAt = runAt === "" ? null : runAt;
+    scheduleUpdatePayload.runAt = runAt === "" ? null : DateSchema.parse(runAt);
     updated = true;
   }
   if (description !== null && init.description !== description) {

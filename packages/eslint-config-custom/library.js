@@ -34,5 +34,5 @@ module.exports = {
     'no-console': process.env.CI ? 2 : 0,
     '@typescript-eslint/explicit-function-return-type': 0
   },
-  ignorePatterns: ["node_modules/", "dist/"],
+  ignorePatterns: ["node_modules/", "dist/", "coverage/", "*.test.ts"],
 };

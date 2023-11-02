@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   // const url = new URL(request.url);
   // const params = url.searchParams;
 
-  const runs: PublicJobRun[] = await scheduler.getRuns();
+  const runs: PublicJobRun[] = await scheduler.getRuns({});
   return json({ runs });
 };
 

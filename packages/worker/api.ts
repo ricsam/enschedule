@@ -2,6 +2,7 @@ import http from "node:http";
 import { PrivateBackend } from "@enschedule/pg-driver";
 import type { ScheduleUpdatePayload } from "@enschedule/types";
 import {
+  ListRunsOptionsSerializedSchema,
   ScheduleJobOptionsSchema,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
@@ -129,16 +130,8 @@ export class Worker extends PrivateBackend {
     });
 
     app.get("/runs", (req, res, next) => {
-      const scheduleIdSchema = z
-        .string()
-        .optional()
-        .transform((strNumber) =>
-          strNumber
-            ? z.number().int().positive().parse(Number(strNumber))
-            : undefined
-        );
-      const validatedScheduleId = scheduleIdSchema.parse(req.query.scheduleId);
-      this.getRuns({ scheduleId: validatedScheduleId })
+      const options = ListRunsOptionsSerializedSchema.parse(req.query);
+      this.getRuns(options)
         .then((runs) => {
           res.json(runs);
         })

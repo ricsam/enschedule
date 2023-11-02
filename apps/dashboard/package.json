@@ -7,7 +7,9 @@
     "build": "NODE_ENV=production remix build",
     "dev": "remix dev",
     "start": "echo 'You probably want to run yarn run dev'; exit 1; remix-serve build",
-    "docker:start": "NODE_ENV=production remix-serve build"
+    "docker:start": "NODE_ENV=production remix-serve build",
+    "typecheck": "tsc",
+    "lint": "eslint ."
   },
   "dependencies": {
     "ts-node": "^10.9.1",
@@ -21,6 +23,7 @@
     "zod": "^3.22.2",
     "@enschedule/worker-api": "workspace:*",
     "@enschedule/types": "workspace:*",
+    "@enschedule/worker": "workspace:*",
     "date-fns": "~2.29.3",
     "@emotion/react": "~11.10.5",
     "@emotion/styled": "~11.10.5",

@@ -3,5 +3,5 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["worker.ts"]
+  "include": ["worker.ts", "migrate.ts"]
 }

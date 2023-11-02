@@ -1,6 +1,6 @@
 {
   "extends": "tsconfig/library.json",
-  "include": ["index.ts", "types.ts"],
+  "include": ["index.ts", "types.ts", "schemas.test.ts"],
   "exclude": ["dist", "build", "node_modules"],
   "compilerOptions": {
     "outDir": "dist"

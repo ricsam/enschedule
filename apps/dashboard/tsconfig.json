@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "target": "ES6",
     "strict": true,

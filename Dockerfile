@@ -1,5 +1,5 @@
 # BASE
-FROM node:16.20-slim as base
+FROM node:18-slim as base
 LABEL org.opencontainers.image.source=https://github.com/ricsam/enschedule
 LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /app

@@ -2,17 +2,17 @@ import { Typography } from "@mui/material";
 import type {
   LinksFunction,
   LoaderFunction,
-  MetaFunction,
+  MetaFunction
 } from "@remix-run/node";
 import {
+  isRouteErrorResponse,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration,
-  useCatch,
-  useLoaderData,
+  ScrollRestoration, useLoaderData,
+  useRouteError
 } from "@remix-run/react";
 import styles from "~/style/global.css";
 import { MuiTheme } from "~/utils/MuiTheme";
@@ -43,11 +43,11 @@ export const loader: LoaderFunction = async ({ request }) => {
   return data;
 };
 
-export const meta: MetaFunction = () => ({
-  charset: "utf-8",
-  title: "Enschedule",
-  viewport: "width=device-width,initial-scale=1",
-});
+export const meta: MetaFunction = () => [
+  { charset: "utf-8" },
+  { title: "Enschedule" },
+  { viewport: "width=device-width,initial-scale=1" },
+];
 
 export default function App() {
   const data = useLoaderData<LoaderData>();
@@ -90,7 +90,19 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const error = useRouteError();
+  let errorNode: React.ReactNode = null;
+  if (isRouteErrorResponse(error)) {
+    errorNode = (
+      <div>
+        <h1>Oops</h1>
+        <p>Status: {error.status}</p>
+        <p>{error.data.message}</p>
+      </div>
+    );
+  } else {
+    errorNode = String(error);
+  }
 
   return (
     <html>
@@ -102,9 +114,7 @@ export function CatchBoundary() {
       <body>
         <Typography fontSize={60}>😪</Typography>
         <div className="error-container">
-          <h1>
-            {caught.status} {caught.statusText}
-          </h1>
+          <h1>{errorNode}</h1>
         </div>
         <Scripts />
       </body>

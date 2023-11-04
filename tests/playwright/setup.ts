@@ -166,6 +166,7 @@ export class Setup {
             reject(new Error(`${id} Timeout after 20 seconds: ${allData}`));
           }, 20000);
           server.stdout.on("data", async (data) => {
+            console.log(data.toString());
             allData += data;
             log(data.toString());
             if (ready(data)) {
@@ -202,7 +203,7 @@ export class Setup {
                 })
               );
 
-              log(`Web server running on http://localhost:${port} 🚀`);
+              log(`Server running on http://localhost:${port} 🚀`);
               clearTimeout(timeout);
               resolve(port);
             }
@@ -303,7 +304,7 @@ export class Setup {
         WORKER_URL: `http://localhost:${workerApiPort}`,
       }),
       dashboardPwd,
-      (stdout) => stdout.includes("Remix App Server started at")
+      (stdout) => stdout.includes("[remix-serve] http")
     );
 
     console.log(`Started dashboard on http://localhost:${dashboardPort}`);

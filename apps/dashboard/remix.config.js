@@ -9,11 +9,7 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   serverBuildPath: "./build/index.js",
   publicPath: "/build/",
-  
-  serverMainFields: ["main", "module"], // default value, can be removed
-  serverMinify: false, // default value, can be removed
   serverModuleFormat: "cjs", // default value in 1.x, add before upgrading
-  serverPlatform: "node", // default value, can be removed
 
   serverDependenciesToBundle: [
     /^@schedule\/.*/,

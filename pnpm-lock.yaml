@@ -227,9 +227,6 @@ importers:
         specifier: ~1.1.1
         version: 1.1.4(typescript@4.9.5)(zod@3.22.2)
     devDependencies:
-      '@turbo/gen':
-        specifier: ^1.10.12
-        version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
       '@types/debug':
         specifier: ^4.1.8
         version: 4.1.8
@@ -266,9 +263,6 @@ importers:
         specifier: ^3.22.2
         version: 3.22.2
     devDependencies:
-      '@turbo/gen':
-        specifier: ^1.10.12
-        version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
       '@types/jest':
         specifier: ^29.5.4
         version: 29.5.4
@@ -339,9 +333,6 @@ importers:
         specifier: ^3.22.2
         version: 3.22.2
     devDependencies:
-      '@turbo/gen':
-        specifier: ^1.10.12
-        version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
       '@types/body-parser':
         specifier: ^1.19.2
         version: 1.19.2
@@ -394,9 +385,6 @@ importers:
       '@enschedule/types':
         specifier: workspace:*
         version: link:../types
-      '@turbo/gen':
-        specifier: ^1.10.12
-        version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
       '@types/debug':
         specifier: ^4.1.8
         version: 4.1.8
@@ -444,7 +432,7 @@ importers:
         version: 1.2.2
       ts-node:
         specifier: ^10.9.1
-        version: 10.9.1(@types/node@20.5.4)(typescript@4.9.5)
+        version: 10.9.1(@types/node@20.5.4)(typescript@5.2.2)
       tsconfig:
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -457,9 +445,6 @@ importers:
       '@enschedule/worker':
         specifier: workspace:*
         version: link:../../packages/worker
-      '@turbo/gen':
-        specifier: ^1.10.12
-        version: 1.10.13(@types/node@20.5.4)(typescript@4.9.5)
       '@types/express':
         specifier: ^4.17.17
         version: 4.17.17

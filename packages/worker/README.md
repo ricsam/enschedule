@@ -1,11 +1,11 @@
 # `worker`
 ## Docker
 ### Environment variables
-PGUSER
-PGHOST
-PGPASSWORD
-PGDATABASE
-PGPORT
+DB_USER
+DB_HOST
+DB_PASSWORD
+DB_DATABASE
+DB_PORT
 ENSCHEDULE_API
 REGISTER_JOBS_SCRIPT
 API_PORT or default is 8080
@@ -49,13 +49,7 @@ docker container run -p 8080:8080 -e API_ENDPOINT=true -v ${PWD}:/enschedule/job
 ### Usage
 ```tsx
 import { Worker } from '@enschedule/worker';
-const worker = new Worker({
-  pgUser: process.env.PGUSER,
-  pgHost: process.env.PGHOST,
-  pgPassword: process.env.PGPASSWORD,
-  pgDatabase: process.env.PGDATABASE,
-  pgPort: process.env.PGPORT,
-});
+const worker = new Worker({});
 void (async () => {
   worker.registerJob({
     id: 'log-job',

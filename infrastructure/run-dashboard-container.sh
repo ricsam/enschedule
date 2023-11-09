@@ -7,11 +7,12 @@ cd $SCRIPT_DIR
 docker container run \
   --rm \
   -e PORT=3000 \
-  -e PGUSER=postgres \
-  -e PGHOST=postgres \
-  -e PGPASSWORD=postgres \
-  -e PGDATABASE=postgres \
-  -e PGPORT=5432 \
+  -e POSTGRES=true \
+  -e DB_USER=postgres \
+  -e DB_HOST=postgres \
+  -e DB_PASSWORD=postgres \
+  -e DB_DATABASE=postgres \
+  -e DB_PORT=5432 \
   -e DEBUG='worker-api,pg-driver' \
   -p 3030:3000 \
   -i \

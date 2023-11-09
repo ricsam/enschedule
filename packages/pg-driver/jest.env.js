@@ -1,19 +1,29 @@
-const { Client } = require('pg');
+const { Client } = require("pg");
 
-const TEST_DB = 'enschedule_test';
+const TEST_DB = "enschedule_test";
 
 Object.assign(process.env, {
-  PGUSER: 'postgres',
-  PGHOST: 'localhost',
-  PGPASSWORD: 'postgres',
-  PGDATABASE: 'postgres',
-  PGPORT: '6543',
+  // `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`
+  POSTGRES: 'true',
+  DB_USER: "postgres",
+  DB_HOST: "localhost",
+  DB_PASSWORD: "postgres",
+  DB_DATABASE: "postgres",
+  DB_PORT: "6543",
 });
 
 module.exports = async () => {
-  const client = new Client();
+  const client = new Client({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+    port: Number(process.env.DB_PORT),
+  });
   await client.connect();
-  const dbExists = await client.query(`SELECT 1 FROM pg_database WHERE datname='${TEST_DB}'`);
+  const dbExists = await client.query(
+    `SELECT 1 FROM pg_database WHERE datname='${TEST_DB}'`
+  );
   if (dbExists.rowCount > 0) {
     // delete database
     // disconnect clients
@@ -28,6 +38,6 @@ module.exports = async () => {
 
   await client.end();
   Object.assign(process.env, {
-    PGDATABASE: TEST_DB,
+    DB_DATABASE: TEST_DB,
   });
 };

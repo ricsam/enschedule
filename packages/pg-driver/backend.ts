@@ -40,6 +40,11 @@ import type { ZodType } from "zod";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
+import type {
+  SeqConstructorOptions} from "./env-sequalize-options";
+import {
+  envSequalizeOptions
+} from "./env-sequalize-options";
 import { log } from "./log";
 
 interface JobDefinition<T extends ZodType = ZodType> {
@@ -270,11 +275,7 @@ export const createJobDefinition = <T extends ZodType = ZodType>(
 ) => job;
 
 export interface BackendOptions {
-  pgUser: string;
-  pgPassword: string;
-  pgHost: string;
-  pgPort: string;
-  pgDatabase: string;
+  database?: SeqConstructorOptions;
   forkArgv?: string[];
 }
 
@@ -288,15 +289,14 @@ export class PrivateBackend {
   private forkArgv: string[] | undefined;
 
   constructor(backendOptions: BackendOptions) {
-    const { pgUser, pgPassword, pgHost, pgPort, pgDatabase, forkArgv } =
-      backendOptions;
+    const { database: passedDatabaseOptions, forkArgv } = backendOptions;
+    const database = passedDatabaseOptions ?? envSequalizeOptions();
     this.forkArgv = forkArgv;
-    const sequelize = new Sequelize(
-      `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`,
-      {
-        logging: false,
-      }
-    );
+
+    const sequelize = database.uri
+      ? new Sequelize(database.uri, database)
+      : new Sequelize(database);
+
     this.sequelize = sequelize;
 
     Schedule.init(

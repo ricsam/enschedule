@@ -3,22 +3,15 @@
 /* eslint-disable */
 
 import { RunDefinition } from "@enschedule/types";
-import stream from "stream";
 import { z } from "zod";
 import {
-  TestBackend,
   createJobDefinition,
-  StreamHandle,
   Schedule,
+  StreamHandle,
+  TestBackend,
 } from "./backend";
 
-const backend = new TestBackend({
-  pgUser: process.env.PGUSER!,
-  pgHost: process.env.PGHOST!,
-  pgPassword: process.env.PGPASSWORD!,
-  pgDatabase: process.env.PGDATABASE!,
-  pgPort: process.env.PGPORT!,
-});
+const backend = new TestBackend({});
 const Console = console.Console;
 
 backend.fork = async function (

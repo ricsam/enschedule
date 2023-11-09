@@ -16,15 +16,16 @@ services:
         condition: service_healthy
     image: 'ghcr.io/ricsam/enschedule-worker:latest'
     environment:
-      - PGUSER=postgres
-      - PGHOST=postgres
-      - PGPASSWORD=postgres
-      - PGDATABASE=postgres
+      - POSTGRES=true
+      - DB_USER=postgres
+      - DB_HOST=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=postgres
       - API_KEY=secret_key
       - ENSCHEDULE_API=true
       - API_PORT=3000
       - API_HOSTNAME=worker
-      - PGPORT=5432
+      - DB_PORT=5432
       - DEBUG=pg-driver
     volumes:
       - "${PWD}/JobDefinitions:/app/packages/worker/definitions"

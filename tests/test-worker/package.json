@@ -8,7 +8,7 @@
     "worker:work": "nodemon --watch 'worker.ts' --watch '../../packages/worker/*.ts' --watch '../../packages/types/*.ts' --watch '../../packages/pg-driver/*.ts' ./worker.ts",
     "serve": "ts-node ./worker.ts",
     "lint": "eslint .",
-    "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 ${PGDATABASE:-dev} || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c \"create database ${PGDATABASE:-dev};\"",
+    "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 ${DB_DATABASE:-dev} || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c \"create database ${DB_DATABASE:-dev};\"",
     "seed": "yarn run create-db && ts-node --project ./tsconfig.json -e 'import * as dotenv from \"dotenv\"; dotenv.config(); import { migrate } from \"./migrate\"; migrate();'"
   },
   "devDependencies": {
@@ -18,7 +18,6 @@
     "date-fns": "~2.29.3",
     "zod": "^3.22.2",
     "nodemon": "^3.0.1",
-    "@turbo/gen": "^1.10.12",
     "@types/node": "^20.5.2",
     "eslint-config-custom": "workspace:*",
     "tsconfig": "workspace:*",

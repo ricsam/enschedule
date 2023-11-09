@@ -17,11 +17,11 @@ export class Setup {
   private childProcesses: ChildProcess[] = [];
 
   private dbCreds = {
-    PGUSER: "postgres",
-    PGHOST: "127.0.0.1",
-    PGPASSWORD: "postgres",
-    PGDATABASE: "postgres",
-    PGPORT: "6543",
+    DB_USER: "postgres",
+    DB_HOST: "127.0.0.1",
+    DB_PASSWORD: "postgres",
+    DB_DATABASE: "postgres",
+    DB_PORT: "6543",
   };
 
   private _dashboardUrl = "";
@@ -61,8 +61,9 @@ export class Setup {
   private get workerEnvs() {
     return {
       ...this.dbCreds,
+      POSTGRES: "true",
       DEBUG: "pg-driver,worker",
-      PGDATABASE: this.TEST_DB,
+      DB_DATABASE: this.TEST_DB,
       API_KEY: "secret_key",
     };
   }
@@ -99,11 +100,11 @@ export class Setup {
 
   async createDatabase() {
     const client = new Client({
-      user: this.dbCreds.PGUSER,
-      host: this.dbCreds.PGHOST,
-      password: this.dbCreds.PGPASSWORD,
-      database: this.dbCreds.PGDATABASE,
-      port: Number(this.dbCreds.PGPORT),
+      user: this.dbCreds.DB_USER,
+      host: this.dbCreds.DB_HOST,
+      password: this.dbCreds.DB_PASSWORD,
+      database: this.dbCreds.DB_DATABASE,
+      port: Number(this.dbCreds.DB_PORT),
     });
 
     await client.connect();
@@ -341,11 +342,11 @@ export class Setup {
 
     // Delete the test database
     const client = new Client({
-      user: this.dbCreds.PGUSER,
-      host: this.dbCreds.PGHOST,
-      password: this.dbCreds.PGPASSWORD,
-      database: this.dbCreds.PGDATABASE,
-      port: Number(this.dbCreds.PGPORT),
+      user: this.dbCreds.DB_USER,
+      host: this.dbCreds.DB_HOST,
+      password: this.dbCreds.DB_PASSWORD,
+      database: this.dbCreds.DB_DATABASE,
+      port: Number(this.dbCreds.DB_PORT),
     });
     await client.connect();
     await client.query(`DROP DATABASE IF EXISTS ${this.TEST_DB}`);

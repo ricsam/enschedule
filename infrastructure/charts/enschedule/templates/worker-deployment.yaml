@@ -55,13 +55,15 @@ spec:
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           env:
-            - name: PGUSER
+            - name: POSTGRES
+              value: "true"
+            - name: DB_USER
               value: "postgres"
-            - name: PGHOST
+            - name: DB_HOST
               value: "database-service"
-            - name: PGPASSWORD
+            - name: DB_PASSWORD
               value: "postgres"
-            - name: PGDATABASE
+            - name: DB_DATABASE
               value: "postgres"
             - name: API_KEY
               value: "secret_key"
@@ -69,7 +71,7 @@ spec:
               value: "true"
             - name: API_PORT
               value: "8000"
-            - name: PGPORT
+            - name: DB_PORT
               value: "{{ .Values.database.service.port }}"
             - name: DEBUG
               value: "pg-driver,worker"

@@ -77,7 +77,9 @@ export class WorkerAPI {
     const options = {
       hostname: this.hostname,
       port: this.port,
-      path: method === "GET" && dataString ? `${path}?${dataString}` : path,
+      path: `/api/v1${
+        method === "GET" && dataString ? `${path}?${dataString}` : path
+      }`,
       method,
       headers: {
         "Content-Type": "application/json",
@@ -109,7 +111,7 @@ export class WorkerAPI {
                 log(
                   "Res:",
                   method,
-                  `${this.url}${path}`,
+                  `${this.url}${options.path}`,
                   res.statusCode,
                   res.statusMessage,
                   ...args

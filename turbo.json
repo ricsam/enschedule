@@ -4,7 +4,8 @@
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "build/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "build/**", "dist/**"],
+      "env": ["NODE_ENV", "MONO_REPO_BUILD"]
     },
     "lint": {},
     "typecheck": {},

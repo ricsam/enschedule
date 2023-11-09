@@ -28,9 +28,11 @@ void (async () => {
   }
   await worker.startPolling();
   if (process.env.ENSCHEDULE_API) {
-    worker.serve({
-      port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
-      hostname: process.env.API_HOSTNAME,
-    });
+    worker
+      .serve({
+        port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+        hostname: process.env.API_HOSTNAME,
+      })
+      .listen();
   }
 })();

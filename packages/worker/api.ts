@@ -8,7 +8,7 @@ import {
 } from "@enschedule/types";
 import { json as parseJsonBody } from "body-parser";
 import { debug } from "debug";
-import express from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 
 const log = debug("worker");
@@ -19,13 +19,15 @@ export interface ServeOptions {
 }
 
 export class Worker extends PrivateBackend {
-  serve(serveOptions: ServeOptions): void {
+  serve(
+    serveOptions: ServeOptions,
+    app: express.Express = express()
+  ): { listen: (cb?: (url: string) => void) => void } {
     if (!process.env.API_KEY) {
       throw new Error(
         "Environment variable API_KEY must be defined to start the API endpoint"
       );
     }
-    const app = express();
 
     const apiKeyMiddleware = (
       req: express.Request,
@@ -39,11 +41,15 @@ export class Worker extends PrivateBackend {
       next();
     };
 
-    app.get("/healthz", (req, res) => {
+    const router = Router({
+      strict: true,
+    });
+
+    router.get("/healthz", (req, res) => {
       res.status(200).json({ message: "Endpoint is healthy" });
     });
 
-    app.use((req, res, next) => {
+    router.use((req, res, next) => {
       log("Incoming", req.method, decodeURI(req.url));
       res.on("finish", () => {
         log(
@@ -57,20 +63,20 @@ export class Worker extends PrivateBackend {
       next();
     });
 
-    app.use(apiKeyMiddleware);
-    app.use(parseJsonBody());
+    router.use(apiKeyMiddleware);
+    router.use(parseJsonBody());
 
-    app.get("/job-definitions", (req, res) => {
+    router.get("/job-definitions", (req, res) => {
       const jobDefinitions = this.getDefinitions();
       res.json(jobDefinitions);
     });
 
-    app.get("/job-definitions/:id", (req, res) => {
+    router.get("/job-definitions/:id", (req, res) => {
       const jobDefinition = this.getJobDefinition(req.params.id);
       res.json(jobDefinition);
     });
 
-    app.get("/schedules", (req, res, next) => {
+    router.get("/schedules", (req, res, next) => {
       const querySchema = z.object({
         definitionId: z.string().optional(),
       });
@@ -82,7 +88,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/schedules", (req, res, next) => {
+    router.post("/schedules", (req, res, next) => {
       const ScheduleSchema = z.object({
         jobId: z.string(),
         data: z.unknown(),
@@ -96,7 +102,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.get("/schedules/:id", (req, res, next) => {
+    router.get("/schedules/:id", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.getSchedule(validatedId)
@@ -106,7 +112,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.delete("/schedules/:id", (req, res, next) => {
+    router.delete("/schedules/:id", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.deleteSchedule(validatedId)
@@ -116,7 +122,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/delete-schedules", (req, res, next) => {
+    router.post("/delete-schedules", (req, res, next) => {
       const idSchema = z.object({
         scheduleIds: z.array(z.number().int().positive()),
       });
@@ -129,7 +135,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.get("/runs", (req, res, next) => {
+    router.get("/runs", (req, res, next) => {
       const options = ListRunsOptionsSerializedSchema.parse(req.query);
       this.getRuns(options)
         .then((runs) => {
@@ -138,7 +144,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.put("/schedules/:id", (req, res, next) => {
+    router.put("/schedules/:id", (req, res, next) => {
       const updatePayload: ScheduleUpdatePayload =
         ScheduleUpdatePayloadSchema.parse({
           ...req.body,
@@ -151,7 +157,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.get("/runs/:id", (req, res, next) => {
+    router.get("/runs/:id", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.getRun(validatedId)
@@ -161,7 +167,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.delete("/runs/:id", (req, res, next) => {
+    router.delete("/runs/:id", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.deleteRun(validatedId)
@@ -171,7 +177,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/delete-runs", (req, res, next) => {
+    router.post("/delete-runs", (req, res, next) => {
       const idSchema = z.object({
         runIds: z.array(z.number().int().positive()),
       });
@@ -184,7 +190,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/schedules/:id/runs", (req, res, next) => {
+    router.post("/schedules/:id/runs", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedId = idSchema.parse(Number(req.params.id));
       this.runScheduleNow(validatedId)
@@ -194,7 +200,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/runs-schedules", (req, res, next) => {
+    router.post("/runs-schedules", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedIds = z.array(idSchema).parse(req.body);
       this.runSchedulesNow(validatedIds)
@@ -204,7 +210,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.post("/unschedule", (req, res, next) => {
+    router.post("/unschedule", (req, res, next) => {
       const idSchema = z.number().int().positive();
       const validatedIds = z.array(idSchema).parse(req.body);
       this.unschedule(validatedIds)
@@ -214,7 +220,7 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    app.delete("/", (req, res, next) => {
+    router.delete("/", (req, res, next) => {
       this.reset()
         .then(() => {
           res.json({ success: true });
@@ -222,22 +228,32 @@ export class Worker extends PrivateBackend {
         .catch(next);
     });
 
-    const { port, hostname } = serveOptions;
-    const server = http.createServer(app);
-    const cb = () => {
-      const ad = server.address();
-      const host =
-        typeof ad === "string"
-          ? ad
-          : `${
-              !ad?.address || ad.address === "::" ? "localhost" : ad.address
-            }:${ad?.port || port}`;
-      console.log(`Worker API is running on http://${host}`);
+    app.use("/api/v1", router);
+
+    return {
+      listen: (cb) => {
+        const { port, hostname } = serveOptions;
+        const server = http.createServer(app);
+        const onListen = () => {
+          const ad = server.address();
+          const host =
+            typeof ad === "string"
+              ? ad
+              : `${
+                  !ad?.address || ad.address === "::" ? "localhost" : ad.address
+                }:${ad?.port || port}`;
+          const url = `http://${host}`;
+          console.log(`Worker API is running on ${url}`);
+          if (cb) {
+            cb(url);
+          }
+        };
+        if (hostname) {
+          server.listen(port, hostname, onListen);
+        } else {
+          server.listen(port, onListen);
+        }
+      },
     };
-    if (hostname) {
-      server.listen(port, hostname, cb);
-    } else {
-      server.listen(port, cb);
-    }
   }
 }

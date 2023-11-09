@@ -1,0 +1,10 @@
+{
+  "extends": "tsconfig/library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+  },
+  "include": ["index.ts", "global.d.ts"],
+  "ts-node": {
+    "files": true
+  }
+}

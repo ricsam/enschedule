@@ -147,7 +147,8 @@ export class Setup {
       cmd: string[],
       env: (port: number) => NodeJS.ProcessEnv,
       cwd: string,
-      ready: (data: any) => boolean
+      ready: (data: any) => boolean,
+      healthEndpoint: string
     ) => {
       const id = `[${cmd.join(",")} in ${path.relative(this.cwd, cwd)}]`;
       const log = (...msg: any[]) => console.log(id, ...msg);
@@ -217,20 +218,20 @@ export class Setup {
 
       const port = await getPort();
 
-      const waitForPort = async (port: number) => {
+      const waitForPort = async (port: number, endpoint: string) => {
         // Wait for the server to ready by sending a HTTP get request to /healthz until a 200 response
         let attempts = 0;
         while (true) {
           try {
             const res = await new Promise((resolve, reject) => {
               http
-                .get(`http://localhost:${port}/healthz`, (res) => {
+                .get(`http://localhost:${port}${endpoint}`, (res) => {
                   let data = "";
                   res.on("data", (chunk) => {
                     data += chunk;
                   });
                   res.on("end", () => {
-                    log("/healthz", data);
+                    log(endpoint, data);
                     resolve(res.statusCode);
                   });
                 })
@@ -238,7 +239,7 @@ export class Setup {
                   reject(err);
                 });
             });
-            log("GET", `http://localhost:${port}/healthz`, res);
+            log("GET", `http://localhost:${port}${endpoint}`, res);
             if (res === 200) {
               break;
             }
@@ -253,7 +254,7 @@ export class Setup {
         }
       };
 
-      await waitForPort(port);
+      await waitForPort(port, healthEndpoint);
       return port;
     };
 
@@ -266,7 +267,8 @@ export class Setup {
         API_PORT: String(port),
       }),
       this.workerPwd,
-      (stdout) => stdout.includes("Worker up and running")
+      (stdout) => stdout.includes("Worker up and running"),
+      "/api/v1/healthz"
     );
 
     const dashboardPwd = path.join(this.cwd, "apps/dashboard");
@@ -305,7 +307,8 @@ export class Setup {
         WORKER_URL: `http://localhost:${workerApiPort}`,
       }),
       dashboardPwd,
-      (stdout) => stdout.includes("[remix-serve] http")
+      (stdout) => stdout.includes("[remix-serve] http"),
+      "/healthz"
     );
 
     console.log(`Started dashboard on http://localhost:${dashboardPort}`);

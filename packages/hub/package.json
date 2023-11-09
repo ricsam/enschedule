@@ -1,13 +1,13 @@
 {
-  "name": "@enschedule/worker",
+  "name": "@enschedule/hub",
   "version": "0.0.0",
-  "types": "index.ts",
-  "module": "index.ts",
-  "main": "dist/index.js",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "license": "MIT",
   "scripts": {
     "lint": "eslint -f visualstudio .",
-    "build": "tsc -p ./tsconfig.json"
+    "build": "tsc -p ./tsconfig.json",
+    "dev": "ts-node ./index.ts"
   },
   "files": [
     "index.ts",
@@ -28,13 +28,21 @@
     "nodemon": "^3.0.1",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
-    "@types/debug": "^4.1.8"
+    "@types/debug": "^4.1.8",
+    "@types/morgan": "^1.9.2",
+    "@types/compression": "^1.7.0"
   },
   "dependencies": {
     "express": "^4.18.2",
     "@enschedule/pg-driver": "workspace:*",
     "@enschedule/types": "workspace:*",
+    "@enschedule/dashboard": "workspace:*",
+    "@enschedule/worker": "workspace:*",
+    "@remix-run/express": "^2.2.0",
+    "@remix-run/node": "^2.2.0",
+    "morgan": "^1.10.0",
     "body-parser": "^1.20.2",
+    "compression": "^1.7.4",
     "zod": "^3.22.2",
     "debug": "^4.3.4"
   }

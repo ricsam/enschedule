@@ -45,3 +45,4 @@ export default function handleRequest(
     setTimeout(abort, ABORT_DELAY);
   });
 }
+export { scheduler } from "./scheduler.server";

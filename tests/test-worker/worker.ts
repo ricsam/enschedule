@@ -76,9 +76,11 @@ void (async () => {
 
   if (process.env.ENSCHEDULE_API) {
     console.log("Starting the API");
-    worker.serve({
-      port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
-    });
+    worker
+      .serve({
+        port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+      })
+      .listen();
   }
   console.log("Starting polling");
   await worker.startPolling({ dontMigrate: true });

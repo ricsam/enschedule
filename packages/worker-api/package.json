@@ -1,11 +1,12 @@
 {
   "name": "@enschedule/worker-api",
   "version": "0.0.0",
-  "main": "./index.ts",
+  "module": "./index.ts",
+  "main": "./dist/index.js",
   "types": "./index.ts",
   "license": "MIT",
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint -f visualstudio .",
     "build": "tsc -p ./tsconfig.json"
   },
   "devDependencies": {
@@ -13,7 +14,7 @@
     "eslint-config-custom": "workspace:*",
     "tsconfig": "workspace:*",
     "@enschedule/types": "workspace:*",
-    "typescript": "^4.9.4",
+    "typescript": "^5.1.0",
     "@types/debug": "^4.1.8"
   },
   "dependencies": {

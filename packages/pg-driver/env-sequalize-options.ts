@@ -1,5 +1,4 @@
 import type { Dialect, Options } from "sequelize";
-import { z } from "zod";
 
 const assertEnvs = (...envs: string[]): string[] => {
   const missingEnvs: string[] = [];
@@ -32,11 +31,6 @@ const dialects: Dialect[] = [
   "snowflake",
   "oracle",
 ];
-function isDialect(dialect: string): asserts dialect is Dialect {
-  if (!dialects.includes(dialect as Dialect)) {
-    throw new Error("Invalid dialect, must be one of " + dialects.join(", "));
-  }
-}
 
 export const envSequalizeOptions = (): SeqConstructorOptions => {
   const options: SeqConstructorOptions = {

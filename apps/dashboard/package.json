@@ -3,13 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "scripts": {
-    "build": "NODE_ENV=production remix build",
+    "build": "remix build && cp ./build.d.ts ./build/index.d.ts",
     "dev": "remix dev",
     "start": "echo 'You probably want to run yarn run dev'; exit 1; remix-serve build",
     "docker:start": "NODE_ENV=production remix-serve build/index.js",
     "typecheck": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint -f visualstudio ."
   },
   "dependencies": {
     "@emotion/react": "~11.10.5",

@@ -1,3 +1,4 @@
+import type { ZodType } from "zod";
 import { z } from "zod";
 
 //#region Enums
@@ -231,3 +232,15 @@ export const ListRunsOptionsSerialize = (
     offset: ob.offset ? String(ob.offset) : undefined,
   };
 };
+
+/**
+ * rename to handler
+ */
+export interface JobDefinition<T extends ZodType = ZodType> {
+  dataSchema: T;
+  id: string;
+  title: string;
+  description: string;
+  job: (data: z.infer<T>) => Promise<void> | void;
+  example: z.infer<T>;
+}

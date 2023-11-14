@@ -31,7 +31,7 @@ import parseISO from "date-fns/parseISO";
 import React from "react";
 import { z } from "zod";
 import { Editor } from "~/components/Editor";
-import { scheduler } from "~/scheduler.server";
+import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
@@ -39,9 +39,10 @@ import RunPage from "./RunPage";
 export const editDetailsAction: ActionFunction = async ({
   request,
   params,
+  context,
 }) => {
   const scheduleId = getScheduleId(params);
-  const schedule = await scheduler.getSchedule(scheduleId);
+  const schedule = await getWorker(context.worker).getSchedule(scheduleId);
   if (!schedule) {
     throw new Error("Invalid scheduleId");
   }
@@ -101,7 +102,7 @@ export const editDetailsAction: ActionFunction = async ({
     }
   }
   if (updated) {
-    await scheduler.updateSchedule(scheduleUpdatePayload);
+    await getWorker(context.worker).updateSchedule(scheduleUpdatePayload);
   }
   return redirect(getParentUrl(request.url));
 };
@@ -659,7 +660,7 @@ export const getScheduleId = (params: Params<string>): number => {
 };
 
 export const action: ActionFunction = async (arg) => {
-  const { request, params } = arg;
+  const { request, params, context } = arg;
   const fd = await request.formData();
   const action = z
     .union([z.literal("delete"), z.literal("run")])
@@ -668,10 +669,10 @@ export const action: ActionFunction = async (arg) => {
   const id = getScheduleId(params);
   if (action === "run") {
     const redirectTo = z.string().parse(fd.get("redirect"));
-    await scheduler.runScheduleNow(id);
+    await getWorker(context.worker).runScheduleNow(id);
     return redirect(redirectTo);
   } else {
-    await scheduler.deleteSchedule(id);
+    await getWorker(context.worker).deleteSchedule(id);
     return redirect(getParentUrl(request.url));
   }
 };

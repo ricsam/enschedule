@@ -11,6 +11,8 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
+  // console.log("remixContext", remixContext);
+
   return new Promise((resolve, reject) => {
     let didError = false;
 
@@ -45,4 +47,3 @@ export default function handleRequest(
     setTimeout(abort, ABORT_DELAY);
   });
 }
-export { scheduler } from "./scheduler.server";

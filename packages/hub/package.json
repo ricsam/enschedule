@@ -1,8 +1,9 @@
 {
   "name": "@enschedule/hub",
   "version": "0.0.0",
-  "main": "./index.ts",
+  "main": "./dist/index.ts",
   "types": "./index.ts",
+  "module": "./index.ts",
   "license": "MIT",
   "scripts": {
     "lint": "eslint -f visualstudio .",
@@ -10,10 +11,7 @@
     "dev": "ts-node ./index.ts"
   },
   "files": [
-    "index.ts",
-    "docker-entry.ts",
-    "api.ts",
-    "dist"
+    "index.ts"
   ],
   "devDependencies": {
     "@types/node": "^20.5.2",
@@ -38,6 +36,7 @@
     "@enschedule/types": "workspace:*",
     "@enschedule/dashboard": "workspace:*",
     "@enschedule/worker": "workspace:*",
+    "@enschedule/worker-api": "workspace:*",
     "@remix-run/express": "^2.2.0",
     "@remix-run/node": "^2.2.0",
     "morgan": "^1.10.0",

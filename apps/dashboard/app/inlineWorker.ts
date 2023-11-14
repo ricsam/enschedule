@@ -1,6 +1,6 @@
 import { Worker } from "@enschedule/worker";
 
-export const standaloneWorker = () => {
+export const inlineWorker = () => {
   const worker = new Worker({
     forkArgv: [__filename, "launch"],
   });
@@ -11,7 +11,7 @@ export const standaloneWorker = () => {
 
 if (process.argv[2] === "launch") {
   (async () => {
-    const worker = standaloneWorker();
+    const worker = inlineWorker();
     const ranJob = await worker.listenForIncomingRuns();
     if (ranJob) {
       return;

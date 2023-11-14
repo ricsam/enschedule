@@ -6,26 +6,31 @@ import { useLoaderData } from "@remix-run/react";
 import assert from "assert";
 import { RootLayout } from "~/components/Layout";
 import SchedulesTable from "~/components/SchedulesTable";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs, useLayout } from "..";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export async function getLoaderData(params: Params<string>): Promise<{
+export async function getLoaderData(
+  params: Params<string>,
+  worker: DashboardWorker
+): Promise<{
   schedules: PublicJobSchedule[];
   jobDefinition: PublicJobDefinition;
 }> {
   const definitionId = params.definitionId;
   assert(definitionId, "You must have a definitionId");
-  const jobDefinition = await scheduler.getJobDefinition(definitionId);
-  const schedules = await scheduler.getSchedules(definitionId);
+  const jobDefinition = await worker.getJobDefinition(definitionId);
+  const schedules = await worker.getSchedules(definitionId);
   return { schedules, jobDefinition };
 }
 
-export const loader: LoaderFunction = async ({ params }) => {
-  return json<LoaderData>(await getLoaderData(params));
+export const loader: LoaderFunction = async ({ params, context }) => {
+  return json<LoaderData>(
+    await getLoaderData(params, getWorker(context.worker))
+  );
 };
 
 export { action } from "~/components/SchedulesTable";

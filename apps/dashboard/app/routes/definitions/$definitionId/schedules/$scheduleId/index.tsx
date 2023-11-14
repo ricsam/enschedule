@@ -4,12 +4,12 @@ import type { Params } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulePage, { Actions } from "~/components/SchedulePage";
-import { scheduler } from "~/scheduler.server";
 
 import type { PublicJobSchedule } from "@enschedule/types";
-import type { Breadcrumb } from "~/types";
+import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
+import { getWorker } from "~/createWorker";
 
 const getScheduleId = (params: Params<string>): number => {
   const scheduleId = params.scheduleId;
@@ -20,21 +20,24 @@ const getScheduleId = (params: Params<string>): number => {
   return id;
 };
 
-export const getLoaderData = async (params: Params) => {
+export const getLoaderData = async (
+  params: Params,
+  worker: DashboardWorker
+) => {
   const id = getScheduleId(params);
-  const schedule = await scheduler.getSchedule(id);
+  const schedule = await worker.getSchedule(id);
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await scheduler.getRuns({ scheduleId: schedule.id });
+  const runs = await worker.getRuns({ scheduleId: schedule.id });
 
   return { schedule, runs };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params }) => {
-  const loaderData = await getLoaderData(params);
+export const loader: LoaderFunction = async ({ params, context }) => {
+  const loaderData = await getLoaderData(params, getWorker(context.worker));
   return json(loaderData);
 };
 
@@ -58,7 +61,7 @@ export const useNavbar = (action: string, runRedirect: string) => {
 
   const def = data.schedule.jobDefinition;
 
-  const definitionId = typeof def === 'string' ? def : def.id;
+  const definitionId = typeof def === "string" ? def : def.id;
 
   return {
     title: data.schedule.title,

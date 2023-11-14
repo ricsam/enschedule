@@ -6,25 +6,30 @@ import type { Params } from "@remix-run/react";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulesTable from "~/components/SchedulesTable";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb, DashboardWorker } from "~/types";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export async function getLoaderData(params: Params<string>): Promise<{
+export async function getLoaderData(
+  params: Params<string>,
+  worker: DashboardWorker
+): Promise<{
   schedules: PublicJobSchedule[];
   definition?: PublicJobDefinition;
 }> {
   const definitionId = params.definitionId;
   const definition = definitionId
-    ? await scheduler.getJobDefinition(definitionId)
+    ? await worker.getJobDefinition(definitionId)
     : undefined;
-  const schedules = await scheduler.getSchedules(definitionId);
+  const schedules = await worker.getSchedules(definitionId);
   return { schedules, definition };
 }
 
-export const loader: LoaderFunction = async ({ params }) => {
-  return json<LoaderData>(await getLoaderData(params));
+export const loader: LoaderFunction = async ({ params, context }) => {
+  return json<LoaderData>(
+    await getLoaderData(params, getWorker(context.worker))
+  );
 };
 
 export { action } from "~/components/SchedulesTable";

@@ -5,8 +5,8 @@ import type { Params } from "@remix-run/react";
 import { useHref, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import RunsTable from "~/components/RunsTable";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs, useNavbar } from "..";
 
@@ -19,21 +19,24 @@ const getScheduleId = (params: Params<string>): number => {
   return id;
 };
 
-export const getLoaderData = async (params: Params) => {
+export const getLoaderData = async (
+  params: Params,
+  worker: DashboardWorker
+) => {
   const id = getScheduleId(params);
-  const schedule = await scheduler.getSchedule(id);
+  const schedule = await worker.getSchedule(id);
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await scheduler.getRuns({ scheduleId: schedule.id });
+  const runs = await worker.getRuns({ scheduleId: schedule.id });
 
   return { schedule, runs };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params }) => {
-  const loaderData = await getLoaderData(params);
+export const loader: LoaderFunction = async ({ params, context }) => {
+  const loaderData = await getLoaderData(params, getWorker(context.worker));
   return json(loaderData);
 };
 

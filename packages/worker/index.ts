@@ -1,1 +1,1 @@
-export { Worker } from "./api";
+export { Worker, expressRouter } from "./api";

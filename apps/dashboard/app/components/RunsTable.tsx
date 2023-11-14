@@ -7,7 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { z } from "zod";
 import { ExpandableTable } from "~/components/Table";
-import { scheduler } from "~/scheduler.server";
+import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { createMsButtons } from "./createMsButtons";
 import RunPage from "./RunPage";
@@ -121,7 +121,8 @@ export default function RunsTable({
     />
   );
 }
-export const action: ActionFunction = async ({ request }) => {
+
+export const action: ActionFunction = async ({ request, context }) => {
   const fd = await request.formData();
   const action = z
     .union([z.literal("delete"), z.literal("placeholder")])
@@ -129,7 +130,7 @@ export const action: ActionFunction = async ({ request }) => {
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
 
   if (action === "delete") {
-    const deletedIds = await scheduler.deleteRuns(selected);
+    const deletedIds = await getWorker(context.worker).deleteRuns(selected);
     return json(deletedIds);
   }
   return json({

@@ -2,33 +2,33 @@ import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import type { ActionFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { Form } from "@remix-run/react";
-import { z } from "zod";
-import { RootLayout } from "~/components/Layout";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 import React from "react";
+import { z } from "zod";
+import { RootLayout } from "~/components/Layout";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb } from "~/types";
 
 export const useBreadcrumbs = (): Breadcrumb[] => {
   return [{ title: "Settings", href: "/settings" }];
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   const fd = await request.formData();
   const action = z
     .union([z.literal("reset-enschedule"), z.literal("placeholder")])
     .parse(fd.get("action"));
   if (action === "reset-enschedule") {
-    await scheduler.reset();
+    await getWorker(context.worker).reset();
   }
   return json({ success: true });
 };
@@ -73,7 +73,9 @@ function DeleteButton() {
         Delete
       </Button>
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>{"Are you sure you want to reset Enschedule?"}</DialogTitle>
+        <DialogTitle>
+          {"Are you sure you want to reset Enschedule?"}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             This will delete all runs and all schedules

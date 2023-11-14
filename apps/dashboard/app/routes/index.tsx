@@ -1,6 +1,12 @@
-import { Box, Typography } from '@mui/material';
-import { ReadOnlyEditor } from '~/components/Editor';
-import { RootLayout } from '~/components/Layout';
+import { Box, Typography } from "@mui/material";
+import type { LoaderFunction } from "@remix-run/node";
+import { ReadOnlyEditor } from "~/components/Editor";
+import { RootLayout } from "~/components/Layout";
+
+export const loader: LoaderFunction = ({ context }) => {
+  console.log("@context", context);
+  return {};
+};
 
 export default function () {
   return (
@@ -8,15 +14,18 @@ export default function () {
       <Box>
         <Typography variant="h3">Enschedule</Typography>
         <Typography variant="body1">
-          You can schedule to run code repeatedly or on a specific time. The code you want to run are created
-          in a definition. A definition can run according to a schedule.
+          You can schedule to run code repeatedly or on a specific time. The
+          code you want to run are created in a definition. A definition can run
+          according to a schedule.
         </Typography>
         <Typography variant="body1">
           The core objects in Enschedule is the definition, schedule and run.
         </Typography>
         <br />
         <Typography variant="h4">Definition</Typography>
-        <Typography variant="body1">You write the definitions in your server side code like this:</Typography>
+        <Typography variant="body1">
+          You write the definitions in your server side code like this:
+        </Typography>
         <br />
         <ReadOnlyEditor
           example={`scheduler.registerJob({
@@ -42,22 +51,25 @@ export default function () {
 
         <Typography variant="h4">Schedule</Typography>
         <Typography variant="body1">
-          The schedule contains data that is passed to the job definition as well as an optional time
-          parameter for when the job should run.
+          The schedule contains data that is passed to the job definition as
+          well as an optional time parameter for when the job should run.
         </Typography>
-        <Typography variant="body1">The time parameter can be "now", "manual", "cron", "date"</Typography>
+        <Typography variant="body1">
+          The time parameter can be "now", "manual", "cron", "date"
+        </Typography>
         <ul>
           <li>now - the schedule will instantly run the defined job</li>
           <li>
-            manual - the schedule will not do anything, but you can manually trigger the job to run by
-            navigating to the schedule in the UI
+            manual - the schedule will not do anything, but you can manually
+            trigger the job to run by navigating to the schedule in the UI
           </li>
           <li>cron - will run the job according to the cron expression</li>
           <li>date - will run the job once on the specified date</li>
         </ul>
         <Typography variant="h4">Run</Typography>
         <Typography variant="body1">
-          A run is created when a job runs. The run will store logged output and output from errors
+          A run is created when a job runs. The run will store logged output and
+          output from errors
         </Typography>
       </Box>
     </RootLayout>

@@ -1,3 +1,5 @@
+import type { Worker } from "@enschedule/worker";
+import type { WorkerAPI } from "@enschedule/worker-api";
 import type React from "react";
 
 export type NavBarTab = {
@@ -22,3 +24,5 @@ export type Handle<LoaderData> = {
   breadcrumb?: (params: HandleParams<LoaderData>) => Breadcrumb[];
   navbar?: (params: HandleParams<LoaderData>) => NavBar;
 };
+
+export type DashboardWorker = WorkerAPI | Worker;

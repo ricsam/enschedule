@@ -11,7 +11,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
 import { z } from "zod";
-import { scheduler } from "~/scheduler.server";
+import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { createMsButtons } from "./createMsButtons";
 import { ExpandableTable } from "./Table";
@@ -228,18 +228,18 @@ export default function SchedulesTable({
   );
 }
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   const fd = await request.formData();
   const action = z
     .union([z.literal("delete"), z.literal("run"), z.literal("unschedule")])
     .parse(fd.get("action"));
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
   if (action === "run") {
-    await scheduler.runSchedulesNow(selected);
+    await getWorker(context.worker).runSchedulesNow(selected);
   } else if (action === "delete") {
-    await scheduler.deleteSchedules(selected);
+    await getWorker(context.worker).deleteSchedules(selected);
   } else if (action === "unschedule") {
-    await scheduler.unschedule(selected);
+    await getWorker(context.worker).unschedule(selected);
   }
   return json({ success: true });
 };

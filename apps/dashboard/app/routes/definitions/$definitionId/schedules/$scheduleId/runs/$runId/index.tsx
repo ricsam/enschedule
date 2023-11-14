@@ -2,6 +2,7 @@ import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { RunRoute } from "~/components/routes/RunRoute";
+import { getWorker } from "~/createWorker";
 import type { Breadcrumb } from "~/types";
 import { useRunBreadcrumbs } from "~/utils/breadcrumbUtils";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
@@ -21,8 +22,8 @@ export const useBreadcrumbs = (
 const getLoaderData = getRunData;
 
 export const loader: LoaderFunction = async (args) => {
-  const { params } = args;
-  return json(await getLoaderData(params));
+  const { params, context } = args;
+  return json(await getLoaderData(params, getWorker(context.worker)));
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

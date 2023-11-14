@@ -8,12 +8,12 @@ import { differenceInMilliseconds } from "date-fns";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import RunPage from "~/components/RunPage";
-import { scheduler } from "~/scheduler.server";
+import { getWorker } from "~/createWorker";
 import type { Breadcrumb } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "../../utils/getParentUrl";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   const fd = await request.formData();
   const url = getParentUrl(request.url);
   const id = z
@@ -21,7 +21,7 @@ export const action: ActionFunction = async ({ request }) => {
     .int()
     .positive()
     .parse(Number(fd.get("id")));
-  await scheduler.deleteRun(id);
+  await getWorker(context.worker).deleteRun(id);
   return redirect(url);
 };
 

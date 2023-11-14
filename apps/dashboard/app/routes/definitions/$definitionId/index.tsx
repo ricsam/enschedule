@@ -6,8 +6,8 @@ import type { Params } from "@remix-run/react";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
 import DefinitionPage from "~/components/DefinitionPage";
 import { RootLayout } from "~/components/Layout";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb } from "~/types";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from "..";
 
@@ -27,9 +27,12 @@ export const useBreadcrumbs = (
   ]);
 };
 
-export async function getLoaderData(params: Params<string>) {
+export async function getLoaderData(
+  params: Params<string>,
+  worker: DashboardWorker
+) {
   const id = getDefinitionId(params);
-  const def = await scheduler.getJobDefinition(id);
+  const def = await worker.getJobDefinition(id);
   return { def };
 }
 
@@ -43,8 +46,8 @@ export const getDefinitionId = (params: Params<string>): string => {
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params }) => {
-  const loaderData = await getLoaderData(params);
+export const loader: LoaderFunction = async ({ params, context }) => {
+  const loaderData = await getLoaderData(params, getWorker(context.worker));
   return json(loaderData);
 };
 

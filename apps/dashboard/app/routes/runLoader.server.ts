@@ -1,7 +1,7 @@
-import { scheduler } from "~/scheduler.server";
+import type { DashboardWorker } from "~/types";
 
-export async function getLoaderData() {
-  const definitions = await scheduler.getDefinitions();
-  const schedules = await scheduler.getSchedules();
+export async function getLoaderData(worker: DashboardWorker) {
+  const definitions = await worker.getDefinitions();
+  const schedules = await worker.getSchedules();
   return { definitions, schedules };
 }

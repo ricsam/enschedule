@@ -1,7 +1,9 @@
 import path from "node:path";
-import "dotenv/config";
 import { build, dirname } from "@enschedule/dashboard";
-import type { Worker } from "@enschedule/worker";
+import type { PrivateBackend } from "@enschedule/pg-driver";
+import type { JobDefinition } from "@enschedule/types";
+import { expressRouter } from "@enschedule/worker";
+import { WorkerAPI } from "@enschedule/worker-api";
 import type { AppLoadContext } from "@remix-run/node";
 import {
   createReadableStreamFromReadable,
@@ -9,9 +11,12 @@ import {
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 import compression from "compression";
-import express, { static as expressStatic } from "express";
+import "dotenv/config";
+import type { Express } from "express";
+import express, { Router, static as expressStatic } from "express";
 import morgan from "morgan";
-import { z } from "zod";
+import type { ZodType } from "zod";
+import { inlineWorker } from "./inline-worker";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -138,73 +143,89 @@ async function sendRemixResponse(
   }
 }
 
-const app = express();
+interface EnscheduleOptions {
+  dashboard?: boolean;
+  api?: boolean;
+  externalWorker?: {
+    apiKey: string;
+    url: string;
+  };
+  handlers?: JobDefinition[];
+  logJobs?: boolean;
+  retryStrategy?: () => number;
+}
 
-app.disable("x-powered-by");
-app.use(compression());
-
-console.log(
-  "@build.assetsBuildDirectory",
-  dirname,
-  build.publicPath,
-  build.assetsBuildDirectory,
-  build.mode
-);
-
-app.use(
-  build.publicPath,
-  expressStatic(path.join(dirname, build.assetsBuildDirectory), {
-    immutable: true,
-    maxAge: "1y",
-  })
-);
-
-app.use(expressStatic(path.join(dirname, "public"), { maxAge: "1h" }));
-app.use(morgan("tiny"));
-
-const serverExports = build.entry.module as unknown as {
-  scheduler: Worker;
+export const createHandler = <T extends ZodType = ZodType>(
+  job: JobDefinition<T>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): JobDefinition<any> => {
+  return job;
 };
 
-const scheduler = serverExports.scheduler;
+export const enschedule = async (
+  options: EnscheduleOptions
+): Promise<Express | undefined> => {
+  let worker: undefined | WorkerAPI | PrivateBackend;
+  if (options.externalWorker) {
+    worker = new WorkerAPI(
+      options.externalWorker.apiKey,
+      options.externalWorker.url
+    );
+  } else {
+    worker = inlineWorker();
+    await worker.startPolling();
+  }
 
-const { listen } = scheduler.serve({ port: 3001 }, app);
-const handler = createRequestHandler({
-  // return anything you want here to be available as `context` in your
-  // loaders and actions. This is where you can bridge the gap between Remix
-  // and your server
-  getLoadContext(_req, _res) {
-    return {};
-  },
-  mode: build.mode,
-});
+  const app = express();
 
-// needs to handle all verbs (GET, POST, etc.)
-app.all("*", (req, res, next) => {
-  handler(req, res, next)
-    .then(() => {
-      // handled
+  app.disable("x-powered-by");
+
+  if (options.api) {
+    app.use("/api/v1", expressRouter(worker));
+  }
+
+  if (options.dashboard) {
+    // needs to handle all verbs (GET, POST, etc.)
+    app.use("*", dashboardRouter(worker));
+  }
+
+  return app;
+};
+
+function dashboardRouter(worker: WorkerAPI | PrivateBackend) {
+  const handler = createRequestHandler({
+    // return anything you want here to be available as `context` in your
+    // loaders and actions. This is where you can bridge the gap between Remix
+    // and your server
+    getLoadContext(_req, _res) {
+      return {
+        worker,
+      };
+    },
+    mode: build.mode,
+  });
+
+  const router = Router();
+  router.use(compression());
+  router.use(
+    build.publicPath,
+    expressStatic(path.join(dirname, build.assetsBuildDirectory), {
+      immutable: true,
+      maxAge: "1y",
     })
-    .catch(next);
-});
+  );
 
-listen();
+  router.use(expressStatic(path.join(dirname, "public"), { maxAge: "1h" }));
 
-scheduler.registerJob({
-  id: "send-http-request",
-  title: "Send HTTP request",
-  dataSchema: z.object({
-    url: z.string(),
-  }),
-  job: (data) => {
-    console.log("pretending to fetch", data.url);
-  },
-  description: "Provide HTTP parameters as data to send a request",
-  example: {
-    url: "http://localhost:3000",
-  },
-});
+  router.use(morgan("tiny"));
+  // needs to handle all verbs (GET, POST, etc.)
+  router.all("*", (req, res, next) => {
+    handler(req, res, next)
+      .then(() => {
+        // handled
+      })
+      .catch(next);
+  });
 
-// app.listen(3001, () => {
-//   console.log("Listening on port http://localhost:3001");
-// });
+  return router;
+}

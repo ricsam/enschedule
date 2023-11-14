@@ -4,7 +4,7 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import RunsTable from "~/components/RunsTable";
-import { scheduler } from "~/scheduler.server";
+import { getWorker } from "~/createWorker";
 import type { Breadcrumb } from "~/types";
 
 export type LoaderData = {
@@ -13,11 +13,11 @@ export type LoaderData = {
 
 export { action } from "~/components/RunsTable";
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request, context }) => {
   // const url = new URL(request.url);
   // const params = url.searchParams;
 
-  const runs: PublicJobRun[] = await scheduler.getRuns({});
+  const runs: PublicJobRun[] = await getWorker(context.worker).getRuns({});
   return json({ runs });
 };
 

@@ -8,27 +8,30 @@ import SchedulePage, {
   Actions,
   getScheduleId,
 } from "~/components/SchedulePage";
-import { scheduler } from "~/scheduler.server";
-import type { Breadcrumb, NavBar } from "~/types";
+import { getWorker } from "~/createWorker";
+import type { Breadcrumb, DashboardWorker, NavBar } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
 export { action } from "~/components/SchedulePage";
 
-export const getLoaderData = async (params: Params) => {
+export const getLoaderData = async (
+  params: Params,
+  worker: DashboardWorker
+) => {
   const id = getScheduleId(params);
-  const schedule = await scheduler.getSchedule(id);
+  const schedule = await worker.getSchedule(id);
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await scheduler.getRuns({ scheduleId: schedule.id });
+  const runs = await worker.getRuns({ scheduleId: schedule.id });
 
   return { schedule, runs };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params }) => {
-  const loaderData = await getLoaderData(params);
+export const loader: LoaderFunction = async ({ params, context }) => {
+  const loaderData = await getLoaderData(params, getWorker(context.worker));
   return json(loaderData);
 };
 

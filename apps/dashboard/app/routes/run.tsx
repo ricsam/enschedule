@@ -1,7 +1,7 @@
 import type { PublicJobDefinition, PublicJobSchedule } from "@enschedule/types";
 import {
   publicJobScheduleSchema,
-  ScheduleJobOptionsSchema,
+  ScheduleJobOptionsSchema
 } from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
 import type { SxProps } from "@mui/material";
@@ -10,7 +10,7 @@ import {
   CardHeader,
   Link as MuiLink,
   Typography,
-  useTheme,
+  useTheme
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -26,14 +26,14 @@ import type {
   ActionFunction,
   LinksFunction,
   LoaderFunction,
-  SerializeFrom,
+  SerializeFrom
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   Link,
   useFetcher,
   useLoaderData,
-  useSearchParams,
+  useSearchParams
 } from "@remix-run/react";
 import cronParser from "cron-parser";
 import { format, parse } from "date-fns";
@@ -42,8 +42,8 @@ import React from "react";
 import { z } from "zod";
 import { Editor, ReadOnlyEditor } from "~/components/Editor";
 import { RootLayout } from "~/components/Layout";
+import { getWorker } from "~/createWorker";
 import icon from "~/icon.svg";
-import { scheduler } from "~/scheduler.server";
 import { getLoaderData } from "./runLoader.server";
 
 const SerializedJobEventSchema = z.intersection(
@@ -55,7 +55,7 @@ const SerializedJobEventSchema = z.intersection(
   ScheduleJobOptionsSchema.omit({ runAt: true })
 );
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   const body = await request.formData();
   const jsonString = z.string().parse(body.get("jsonData"));
 
@@ -65,7 +65,7 @@ export const action: ActionFunction = async ({ request }) => {
   const data = JSON.parse(serializedEv.data);
   const target = serializedEv.target;
 
-  const response = await scheduler.scheduleJob(
+  const response = await getWorker(context.worker).scheduleJob(
     target,
     data,
     ScheduleJobOptionsSchema.parse(serializedEv)
@@ -157,8 +157,8 @@ const MyMessage = ({
   );
 };
 
-export const loader: LoaderFunction = async () => {
-  return json<LoaderData>(await getLoaderData());
+export const loader: LoaderFunction = async ({ context }) => {
+  return json<LoaderData>(await getLoaderData(getWorker(context.worker)));
 };
 
 const SendButton = (props: IconButtonProps) => (

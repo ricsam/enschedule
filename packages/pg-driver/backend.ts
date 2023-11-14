@@ -1,6 +1,7 @@
 import * as cp from "node:child_process";
 import stream from "node:stream";
 import type {
+  JobDefinition,
   ListRunsOptions,
   PublicJobDefinition,
   PublicJobRun,
@@ -40,21 +41,9 @@ import type { ZodType } from "zod";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
-import type {
-  SeqConstructorOptions} from "./env-sequalize-options";
-import {
-  envSequalizeOptions
-} from "./env-sequalize-options";
+import type { SeqConstructorOptions } from "./env-sequalize-options";
+import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
-
-interface JobDefinition<T extends ZodType = ZodType> {
-  dataSchema: T;
-  id: string;
-  title: string;
-  description: string;
-  job: (data: z.infer<T>) => Promise<void> | void;
-  example: z.infer<T>;
-}
 
 export const createPublicJobDefinition = (
   jobDef: JobDefinition

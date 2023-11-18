@@ -1,7 +1,7 @@
 {
   "name": "@enschedule/hub",
   "version": "0.0.0",
-  "main": "./dist/index.ts",
+  "main": "./index.ts",
   "types": "./index.ts",
   "module": "./index.ts",
   "license": "MIT",

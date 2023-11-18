@@ -1,6 +1,6 @@
 import path from "node:path";
 import { build, dirname } from "@enschedule/dashboard";
-import type { PrivateBackend } from "@enschedule/pg-driver";
+import { PrivateBackend } from "@enschedule/pg-driver";
 import type { JobDefinition } from "@enschedule/types";
 import { expressRouter } from "@enschedule/worker";
 import { WorkerAPI } from "@enschedule/worker-api";
@@ -16,7 +16,6 @@ import type { Express } from "express";
 import express, { Router, static as expressStatic } from "express";
 import morgan from "morgan";
 import type { ZodType } from "zod";
-import { inlineWorker } from "./inline-worker";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -144,12 +143,18 @@ async function sendRemixResponse(
 }
 
 interface EnscheduleOptions {
+  worker:
+    | {
+        type: "inline";
+        filename: string;
+      }
+    | {
+        type: "external";
+        url: string;
+        apiKey: string;
+      };
   dashboard?: boolean;
   api?: boolean;
-  externalWorker?: {
-    apiKey: string;
-    url: string;
-  };
   handlers?: JobDefinition[];
   logJobs?: boolean;
   retryStrategy?: () => number;
@@ -166,14 +171,28 @@ export const enschedule = async (
   options: EnscheduleOptions
 ): Promise<Express | undefined> => {
   let worker: undefined | WorkerAPI | PrivateBackend;
-  if (options.externalWorker) {
-    worker = new WorkerAPI(
-      options.externalWorker.apiKey,
-      options.externalWorker.url
-    );
+  if (options.worker.type === "external") {
+    worker = new WorkerAPI(options.worker.apiKey, options.worker.url);
   } else {
-    worker = inlineWorker();
-    await worker.startPolling();
+    const iWorker = new PrivateBackend({
+      forkArgv: [options.worker.filename, "__enschedule_worker_launch__"],
+    });
+    iWorker.logJobs = true;
+    iWorker.retryStrategy = () => 5000;
+
+    options.handlers?.forEach((handler) => {
+      iWorker.registerJob(handler);
+    });
+
+    if (process.argv[2] === "__enschedule_worker_launch__") {
+      const ranJob = await iWorker.listenForIncomingRuns();
+      if (ranJob) {
+        return undefined;
+      }
+    }
+
+    await iWorker.startPolling();
+    worker = iWorker;
   }
 
   const app = express();
@@ -186,7 +205,7 @@ export const enschedule = async (
 
   if (options.dashboard) {
     // needs to handle all verbs (GET, POST, etc.)
-    app.use("*", dashboardRouter(worker));
+    app.use(dashboardRouter(worker));
   }
 
   return app;

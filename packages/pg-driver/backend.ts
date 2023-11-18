@@ -985,8 +985,8 @@ export class PrivateBackend {
     { stdout, stderr, toggleBuffering }: StreamHandle
   ) {
     return new Promise<string>((resolve, reject) => {
-      log("Launching", ...process.execArgv, ...process.argv);
       const argv = this.forkArgv ?? process.argv.slice(1);
+      log("Launching", ...process.execArgv, argv[0], ...argv.slice(1));
       const child = cp.fork(argv[0], argv.slice(1), {
         env: { ...process.env, ENSCHEDULE_CHILD_WORKER: "true" },
         stdio: "pipe",

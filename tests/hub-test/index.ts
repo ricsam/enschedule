@@ -8,6 +8,10 @@ import { z } from "zod";
     dashboard: true,
     logJobs: true,
     retryStrategy: () => 5000,
+    worker: {
+      type: "inline",
+      filename: __filename,
+    },
     handlers: [
       createHandler({
         id: "send-http-request",

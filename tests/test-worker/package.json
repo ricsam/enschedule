@@ -9,7 +9,7 @@
     "serve": "ts-node ./worker.ts",
     "lint": "eslint -f visualstudio .",
     "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 ${DB_DATABASE:-dev} || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c \"create database ${DB_DATABASE:-dev};\"",
-    "seed": "yarn run create-db && ts-node --project ./tsconfig.json -e 'import * as dotenv from \"dotenv\"; dotenv.config(); import { migrate } from \"./migrate\"; migrate();'"
+    "seed": "pnpm run create-db && ts-node --project ./tsconfig.json -e 'import * as dotenv from \"dotenv\"; dotenv.config(); import { migrate } from \"./migrate\"; migrate();'"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

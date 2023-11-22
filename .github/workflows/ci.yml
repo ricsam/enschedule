@@ -47,6 +47,8 @@ jobs:
         run: npx playwright install chromium --with-deps
       - name: Build all packages
         run: NODE_ENV=production pnpm run build
+      - name: corepack enable
+        run: corepack enable
       - name: All playwright tests
         run: pnpm run playwright test
       - uses: actions/upload-artifact@v3

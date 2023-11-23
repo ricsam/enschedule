@@ -13,3 +13,4 @@ build
 /infrastructure
 .github
 tests
+ci.secrets

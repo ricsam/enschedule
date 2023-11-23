@@ -154,7 +154,8 @@ jobs:
           target: dashboard
       - name: helm login, package and push
         run: |
-          echo $GITHUB_TOKEN | helm registry login $OCI_REGISTRY/$GITHUB_USERNAME --username ricsam --password-stdin
+          echo $GITHUB_TOKEN | helm registry login $OCI_REGISTRY/$GITHUB_USERNAME --username $GITHUB_USERNAME --password-stdin
+          echo $GITHUB_TOKEN | docker login $OCI_REGISTRY/$GITHUB_USERNAME --username $GITHUB_USERNAME --password-stdin
           cd infrastructure/charts/enschedule && helm package .
           helm push $(ls | grep .tgz) oci://$OCI_REGISTRY/$GITHUB_USERNAME
         env:

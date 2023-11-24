@@ -63,7 +63,11 @@ RUN for pkg in pg-driver types worker; do \
 RUN mkdir /app/packages/worker/definitions
 
 WORKDIR /app/packages/worker
-CMD node dist/docker-entry.js
+
+RUN echo "API_HOSTNAME=0.0.0.0 node dist/docker-entry.js" > docker-entry.sh && \
+    chmod +x docker-entry.sh
+
+CMD ["sh", "docker-entry.sh"]
 
 # Dashboard image
 FROM base AS dashboard
@@ -93,6 +97,7 @@ RUN for pkg in worker-api types; do \
 
 WORKDIR /app/apps/dashboard
 
-CMD npm run "docker:start"
+RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
+    chmod +x docker-entry.sh
 
-
+CMD ["sh", "docker-entry.sh"]

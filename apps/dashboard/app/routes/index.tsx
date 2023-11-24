@@ -1,12 +1,6 @@
 import { Box, Typography } from "@mui/material";
-import type { LoaderFunction } from "@remix-run/node";
 import { ReadOnlyEditor } from "~/components/Editor";
 import { RootLayout } from "~/components/Layout";
-
-export const loader: LoaderFunction = ({ context }) => {
-  console.log("@context", context);
-  return {};
-};
 
 export default function () {
   return (

@@ -16,7 +16,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: worker-ingress
   labels:
     {{- include "enschedule.labels" . | nindent 4 }}
   {{- with .Values.worker.ingress.annotations }}
@@ -50,11 +50,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: worker-service
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ $fullName }}
+              serviceName: worker-service
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}

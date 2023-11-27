@@ -1,5 +1,5 @@
 export type {
-  RunDefinition,
+  RunHandlerInCp,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
@@ -7,10 +7,12 @@ export type {
   SerializedRun,
   ScheduleUpdatePayload,
   ListRunsOptions,
+  PublicWorker,
   JobDefinition,
 } from "./types";
 
 export {
+  RunHandlerInCpSchema,
   publicJobDefinitionSchema,
   serializedRunSchema,
   publicJobScheduleSchema,
@@ -23,4 +25,6 @@ export {
   ListRunsOptionsSerialize,
   ListRunsOptionsSerializedSchema,
   DateStringSchema,
+  PublicWorkerSchema,
+  WorkerStatus,
 } from "./types";

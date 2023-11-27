@@ -1,21 +1,28 @@
 import * as cp from "node:child_process";
+import * as crypto from "node:crypto";
+import os from "node:os";
 import stream from "node:stream";
+import { parseExpression } from "cron-parser";
+import {
+  RunHandlerInCpSchema,
+  ScheduleStatus,
+  WorkerStatus,
+} from "@enschedule/types";
 import type {
   JobDefinition,
   ListRunsOptions,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
-  RunDefinition,
+  PublicWorker,
+  PublicWorkerSchema,
+  RunHandlerInCp,
   ScheduleJobOptions,
   ScheduleUpdatePayloadSchema,
   SerializedRun,
 } from "@enschedule/types";
-import { ScheduleStatus } from "@enschedule/types";
-import { parseExpression } from "cron-parser";
 import { pascalCase } from "pascal-case";
 import type {
-  Association,
   CreationOptional,
   ForeignKey,
   HasManyAddAssociationMixin,
@@ -37,13 +44,49 @@ import type {
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
-import type { ZodType } from "zod";
-import { z } from "zod";
+import type { ZodType, z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
 import type { SeqConstructorOptions } from "./env-sequalize-options";
 import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
+
+const createPublicWorker = (dbWorker: Worker): PublicWorker => {
+  const pollInterval = dbWorker.pollInterval;
+  const currentTime = Date.now();
+  const lastReached = currentTime - dbWorker.lastReached.getTime();
+  const pendingThreshold = pollInterval + 5 * 1000;
+  const downThreshold = 2 * pollInterval + 5 * 1000;
+
+  let status: WorkerStatus = WorkerStatus.UP;
+
+  if (lastReached > pendingThreshold) {
+    status = WorkerStatus.PENDING;
+  }
+  if (lastReached > downThreshold) {
+    status = WorkerStatus.DOWN;
+  }
+
+  return {
+    createdAt: dbWorker.createdAt,
+    definitions: dbWorker.definitions,
+    description: dbWorker.description ?? undefined,
+    hostname: dbWorker.hostname,
+    id: dbWorker.id,
+    instanceId: dbWorker.instanceId,
+    lastReached: dbWorker.lastReached,
+    title: dbWorker.title,
+    pollInterval: dbWorker.pollInterval,
+    version: dbWorker.version,
+    workerId: dbWorker.workerId,
+    runs:
+      dbWorker.runs?.map((run) => {
+        return serializeRun(run);
+      }) ?? [],
+    lastRun: dbWorker.lastRun ? serializeRun(dbWorker.lastRun) : undefined,
+    status,
+  };
+};
 
 export const createPublicJobDefinition = (
   jobDef: JobDefinition
@@ -58,6 +101,7 @@ export const createPublicJobDefinition = (
   );
 
   return {
+    version: jobDef.version,
     id: jobDef.id,
     title: jobDef.title,
     description: jobDef.description,
@@ -140,6 +184,7 @@ export const createPublicJobRun = (
     scheduledToRunAt: run.scheduledToRunAt,
     jobSchedule: createPublicJobSchedule(schedule, jobDef),
     data: run.data,
+    worker: createPublicWorker(run.worker),
   };
 };
 
@@ -156,21 +201,65 @@ interface CreateJobScheduleOptions {
   retryFailedJobs?: boolean;
   maxRetries?: number;
   failureTrigger?: number;
+  workerId?: string;
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const assert = <T, U extends T>() => {
-  //
+  // do nothing
 };
 assert<
-  // omit desc and title because they are passed as argumnets to createJobSchedule
-  Omit<ScheduleJobOptions, "description" | "title">,
-  CreateJobScheduleOptions
+  // omit desc and title because they are passed as arguments to createJobSchedule
+  Required<Omit<ScheduleJobOptions, "description" | "title">>,
+  Required<CreateJobScheduleOptions>
+>();
+// and the opposite
+assert<
+  Required<CreateJobScheduleOptions>,
+  Required<Omit<ScheduleJobOptions, "description" | "title">>
 >();
 
 type ScheduleAttributes = InferAttributes<
   Schedule,
   { omit: "runs" | "lastRun" }
 >;
+
+type WorkerAttributes = InferAttributes<
+  Worker,
+  {
+    omit: "runs" | "lastRun";
+  }
+>;
+
+export class Worker extends Model<
+  WorkerAttributes,
+  InferCreationAttributes<Worker>
+> {
+  declare id: CreationOptional<number>;
+  declare workerId: string;
+
+  declare version: number;
+
+  declare pollInterval: number;
+  declare title: string;
+  declare description?: string | null;
+  declare definitions: PublicJobDefinition[];
+
+  declare instanceId: string;
+  declare createdAt: CreationOptional<Date>;
+  declare hostname: string;
+  declare lastReached: Date;
+  declare runs?: NonAttribute<Run[]>;
+
+  declare workerPk: ForeignKey<Worker["id"]>;
+
+  declare lastRun?: NonAttribute<Run> | null;
+  declare getLastRun: HasOneGetAssociationMixin<Run>;
+  declare setLastRun: HasOneSetAssociationMixin<Run, number>;
+  declare createLastRun: HasOneCreateAssociationMixin<Run>;
+  // declare static associations: {
+  //   lastRun: Association<Worker, Run>;
+  // };
+}
 
 export class Schedule extends Model<
   ScheduleAttributes,
@@ -203,7 +292,11 @@ export class Schedule extends Model<
    */
   declare maxRetries: CreationOptional<number>;
   declare claimed: CreationOptional<boolean>;
+
+  // related to the handler
+  declare handlerVersion: number;
   declare data: string;
+
   declare numRuns: CreationOptional<number>;
 
   declare getRuns: HasManyGetAssociationsMixin<Run>; // Note the null assertions!
@@ -224,18 +317,19 @@ export class Schedule extends Model<
   declare lastRun?: NonAttribute<Run> | null;
   declare runs?: NonAttribute<Run[]>;
 
-  declare failureTriggerId: ForeignKey<Schedule["id"]>;
+  declare failureTriggerId?: ForeignKey<Schedule["id"]> | null;
+  declare workerId?: CreationOptional<string> | null; // optional, a user can say a schedule must run on a worker with a specific workerId
 
-  declare getFailureTrigger: HasOneGetAssociationMixin<Schedule | null>; // Note the null assertions!
+  declare getFailureTrigger: HasOneGetAssociationMixin<Schedule | null>;
   declare setFailureTrigger: HasOneSetAssociationMixin<Schedule, number>;
   declare createFailureTrigger: HasOneCreateAssociationMixin<Schedule>;
 
-  declare failureTrigger: NonAttribute<Schedule>;
+  declare failureTrigger?: NonAttribute<Schedule>;
 
-  declare static associations: {
-    runs: Association<Schedule, Run>;
-    lastRun: Association<Schedule, Run>;
-  };
+  // declare static associations: {
+  //   runs: Association<Schedule, Run>;
+  //   lastRun: Association<Schedule, Run>;
+  // };
 }
 
 class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
@@ -251,12 +345,14 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare exitSignal: string;
 
   declare scheduleId: ForeignKey<Schedule["id"]>;
+  declare workerId: ForeignKey<Worker["id"]>;
 
   declare getSchedule: HasOneGetAssociationMixin<Schedule>; // Note the null assertions!
   declare setSchedule: HasOneSetAssociationMixin<Schedule, number>;
   declare createSchedule: HasOneCreateAssociationMixin<Schedule>;
 
   declare schedule: NonAttribute<Schedule>;
+  declare worker: NonAttribute<Worker>;
 }
 
 export const createJobDefinition = <T extends ZodType = ZodType>(
@@ -266,6 +362,24 @@ export const createJobDefinition = <T extends ZodType = ZodType>(
 export interface BackendOptions {
   database?: SeqConstructorOptions;
   forkArgv?: string[];
+  workerId: string;
+  name: string;
+  description?: string;
+}
+
+interface WorkerInstance {
+  workerId: string;
+  title: string;
+  description?: string;
+  instanceId: string;
+}
+
+function createShortShaHash(input: string) {
+  // Create a SHA-256 hash of the input
+  const hash = crypto.createHash("sha256").update(input).digest("hex");
+
+  // Return the first 6 characters
+  return hash.substring(0, 6);
 }
 
 export class PrivateBackend {
@@ -275,10 +389,24 @@ export class PrivateBackend {
   protected sequelize: Sequelize;
   protected Run: typeof Run;
   protected Schedule: typeof Schedule;
+  protected Worker: typeof Worker;
   private forkArgv: string[] | undefined;
+  protected workerInstance: WorkerInstance;
 
   constructor(backendOptions: BackendOptions) {
-    const { database: passedDatabaseOptions, forkArgv } = backendOptions;
+    const {
+      database: passedDatabaseOptions,
+      forkArgv,
+      workerId,
+      name,
+      description,
+    } = backendOptions;
+    this.workerInstance = {
+      workerId,
+      title: name,
+      description,
+      instanceId: createShortShaHash(String(Math.random())),
+    };
     const database = passedDatabaseOptions ?? envSequalizeOptions();
     this.forkArgv = forkArgv;
 
@@ -288,12 +416,76 @@ export class PrivateBackend {
 
     this.sequelize = sequelize;
 
+    Worker.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        version: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        pollInterval: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        title: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        definitions: {
+          type: DataTypes.JSON,
+          allowNull: false,
+        },
+        workerId: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        instanceId: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        hostname: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        lastReached: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      },
+      {
+        sequelize,
+        modelName: "Worker",
+      }
+    );
+
     Schedule.init(
       {
         id: {
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+          allowNull: false,
+        },
+        workerId: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        handlerVersion: {
+          type: DataTypes.INTEGER,
           allowNull: false,
         },
         data: {
@@ -416,20 +608,77 @@ export class PrivateBackend {
       }
     );
 
+    //#region schedule.runs / run.schedule
+    /**
+     * one-to-many
+     * one schedule can have many runs
+     */
     Schedule.hasMany(Run, {
       foreignKey: {
-        name: "scheduleId",
+        name: "scheduleId", // run.scheduleId
         allowNull: false,
       },
       as: "runs",
     });
+    // foreign key on Run, run.scheduleId, run.schedule
     Run.belongsTo(Schedule, {
+      foreignKey: {
+        name: "scheduleId",
+        allowNull: false,
+      },
       as: "schedule",
     });
+    //#endregion
 
-    Schedule.hasOne(Run, {
+    //#region worker.runs / run.worker
+    /**
+     * one-to-many
+     * one worker can have many runs
+     */
+    Worker.hasMany(Run, {
+      foreignKey: {
+        name: "workerId", // run.workerId
+        allowNull: true,
+      },
+      as: "runs",
+    });
+    // foreign key on Run, run.workerId
+    Run.belongsTo(Worker, {
+      as: "worker",
+      foreignKey: {
+        name: "workerId",
+        allowNull: true,
+      },
+    });
+    //#endregion
+
+    //#region worker.schedules / schedule.worker
+    // no foreign keys, because schedule.workerId is just an optional string, pointing to a workerId
+    //#endregion
+
+    //#region schedule.lastRun
+    /**
+     * Fk on run.lastRunId
+     */
+    Schedule.belongsTo(Run, {
+      foreignKey: {
+        name: "lastRunId", // schedule.lastRunId
+        allowNull: true,
+      },
       as: "lastRun",
     });
+
+    //#endregion
+
+    //#region worker.lastRun
+    Worker.belongsTo(Run, {
+      foreignKey: {
+        name: "lastRunId", // worker.lastRunId
+        allowNull: true,
+      },
+      as: "lastRun",
+    });
+    //#endregion
 
     Schedule.belongsTo(Schedule, {
       foreignKey: {
@@ -441,6 +690,7 @@ export class PrivateBackend {
 
     this.Run = Run;
     this.Schedule = Schedule;
+    this.Worker = Worker;
   }
 
   protected async getDbRuns() {
@@ -459,11 +709,16 @@ export class PrivateBackend {
     });
     return jobs;
   }
-  protected getJobDef(id: string): JobDefinition {
-    const def = this.definedJobs[id];
-    if (!def) {
+  protected getJobDef(id: string, version: number): JobDefinition {
+    const versions = this.definedJobs[id];
+    if (!versions) {
       throw new Error("invalid id");
     }
+    const def = versions[version];
+    if (!def) {
+      throw new Error("invalid version");
+    }
+
     return def;
   }
   public async getRuns({
@@ -477,17 +732,21 @@ export class PrivateBackend {
         limit,
         order,
         offset,
-        include: {
-          model: Schedule,
-          as: "schedule",
-        },
+        include: [
+          {
+            model: Schedule,
+            as: "schedule",
+          },
+          { model: Worker, as: "worker" },
+        ],
       });
       return runs.map((run) => {
         const jobSchedule = run.schedule;
         return createPublicJobRun(
           run,
           jobSchedule,
-          this.definedJobs[jobSchedule.target] || jobSchedule.target
+          this.definedJobs[jobSchedule.target]?.[jobSchedule.handlerVersion] ||
+            jobSchedule.target
         );
       });
     }
@@ -496,27 +755,49 @@ export class PrivateBackend {
     if (!jobSchedule) {
       throw new Error("invalid jobScheduleId");
     }
-    const runs = await jobSchedule.getRuns({ limit, order, offset });
+    const runs = await jobSchedule.getRuns({
+      limit,
+      order,
+      offset,
+      include: [
+        {
+          model: Worker,
+          as: "worker",
+        },
+      ],
+    });
     return runs.map((run) =>
       createPublicJobRun(
         run,
         jobSchedule,
-        this.definedJobs[jobSchedule.target] || jobSchedule.target
+        this.definedJobs[jobSchedule.target]?.[jobSchedule.handlerVersion] ||
+          jobSchedule.target
       )
     );
   }
   public async getRun(runId: number): Promise<PublicJobRun> {
-    const run = await Run.findByPk(runId);
+    const run = await Run.findByPk(runId, {
+      include: [
+        {
+          model: Worker,
+          as: "worker",
+        },
+      ],
+    });
     if (!run) {
       throw new Error("invalid runId");
     }
     const schedule = await run.getSchedule({
-      include: {
-        model: Run,
-        as: "lastRun",
-      },
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+        },
+      ],
     });
-    const definition = this.definedJobs[schedule.target] || schedule.target;
+    const definition =
+      this.definedJobs[schedule.target]?.[schedule.handlerVersion] ||
+      schedule.target;
     return createPublicJobRun(run, schedule, definition);
   }
 
@@ -527,6 +808,7 @@ export class PrivateBackend {
     await Schedule.truncate({
       cascade: true,
     });
+    await this.registerWorker();
     // await this.sequelize.sync({ force: true });
   }
 
@@ -561,18 +843,60 @@ export class PrivateBackend {
     }
     return createPublicJobSchedule(
       schedule,
-      this.definedJobs[schedule.target] || schedule.target
+      this.definedJobs[schedule.target]?.[schedule.handlerVersion] ||
+        schedule.target
     );
   }
-  public getDefinitions(): PublicJobDefinition[] {
+
+  public async getLatestHandler(
+    handlerId: string
+  ): Promise<PublicJobDefinition> {
+    const handlers = await this.getLatestHandlers();
+    const handler = handlers.find((h) => h.id === handlerId);
+    if (!handler) {
+      throw new Error("invalid handlerId or the worker is not online");
+    }
+    return handler;
+  }
+
+  public async getLatestHandlers(): Promise<PublicJobDefinition[]> {
+    const handlerMap: Record<
+      string,
+      { def: PublicJobDefinition; version: number } | undefined
+    > = {};
+    (await this.getWorkers())
+      .filter((worker) => {
+        return worker.status === WorkerStatus.UP;
+      })
+      .forEach((worker) => {
+        return worker.definitions.forEach((def: PublicJobDefinition) => {
+          const latest = { def, version: def.version };
+          const current = handlerMap[def.id] || latest;
+          if (def.id === current.def.id && def.version > current.version) {
+            current.version = def.version;
+            current.def = def;
+          }
+          handlerMap[def.id] = current;
+        });
+      });
+    return Object.values(handlerMap).flatMap((val) => (val ? [val.def] : []));
+  }
+  private getPublicHandlers(): PublicJobDefinition[] {
     return Object.values(this.definedJobs)
+      .map((versions) => {
+        if (!versions) {
+          return [];
+        }
+        const versionList = Object.keys(versions).sort(
+          (a, b) => Number(b) - Number(a)
+        );
+        const latestVersion = versionList[0];
+        return versions[latestVersion];
+      })
       .filter((value): value is JobDefinition => Boolean(value))
       .map((def) => createPublicJobDefinition(def));
   }
   public async getSchedules(definitionId?: string) {
-    if (definitionId) {
-      this.getJobDefinition(definitionId);
-    }
     const dbSchedules = await this.getDbSchedules();
     return dbSchedules
       .filter((schedule) => {
@@ -584,9 +908,111 @@ export class PrivateBackend {
         return Boolean(this.definedJobs[schedule.target]);
       })
       .map((schedule) => {
-        const jobDef = this.definedJobs[schedule.target] || schedule.target;
+        const jobDef =
+          this.definedJobs[schedule.target]?.[schedule.handlerVersion] ||
+          schedule.target;
         return createPublicJobSchedule(schedule, jobDef);
       });
+  }
+
+  private workerHash(
+    title: string,
+    description: undefined | null | string,
+    pollInterval: number,
+    definitions: PublicJobDefinition[]
+  ) {
+    return (
+      title +
+      (description || "") +
+      String(pollInterval) +
+      definitions
+        .slice(0)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((definition) => {
+          return definition.id + String(definition.version);
+        })
+        .join("")
+    );
+  }
+
+  public async registerWorker(attempt = 0): Promise<Worker> {
+    try {
+      return this.sequelize.transaction(async (transaction) => {
+        // As a user I have 3 server running.
+        // Each server runs a worker with the same workerId.
+        // I update the worker on one server.
+        // That worker will get a new hash.
+        // Therefore when comparing that worker to the other workers it will be different.
+        // Therefore the version will be incremented.
+
+        const workers = await this.Worker.findAll({
+          where: { workerId: this.workerInstance.workerId },
+          transaction,
+        });
+
+        let version = 1;
+        const hashes: string[] = [];
+        workers.forEach((worker) => {
+          version = Math.max(worker.version, version);
+          hashes.push(
+            this.workerHash(
+              worker.title,
+              worker.description,
+              worker.pollInterval,
+              worker.definitions
+            )
+          );
+        });
+
+        const thisWorkerHash = this.workerHash(
+          this.workerInstance.title,
+          this.workerInstance.description,
+          this.tickDuration,
+          this.getPublicHandlers()
+        );
+
+        if (hashes.length > 0 && !hashes.includes(thisWorkerHash)) {
+          version += 1;
+        }
+
+        const [worker] = await this.Worker.findOrCreate({
+          where: {
+            workerId: this.workerInstance.workerId,
+            instanceId: this.workerInstance.instanceId,
+          },
+          defaults: {
+            workerId: this.workerInstance.workerId,
+            instanceId: this.workerInstance.instanceId,
+            version,
+            definitions: this.getPublicHandlers(),
+            description: this.workerInstance.description,
+            lastReached: new Date(),
+            title: this.workerInstance.title,
+            hostname: os.hostname(),
+            pollInterval: this.tickDuration,
+          },
+          transaction,
+        });
+        worker.version = version;
+        worker.lastReached = new Date();
+        await worker.save({ transaction });
+        return worker;
+      });
+
+      // If the execution reaches this line, the transaction has been committed successfully
+      // `result` is whatever was returned from the transaction callback (the `user`, in this case)
+    } catch (error) {
+      if (attempt >= 3) {
+        throw error;
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000);
+      });
+      return this.registerWorker(attempt + 1);
+      // If the execution reaches this line, an error occurred.
+      // The transaction has already been rolled back automatically by Sequelize!
+      // try again
+    }
   }
 
   protected createSignature(
@@ -608,10 +1034,25 @@ export class PrivateBackend {
     defId: string,
     title: string,
     description: string,
+    handlerVersion: number,
     data: unknown,
     options: CreateJobScheduleOptions = {}
   ) {
-    const def = this.definedJobs[defId];
+    let migratedVersion = handlerVersion;
+    let migratedData = data;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, no-constant-condition
+    while (true) {
+      const migration = this.migrations[defId]?.[migratedVersion];
+      if (migration) {
+        migratedVersion = migration.targetVersion;
+        migratedData = migration.migrateFn(migratedData);
+      } else {
+        break;
+      }
+    }
+
+    const def = this.definedJobs[defId]?.[migratedVersion];
+
     if (!def) {
       throw new Error("You must create a JobDefinition first");
     }
@@ -622,8 +1063,14 @@ export class PrivateBackend {
       retryFailedJobs,
       maxRetries,
       failureTrigger,
+      workerId,
     } = options;
-    const signature = this.createSignature(defId, runAt, data, cronExpression);
+    const signature = this.createSignature(
+      defId,
+      runAt,
+      migratedData,
+      cronExpression
+    );
     const where: WhereOptions<ScheduleAttributes> = eventId
       ? {
           eventId,
@@ -633,10 +1080,13 @@ export class PrivateBackend {
           signature,
           claimed: false,
         };
+
     return Schedule.findOrCreate({
       where,
       defaults: {
+        handlerVersion: migratedVersion,
         retryFailedJobs,
+        workerId,
         maxRetries,
         target: defId,
         // normalize the cron expression
@@ -644,7 +1094,7 @@ export class PrivateBackend {
           ? parseExpression(cronExpression).stringify(true)
           : undefined,
         runAt,
-        data: JSON.stringify(data),
+        data: JSON.stringify(migratedData),
         signature,
         title,
         description,
@@ -652,8 +1102,12 @@ export class PrivateBackend {
       },
     });
   }
-  public getJobDefinition(definitionId: string): PublicJobDefinition {
-    const jobDef = this.definedJobs[definitionId];
+  public getPublicHandler(
+    handlerId: string,
+    handlerVersion: number
+  ): PublicJobDefinition {
+    const jobDef = this.definedJobs[handlerId]?.[handlerVersion];
+    console.log(this.definedJobs);
     if (!jobDef) {
       throw new Error("invalid definitionId");
     }
@@ -662,17 +1116,20 @@ export class PrivateBackend {
 
   public async scheduleJob(
     jobId: string,
+    handlerVersion: number,
     data: unknown,
-    options?: ScheduleJobOptions
+    options: ScheduleJobOptions
   ): Promise<PublicJobSchedule>;
   public async scheduleJob<T extends ZodType = ZodType>(
     job: JobDefinition<T>,
+    handlerVersion: number,
     data: z.infer<T>,
-    options?: ScheduleJobOptions
+    options: ScheduleJobOptions
   ): Promise<PublicJobSchedule>;
   public async scheduleJob(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     def: string | JobDefinition<any>,
+    handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<PublicJobSchedule> {
@@ -694,6 +1151,7 @@ export class PrivateBackend {
       defId,
       options.title,
       options.description,
+      handlerVersion,
       data,
       {
         eventId: options.eventId,
@@ -706,7 +1164,8 @@ export class PrivateBackend {
     );
     return createPublicJobSchedule(
       dbSchedule,
-      this.definedJobs[dbSchedule.target] || dbSchedule.target
+      this.definedJobs[dbSchedule.target]?.[dbSchedule.handlerVersion] ||
+        dbSchedule.target
     );
   }
 
@@ -795,6 +1254,21 @@ export class PrivateBackend {
                 },
               ],
             },
+            {
+              [Op.or]: [
+                {
+                  workerId: {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    [Op.eq]: null!,
+                  },
+                },
+                {
+                  workerId: {
+                    [Op.eq]: this.workerInstance.workerId,
+                  },
+                },
+              ],
+            },
           ],
         },
       }
@@ -802,21 +1276,109 @@ export class PrivateBackend {
     return { overdueJobs };
   }
 
-  protected definedJobs: Record<string, undefined | JobDefinition> = {};
+  protected definedJobs: Record<
+    string,
+    undefined | Record<string, undefined | JobDefinition>
+  > = {};
 
   public registerJob<T extends ZodType = ZodType>(job: JobDefinition<T>) {
     const id = job.id;
-    if (this.definedJobs[id]) {
-      throw new Error(
-        "You have already declared / registered a job with this id"
-      );
+    if (!this.definedJobs[id]) {
+      this.definedJobs[id] = {};
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.definedJobs[id] = job as JobDefinition<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion
+    this.definedJobs[id]![job.version] = job as JobDefinition<any>;
     return job;
   }
 
-  public async migrate() {
+  /**
+   * e.g. `{ "jobId": { "1": { targetVersion: 2, migrateFn: (data) => data } }`
+   */
+  private migrations: Record<
+    string,
+    | undefined
+    | Record<
+        string,
+        | undefined
+        | {
+            targetVersion: number;
+            migrateFn: (data: unknown) => unknown;
+          }
+      >
+  > = {};
+
+  public async migrateHandler<T extends ZodType, U extends ZodType>(
+    a: Pick<JobDefinition<T>, "id" | "dataSchema" | "version">,
+    b: JobDefinition<U>,
+    migrateFn: (a: z.infer<T>) => z.infer<U>
+  ) {
+    if (a.id !== b.id) {
+      throw new Error("The definition ids must be the same");
+    }
+
+    const job = this.registerJob(b);
+
+    const migrations = this.migrations[a.id] ?? {};
+    migrations[a.version] = {
+      targetVersion: b.version,
+      migrateFn,
+    };
+    this.migrations[a.id] = migrations;
+
+    const schedules = await Schedule.findAll({
+      order: [["createdAt", "DESC"]],
+      include: {
+        model: Run,
+        as: "lastRun",
+      },
+      where: {
+        target: a.id,
+      },
+    });
+
+    await Promise.all(
+      schedules.map(async (schedule) => {
+        if (schedule.handlerVersion === a.version) {
+          const data = a.dataSchema.parse(
+            JSON.parse(schedule.data)
+          ) as z.infer<T>;
+          const newData = b.dataSchema.parse(migrateFn(data)) as z.infer<U>;
+          schedule.data = JSON.stringify(newData);
+          schedule.handlerVersion = b.version;
+          await schedule.save();
+        }
+      })
+    );
+    return job;
+  }
+
+  public async getWorkers(
+    where?: WhereOptions<
+      InferAttributes<
+        Worker,
+        {
+          omit: "lastRun" | "runs";
+        }
+      >
+    >
+  ): Promise<z.output<typeof PublicWorkerSchema>[]> {
+    const allWorkers = await this.Worker.findAll({
+      where,
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+        },
+        {
+          model: Run,
+          as: "runs",
+        },
+      ],
+    });
+    return allWorkers.map(createPublicWorker);
+  }
+
+  public async migrateDatabase() {
     log("Migrating the database");
     await this.sequelize.sync();
   }
@@ -840,6 +1402,7 @@ export class PrivateBackend {
   }
 
   protected async tick() {
+    await this.registerWorker();
     await this.runOverdueJobs();
   }
 
@@ -858,7 +1421,8 @@ export class PrivateBackend {
     return createPublicJobRun(
       run,
       schedule,
-      this.definedJobs[schedule.target] || schedule.target
+      this.definedJobs[schedule.target]?.[schedule.handlerVersion] ??
+        schedule.target
     );
   }
 
@@ -894,19 +1458,24 @@ export class PrivateBackend {
     await schedule.save();
     return createPublicJobSchedule(
       schedule,
-      this.definedJobs[schedule.target] || schedule.target
+      this.definedJobs[schedule.target]?.[schedule.handlerVersion] ||
+        schedule.target
     );
   }
 
   private async runDbSchedule(schedule: Schedule) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
-    const definition = this.getJobDef(schedule.target);
+    const definition = this.getJobDef(schedule.target, schedule.handlerVersion);
     const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
-    return this.runDefinition({ definitionId: schedule.target, data });
+    return this.runDefinition({
+      definitionId: schedule.target,
+      data,
+      version: schedule.handlerVersion,
+    });
     /* eslint-enable */
   }
 
-  public async runDefinition(runMessage: RunDefinition) {
+  public async runDefinition(runMessage: RunHandlerInCp) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
     const stdoutStream = new stream.PassThrough();
@@ -981,7 +1550,7 @@ export class PrivateBackend {
   }
 
   protected async fork(
-    runMessage: RunDefinition,
+    runMessage: RunHandlerInCp,
     { stdout, stderr, toggleBuffering }: StreamHandle
   ) {
     return new Promise<string>((resolve, reject) => {
@@ -1040,13 +1609,9 @@ export class PrivateBackend {
     if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
       return new Promise<boolean>((resolve) => {
         process.once("message", (message) => {
-          const { definitionId, data } = z
-            .object({
-              definitionId: z.string(),
-              data: z.unknown(),
-            })
-            .parse(message);
-          const definition = this.getJobDef(definitionId);
+          const { definitionId, data, version } =
+            RunHandlerInCpSchema.parse(message);
+          const definition = this.getJobDef(definitionId, version);
           (async () => {
             try {
               await definition.job(data);
@@ -1090,7 +1655,7 @@ export class PrivateBackend {
   }
 
   private async scheduleSingleRun(schedule: Schedule) {
-    const definition = this.getJobDef(schedule.target);
+    const definition = this.getJobDef(schedule.target, schedule.handlerVersion);
     log(
       "Will run",
       definition.title,
@@ -1116,21 +1681,36 @@ export class PrivateBackend {
      */
     const runAt = schedule.runAt ?? new Date();
 
-    const run = await schedule.createRun({
-      scheduledToRunAt: runAt,
-      startedAt,
-      stderr,
-      stdout,
-      finishedAt,
-      data: schedule.data,
-      exitSignal,
-    });
+    const run = await schedule.createRun(
+      {
+        scheduledToRunAt: runAt,
+        startedAt,
+        stderr,
+        stdout,
+        finishedAt,
+        data: schedule.data,
+        exitSignal,
+        workerId: (await this.registerWorker()).id,
+      },
+      {
+        include: {
+          model: Worker,
+          as: "worker",
+        },
+      }
+    );
+    await run.reload({ include: { model: Worker, as: "worker" } });
     log(
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
     schedule.numRuns += 1;
     await schedule.setLastRun(run);
     await schedule.save();
+
+    const worker = await this.registerWorker();
+    await worker.setLastRun(run);
+    await worker.save();
+
     return run;
   }
 
@@ -1148,7 +1728,9 @@ export class PrivateBackend {
         overdueJobs
           .map(
             (schedule) =>
-              `${this.getJobDef(schedule.target).title}${schedule.title}`
+              `${
+                this.getJobDef(schedule.target, schedule.handlerVersion).title
+              }${schedule.title}`
           )
           .join(", ")
       );
@@ -1167,7 +1749,7 @@ export class PrivateBackend {
               const nextRun = this.retryStrategy(
                 createPublicJobSchedule(
                   schedule,
-                  this.getJobDef(schedule.target)
+                  this.getJobDef(schedule.target, schedule.handlerVersion)
                 )
               );
               schedule.runAt = new Date(Date.now() + nextRun);
@@ -1212,7 +1794,7 @@ export class PrivateBackend {
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }
-    const jobDef = this.getJobDef(schedule.target);
+    const jobDef = this.getJobDef(schedule.target, schedule.handlerVersion);
     const publicSchedule = createPublicJobSchedule(schedule, jobDef);
 
     await schedule.destroy();
@@ -1238,27 +1820,41 @@ export class TestBackend extends PrivateBackend {
   public sequelize: Sequelize = this.sequelize;
   public Run: typeof Run = this.Run;
   public Schedule: typeof Schedule = this.Schedule;
+  public Worker: typeof Worker = this.Worker;
+  public workerInstance: WorkerInstance = this.workerInstance;
+  /**
+   * `{ [id]: { [version]: JobDefinition }`
+   */
+  public definedJobs: Record<
+    string,
+    undefined | Record<string, JobDefinition | undefined>
+  > = this.definedJobs;
 
   public async createJobSchedule(
     jobId: string,
     title: string,
     description: string,
+    handlerVersion: number,
     data: unknown,
     options: CreateJobScheduleOptions = {}
   ) {
-    return super.createJobSchedule(jobId, title, description, data, options);
+    return super.createJobSchedule(
+      jobId,
+      title,
+      description,
+      handlerVersion,
+      data,
+      options
+    );
   }
   public async getDbSchedules() {
     return super.getDbSchedules();
   }
-  public clearRegisteredJobs() {
-    this.definedJobs = {};
-  }
   public async getDbRuns() {
     return super.getDbRuns();
   }
-  public getJobDef(id: string) {
-    return super.getJobDef(id);
+  public getJobDef(id: string, version: number) {
+    return super.getJobDef(id, version);
   }
   public createConsole(
     stdoutStream: stream.PassThrough,
@@ -1266,7 +1862,7 @@ export class TestBackend extends PrivateBackend {
   ) {
     return super.createConsole(stdoutStream, stderrStream);
   }
-  public async fork(runMessage: RunDefinition, streamHandle: StreamHandle) {
+  public async fork(runMessage: RunHandlerInCp, streamHandle: StreamHandle) {
     return super.fork(runMessage, streamHandle);
   }
   public async runSchedule(scheduleId: number) {

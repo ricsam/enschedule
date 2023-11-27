@@ -1,7 +1,7 @@
 import type { PublicJobDefinition, PublicJobSchedule } from "@enschedule/types";
 import {
   publicJobScheduleSchema,
-  ScheduleJobOptionsSchema
+  ScheduleJobOptionsSchema,
 } from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
 import type { SxProps } from "@mui/material";
@@ -10,7 +10,7 @@ import {
   CardHeader,
   Link as MuiLink,
   Typography,
-  useTheme
+  useTheme,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -26,14 +26,14 @@ import type {
   ActionFunction,
   LinksFunction,
   LoaderFunction,
-  SerializeFrom
+  SerializeFrom,
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   Link,
   useFetcher,
   useLoaderData,
-  useSearchParams
+  useSearchParams,
 } from "@remix-run/react";
 import cronParser from "cron-parser";
 import { format, parse } from "date-fns";
@@ -50,6 +50,7 @@ const SerializedJobEventSchema = z.intersection(
   z.object({
     data: z.string(),
     target: z.string(),
+    handlerVersion: z.number(),
     runAt: z.string().optional(),
   }),
   ScheduleJobOptionsSchema.omit({ runAt: true })
@@ -60,13 +61,16 @@ export const action: ActionFunction = async ({ request, context }) => {
   const jsonString = z.string().parse(body.get("jsonData"));
 
   const jsonValue = JSON.parse(jsonString);
+  
   const serializedEv = SerializedJobEventSchema.parse(jsonValue);
 
   const data = JSON.parse(serializedEv.data);
   const target = serializedEv.target;
+  const handlerVersion = serializedEv.handlerVersion;
 
   const response = await getWorker(context.worker).scheduleJob(
     target,
+    handlerVersion,
     data,
     ScheduleJobOptionsSchema.parse(serializedEv)
   );
@@ -292,6 +296,7 @@ export default function Run() {
                   data: JSON.stringify(data),
                   retryFailedJobs,
                   maxRetries,
+                  handlerVersion: selectedDef.version,
                   failureTrigger: selectedSchedule
                     ? selectedSchedule.id
                     : undefined,

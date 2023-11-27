@@ -465,7 +465,7 @@ test.describe("Can do schedule multi actions", () => {
       );
     };
     await page.getByText("Number of runs").click();
-    await page.getByText("Number of runs").click();
+    // await page.getByText("Number of runs").click();
     await page.waitForURL(/\?sorting=numRuns\.desc/);
     await expectNumRuns(1).toBe("0");
     await expectNumRuns(2).toBe("0");
@@ -489,6 +489,7 @@ test.describe("Can do schedule multi actions", () => {
         }
       );
     };
+    await page.getByText("Next scheduled run").click();
     await page.getByText("Next scheduled run").click();
     await page.waitForURL(/\?sorting=runAt\.asc/);
     await expectRunAt(1).toBe("in 23 hours");

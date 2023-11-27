@@ -2,19 +2,26 @@ import { useSearchParams } from "@remix-run/react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import React from "react";
 
-export const usePagination = (defaultSorting?: SortingState) => {
+export const usePagination = (_defaultSorting?: SortingState) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [defaultSorting, setDefaultSorting] = React.useState<
+    SortingState | undefined
+  >(_defaultSorting);
 
   const getSorting = (): SortingState => {
     const urlSorting = searchParams.getAll("sorting");
     if (urlSorting) {
-      return searchParams.getAll("sorting").map((value) => {
+      const listOfSortings = searchParams.getAll("sorting").map((value) => {
         const [id, sorting] = value.split(".");
         return {
           id,
           desc: sorting === "desc",
         };
       });
+      if (listOfSortings.length > 0) {
+        return listOfSortings;
+      }
+      return defaultSorting ?? [];
     }
     return defaultSorting ?? [];
   };
@@ -28,10 +35,6 @@ export const usePagination = (defaultSorting?: SortingState) => {
 
   const newSorting = getSorting();
   const sortingRef = React.useRef<SortingState>(newSorting);
-
-  if (!sortingRef.current) {
-    sortingRef.current = getSorting();
-  }
 
   if (stringifySorting(newSorting) !== stringifySorting(sortingRef.current)) {
     sortingRef.current = newSorting;
@@ -49,6 +52,11 @@ export const usePagination = (defaultSorting?: SortingState) => {
         ? newSortingFn(sortingRef.current)
         : newSortingFn;
 
+    if (_defaultSorting) {
+      if (newSorting.length === 0) {
+        setDefaultSorting(defaultSorting ? undefined : _defaultSorting);
+      }
+    }
     setSearchParams(
       (prevParams) => {
         prevParams.delete("sorting");

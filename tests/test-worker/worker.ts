@@ -3,7 +3,11 @@ import { Worker } from "@enschedule/worker";
 import add from "date-fns/add";
 import { z } from "zod";
 
-const worker = new Worker({});
+const worker = new Worker({
+  name: "Test worker",
+  workerId: process.env.ENSCHEDULE_API ? "rest-test-worker" : "test-worker",
+  description: process.env.ENSCHEDULE_API ? "With REST API" : "No API",
+});
 worker.logJobs = true;
 worker.retryStrategy = () => 5000;
 
@@ -13,6 +17,7 @@ const httpRequestJob = worker.registerJob({
   dataSchema: z.object({
     url: z.string(),
   }),
+  version: 1,
   job: (data) => {
     console.log("pretending to fetch", data.url);
   },
@@ -27,6 +32,7 @@ worker.registerJob({
   dataSchema: z.object({
     message: z.string(),
   }),
+  version: 1,
   job: (data) => {
     console.log(data.message);
   },
@@ -41,6 +47,7 @@ worker.registerJob({
   dataSchema: z.object({
     message: z.string(),
   }),
+  version: 1,
   job: (data) => {
     if (data.message === "no error") {
       return;
@@ -54,6 +61,7 @@ worker.registerJob({
 });
 worker.registerJob({
   id: "mix-job",
+  version: 1,
   title: "Throw message and log stuff",
   dataSchema: z.object({
     message: z.string(),
@@ -87,6 +95,7 @@ void (async () => {
   console.log("Scheduling test job");
   await worker.scheduleJob(
     httpRequestJob,
+    1,
     { url: "http://localhost:3000" },
     {
       eventId: "first_event",

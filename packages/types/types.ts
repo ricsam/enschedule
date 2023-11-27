@@ -9,6 +9,11 @@ export enum ScheduleStatus {
   UNSCHEDULED = "UNSCHEDULED",
   SCHEDULED = "SCHEDULED",
 }
+export enum WorkerStatus {
+  UP = "UP",
+  DOWN = "DOWN",
+  PENDING = "PENDING",
+}
 //#endregion
 
 export const DateStringSchema = z.string().refine((dateString) => {
@@ -58,6 +63,7 @@ export const serializedRunSchema = z.object({
 //#region PublicJobDefinition
 export const publicJobDefinitionSchema = z.object({
   id: z.string(),
+  version: z.number(),
   description: z.string(),
   title: z.string(),
   example: z.unknown(),
@@ -89,10 +95,31 @@ export const publicJobScheduleSchema = z.object({
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion
 
+//#region PublicWorker
+export const PublicWorkerSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string().optional(),
+  workerId: z.string(),
+  instanceId: z.string(),
+  version: z.number(),
+  hostname: z.string(),
+  lastReached: DateSchema,
+  createdAt: DateSchema,
+  pollInterval: z.number(),
+  definitions: z.array(publicJobDefinitionSchema),
+  runs: z.array(serializedRunSchema),
+  lastRun: serializedRunSchema.optional(),
+  status: z.nativeEnum(WorkerStatus),
+});
+export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
+//#endregion
+
 //#region PublicJobRun
 export const publicJobRunSchema = serializedRunSchema.and(
   z.object({
     jobSchedule: publicJobScheduleSchema,
+    worker: PublicWorkerSchema,
   })
 );
 export type PublicJobRun = z.infer<typeof publicJobRunSchema>;
@@ -108,6 +135,7 @@ export const ScheduleJobOptionsSchema = z.object({
   retryFailedJobs: z.boolean().optional(),
   maxRetries: z.number().optional(),
   failureTrigger: z.number().optional(),
+  workerId: z.string().optional(),
 });
 export type ScheduleJobOptions = z.output<typeof ScheduleJobOptionsSchema>;
 //#endregion
@@ -150,10 +178,13 @@ export interface SerializedRun {
   data: string;
 }
 
-export interface RunDefinition {
-  definitionId: string;
-  data: unknown;
-}
+export const RunHandlerInCpSchema = z.object({
+  definitionId: z.string(),
+  data: z.unknown(),
+  version: z.number(),
+});
+
+export type RunHandlerInCp = z.output<typeof RunHandlerInCpSchema>;
 //#endregion
 
 const StringToOptionalPositiveIntSchema = z
@@ -243,4 +274,5 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   description: string;
   job: (data: z.infer<T>) => Promise<void> | void;
   example: z.infer<T>;
+  version: number;
 }

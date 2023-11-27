@@ -27,3 +27,9 @@ pnpm run playwright test
 # Get $PID by pstree | grep 'enschedule-2/node_modules/.pnpm/turbo'
 kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
 ```
+
+# Hub to work with package.json
+* pg-driver
+* types
+* worker-api
+* worker must have main field that points to "./dist/index.js"

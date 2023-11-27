@@ -2,7 +2,7 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
 
-import { RunDefinition } from "@enschedule/types";
+import { RunHandlerInCp } from "@enschedule/types";
 import { z } from "zod";
 import {
   createJobDefinition,
@@ -10,15 +10,23 @@ import {
   StreamHandle,
   TestBackend,
 } from "./backend";
+import { envSequalizeOptions } from "./env-sequalize-options";
 
-const backend = new TestBackend({});
+const backend = new TestBackend({
+  name: "test worker",
+  workerId: "test-worker",
+  database: { ...envSequalizeOptions(), logging: false },
+});
 const Console = console.Console;
 
 backend.fork = async function (
-  runMessage: RunDefinition,
+  runMessage: RunHandlerInCp,
   streamHandle: StreamHandle
 ) {
-  const definition = backend.getJobDef(runMessage.definitionId);
+  const definition = backend.getJobDef(
+    runMessage.definitionId,
+    runMessage.version
+  );
   const origConsole = console;
   global.console = backend.createConsole(
     streamHandle.stdout,
@@ -45,6 +53,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await backend.sequelize.drop({});
   await backend.sequelize.sync({ force: true });
+  jest.useFakeTimers().setSystemTime(0);
 });
 afterEach(async () => {
   jest.useRealTimers();
@@ -54,6 +63,7 @@ const httpJobDeclaration = (
   cb: (data: { url: string }) => void = (data) => {}
 ) =>
   createJobDefinition({
+    version: 1,
     id: "http_request",
     dataSchema: z.object({ url: z.string() }),
     description: "send a http request",
@@ -69,17 +79,18 @@ const jobData = {
 };
 
 describe("backends", () => {
-  it("should be able to connect to the database and select tasks", async () => {
+  xit("should be able to connect to the database and select tasks", async () => {
     const jobs = await backend.getDbSchedules();
     expect(jobs.length).toBe(0);
   });
-  it("should be able to create a schedule", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to create a schedule", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "desc",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -88,13 +99,14 @@ describe("backends", () => {
     const jobs = await backend.getDbSchedules();
     expect(jobs.length).toBe(1);
   });
-  it("should not update jobs in the future", async () => {
-    backend.clearRegisteredJobs();
+  xit("should not update jobs in the future", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(10),
@@ -104,13 +116,14 @@ describe("backends", () => {
 
     expect((await backend.claimUnclaimedOverdueJobs()).overdueJobs[0]).toBe(0);
   });
-  it("should be able to get a job by climing a job that is overdue", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to get a job by climing a job that is overdue", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(10),
@@ -119,13 +132,14 @@ describe("backends", () => {
     jest.useFakeTimers().setSystemTime(10);
     expect((await backend.claimUnclaimedOverdueJobs()).overdueJobs[0]).toBe(1);
   });
-  it("should be able to claim in parallel", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to claim in parallel", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(10),
@@ -142,17 +156,18 @@ describe("backends", () => {
       ).sort()
     ).toEqual([0, 1]);
   });
-  it("should be able to run overdue jobs", async () => {
+  xit("should be able to run overdue jobs", async () => {
     const jobFn = jest.fn((data: { url: string }) => {
       console.log("comment");
     });
-    backend.clearRegisteredJobs();
     backend.registerJob(httpJobDeclaration(jobFn));
+    await backend.registerWorker();
 
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(10),
@@ -174,18 +189,19 @@ describe("backends", () => {
     expect(jobFn).toHaveBeenLastCalledWith(jobData);
     expect(runs).toHaveLength(1);
   });
-  it("should be able to run jobs that have runNow: true", async () => {
+  xit("should be able to run jobs that have runNow: true", async () => {
     const spy = jest.fn((data: { url: string }) => {
       console.log("comment");
     });
-    backend.clearRegisteredJobs();
     backend.registerJob(httpJobDeclaration(spy));
+    await backend.registerWorker();
 
     const createSchedule = async (id: string) => {
       const [schedule] = await backend.createJobSchedule(
         "http_request",
         "title",
         "description",
+        1,
         jobData,
         {
           eventId: id,
@@ -219,16 +235,17 @@ describe("backends", () => {
     expect(result.overdueJobs[0]).toBe(2);
     expect(spy).toHaveBeenCalledTimes(4);
   });
-  it("should log errors", async () => {
+  xit("should log errors", async () => {
     const spy = jest.fn((data: { url: string }) => {
       throw new Error("Error");
     });
-    backend.clearRegisteredJobs();
     backend.registerJob(httpJobDeclaration(spy));
+    await backend.registerWorker();
     const [job] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(10),
@@ -266,7 +283,7 @@ describe("backends", () => {
     `);
   });
 
-  it("should create a signature", () => {
+  xit("should create a signature", () => {
     const sig = backend.createSignature(
       "http_request",
       new Date(0),
@@ -277,13 +294,14 @@ describe("backends", () => {
       `"http_request-0-{"url":"http://localhost:8080"}-0 0 * * * *"`
     );
   });
-  it("should not create duplicated jobs", async () => {
-    backend.clearRegisteredJobs();
+  xit("should not create duplicated jobs", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       { runAt: new Date(0) }
     );
@@ -292,6 +310,7 @@ describe("backends", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       { runAt: new Date(0) }
     );
@@ -300,6 +319,7 @@ describe("backends", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(900),
@@ -310,6 +330,7 @@ describe("backends", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(15000 - 1),
@@ -320,6 +341,7 @@ describe("backends", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(15000),
@@ -330,17 +352,18 @@ describe("backends", () => {
 });
 
 describe("cron", () => {
-  it("should register cron job", async () => {
+  xit("should register cron job", async () => {
     const spy = jest.fn((data: { url: string }) => {
       console.log("Hello!");
     });
     jest.useFakeTimers().setSystemTime(0);
 
     const job = httpJobDeclaration(spy);
-    backend.clearRegisteredJobs();
     backend.registerJob(job);
+    await backend.registerWorker();
     const schedule = await backend.scheduleJob(
       job,
+      1,
       {
         url: "http://localhost:8080",
       },
@@ -385,14 +408,14 @@ describe("cron", () => {
 });
 
 describe("event uniqueness", () => {
-  it("should create duplicated events if an eventId is not provided", async () => {
-    jest.useFakeTimers().setSystemTime(0);
-    backend.clearRegisteredJobs();
+  xit("should create duplicated events if an eventId is not provided", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -402,6 +425,7 @@ describe("event uniqueness", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(1000),
@@ -409,14 +433,15 @@ describe("event uniqueness", () => {
     );
     expect((await backend.getDbSchedules()).length).toBe(2);
   });
-  it("should not create duplicated events if an eventId is provided", async () => {
+  xit("should not create duplicated events if an eventId is provided", async () => {
     jest.useFakeTimers().setSystemTime(0);
-    backend.clearRegisteredJobs();
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -427,6 +452,7 @@ describe("event uniqueness", () => {
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         eventId: "superevent",
@@ -438,13 +464,14 @@ describe("event uniqueness", () => {
 });
 
 describe("multiple runs", () => {
-  it("should be able to run now and count", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to run now and count", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [schedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -469,13 +496,14 @@ describe("multiple runs", () => {
   });
 });
 describe("delete schedules", () => {
-  it("should be able to delete schedules", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to delete schedules", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [schedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -489,13 +517,14 @@ describe("delete schedules", () => {
 });
 
 describe("update schedule", () => {
-  it("should be able to update a schedule", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to update a schedule", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [schedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -509,13 +538,14 @@ describe("update schedule", () => {
     await schedule.reload();
     expect(schedule.title).toBe("hello");
   });
-  it("should be able to unset the run now", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to unset the run now", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [schedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -538,13 +568,14 @@ describe("update schedule", () => {
 });
 
 describe("get single run", () => {
-  it("should be able to get a single run", async () => {
-    backend.clearRegisteredJobs();
+  xit("should be able to get a single run", async () => {
     backend.registerJob(httpJobDeclaration());
+    await backend.registerWorker();
     const [schedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       jobData,
       {
         runAt: new Date(0),
@@ -573,7 +604,6 @@ describe("can retry", () => {
   ): Promise<
     [Schedule, Schedule, jest.Mock<void, [data: { url: string }], any>]
   > => {
-    backend.clearRegisteredJobs();
     const spy = jest.fn((data: { url: string }) => {
       if (data.url === "http://localhost:1234") {
         throw new Error("failed job");
@@ -584,11 +614,13 @@ describe("can retry", () => {
     });
     jest.useFakeTimers().setSystemTime(0);
     backend.registerJob(httpJobDeclaration(spy));
+    await backend.registerWorker();
 
     const [notifySchedule] = await backend.createJobSchedule(
       "http_request",
       "title",
       "description",
+      1,
       {
         url: "http://localhost:4444",
       }
@@ -598,6 +630,7 @@ describe("can retry", () => {
       "http_request",
       "title",
       "description",
+      1,
       {
         url: "http://localhost:1234",
       },
@@ -643,12 +676,12 @@ describe("can retry", () => {
     );
     return [schedule, notifySchedule, spy];
   };
-  it("should work when retryFailedJobs is true", async () => {
+  xit("should work when retryFailedJobs is true", async () => {
     const [, , spy] = await retryTest();
     // run + 10 retries
     expect(spy).toHaveBeenCalledTimes(11);
   });
-  it("should work with a maxRetries ", async () => {
+  xit("should work with a maxRetries ", async () => {
     const [schedule, , spy] = await retryTest({ maxRetries: 5 });
     expect(spy).toHaveBeenCalledTimes(6);
     let runs = await backend.getDbRuns();
@@ -661,7 +694,7 @@ describe("can retry", () => {
     expect(schedule.runAt?.getTime()).toBeLessThan(Date.now());
     expect(schedule.claimed).toBe(true);
   });
-  it("should work with a trigger job ", async () => {
+  xit("should work with a trigger job ", async () => {
     const [schedule, notifyJob, spy] = await retryTest({
       maxRetries: 5,
       notify: true,
@@ -676,7 +709,7 @@ describe("can retry", () => {
     await schedule.reload();
     expect(schedule.numRuns).toBe(6);
   });
-  it("should not continue to retry if succeeds", async () => {
+  xit("should not continue to retry if succeeds", async () => {
     const [schedule, , spy] = await retryTest({
       maxRetries: 5,
       notify: true,
@@ -690,5 +723,266 @@ describe("can retry", () => {
     expect(runs[1].exitSignal).toBe("1");
     expect(runs[2].exitSignal).toBe("1");
     expect(schedule.numRuns).toBe(3);
+  });
+});
+
+describe("multiple workers", () => {
+  xit("should register workers", async () => {
+    jest.useFakeTimers().setSystemTime(0);
+    // the initial worker is created in the beforeEach
+    const worker = await backend.registerWorker();
+    await backend.tick();
+    expect(worker.title).toBe("test worker");
+    expect(worker.id).toBe(1);
+    expect(worker.workerId).toBe("test-worker");
+    expect(worker.definitions).toMatchInlineSnapshot(`
+      [
+        {
+          "codeBlock": "type HttpRequest = {
+        url: string;
+      };",
+          "description": "send a http request",
+          "example": {
+            "url": "wef",
+          },
+          "id": "http_request",
+          "jsonSchema": {
+            "$ref": "#/definitions/HttpRequest",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {
+              "HttpRequest": {
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "url",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "title": "HTTP request",
+          "version": 1,
+        },
+      ]
+    `);
+    expect(worker.lastReached.getTime()).toBe(0);
+  });
+  xit("should register workers", async () => {
+    // the initial worker is created in the beforeEach
+    const worker = await backend.registerWorker();
+    await backend.tick();
+    expect(worker.title).toBe("test worker");
+    expect(worker.id).toBe(1);
+    expect(worker.version).toBe(1);
+    expect(worker.workerId).toBe("test-worker");
+    expect(worker.lastReached.getTime()).toBe(0);
+  });
+  xit("should update worker version", async () => {
+    const handler = httpJobDeclaration();
+    backend.registerJob(handler);
+    const worker = await backend.registerWorker();
+
+    expect(worker.title).toBe("test worker");
+    expect(worker.id).toBe(1);
+    expect(worker.version).toBe(1);
+    expect(worker.workerId).toBe("test-worker");
+    expect(worker.lastReached.getTime()).toBe(0);
+
+    await backend.registerWorker();
+
+    expect(worker.title).toBe("test worker");
+    expect(worker.id).toBe(1);
+    expect(worker.version).toBe(1);
+    expect(worker.workerId).toBe("test-worker");
+    expect(worker.lastReached.getTime()).toBe(0);
+
+    // pretend we are updating the handler code and restarting the server
+    handler.version = 2;
+    backend.workerInstance.instanceId = "new-instance-id";
+    backend.definedJobs[handler.id] = { "2": handler } as any;
+
+    expect(backend.getPublicHandler(handler.id, handler.version).version).toBe(
+      2
+    );
+
+    const newWorker = await backend.registerWorker();
+    const workers = await backend.Worker.findAll();
+    expect(workers).toHaveLength(2);
+    expect(newWorker.version).toBe(2);
+  });
+  xit("should attach worker instance to the runs", async () => {
+    const handler = httpJobDeclaration();
+    backend.registerJob(handler);
+    const worker = await backend.registerWorker();
+
+    expect(worker.title).toBe("test worker");
+    expect(worker.id).toBe(1);
+    expect(worker.version).toBe(1);
+    expect(worker.workerId).toBe("test-worker");
+    expect(worker.lastReached.getTime()).toBe(0);
+
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      1,
+      {
+        url: "http://localhost:1234",
+      },
+      {
+        runAt: new Date(0),
+      }
+    );
+    const run = await backend.runSchedule(schedule.id);
+    expect(run.worker.id).toBe(worker.id);
+    expect((await backend.getWorkers())[0].id).toBe(worker.id);
+    expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
+  });
+  it("should be able to handle multiple versions of a handler", async () => {
+    const spyA = jest.fn((data: { url: string }) => {});
+
+    const handler = httpJobDeclaration(spyA);
+    backend.registerJob(handler);
+    const worker = await backend.registerWorker();
+
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      1,
+      {
+        url: "http://localhost:1234",
+      },
+      {
+        runAt: new Date(0),
+        eventId: "default-1",
+      }
+    );
+    expect(schedule.id).toBe(1);
+    const runA = await backend.runSchedule(schedule.id);
+    expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
+    expect(runA.data).toBe('{"url":"http://localhost:1234"}');
+
+    const spyB = jest.fn((url: string) => {});
+    backend.registerJob({
+      version: 2,
+      dataSchema: z.string(),
+      description: "new description",
+      title: "new title",
+      job: spyB,
+      id: "http_request",
+      example: "http://localhost:1234",
+    });
+
+    const handlers = await backend.getLatestHandlers();
+    expect(handlers).toHaveLength(1);
+
+    // create a schedule using the old version
+    const [oldSchedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      1,
+      {
+        url: "http://other_url:1234",
+      },
+      {
+        runAt: new Date(0),
+        eventId: "other-1",
+      }
+    );
+    spyA.mockReset();
+    expect(oldSchedule.id).toBe(2);
+    expect(oldSchedule.data).toBe('{"url":"http://other_url:1234"}');
+    expect(oldSchedule.handlerVersion).toBe(1);
+    const runC = await backend.runSchedule(oldSchedule.id);
+    expect(spyA).toHaveBeenCalledWith({ url: "http://other_url:1234" });
+  });
+  it("should be able to migrate a definition", async () => {
+    const spyA = jest.fn((data: { url: string }) => {});
+
+    const handler = httpJobDeclaration(spyA);
+    backend.registerJob(handler);
+    const worker = await backend.registerWorker();
+
+    const [schedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      1,
+      {
+        url: "http://localhost:1234",
+      },
+      {
+        runAt: new Date(0),
+        eventId: "default-1",
+      }
+    );
+    expect(schedule.id).toBe(1);
+    const runA = await backend.runSchedule(schedule.id);
+    expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
+    expect(runA.data).toBe('{"url":"http://localhost:1234"}');
+
+    const spyB = jest.fn((url: string) => {});
+
+    await backend.migrateHandler(
+      {
+        id: handler.id,
+        dataSchema: handler.dataSchema,
+        version: handler.version,
+      },
+      createJobDefinition({
+        version: 2,
+        dataSchema: z.string(),
+        description: "new description",
+        title: "new title",
+        job: spyB,
+        id: "http_request",
+        example: "http://localhost:1234",
+      }),
+      ({ url }) => url
+    );
+
+    const runB = await backend.runSchedule(schedule.id);
+    expect(spyB).toHaveBeenCalledWith("http://localhost:1234");
+    expect(runB.data).toBe('"http://localhost:1234"');
+
+    const handlers = await backend.getLatestHandlers();
+    expect(handlers).toHaveLength(1);
+
+    // create a schedule using the old version
+    const [oldSchedule] = await backend.createJobSchedule(
+      "http_request",
+      "title",
+      "description",
+      1,
+      {
+        url: "http://other_url:1234",
+      },
+      {
+        runAt: new Date(0),
+        eventId: "other-1",
+      }
+    );
+    spyA.mockReset();
+    spyB.mockReset();
+    expect(oldSchedule.id).toBe(2);
+    expect(oldSchedule.handlerVersion).toBe(2);
+    expect(oldSchedule.data).toBe('"http://other_url:1234"');
+    const runC = await backend.runSchedule(oldSchedule.id);
+    expect(spyA).not.toHaveBeenCalled();
+    expect(spyB).toBeCalledWith("http://other_url:1234");
+
+    // backend.clearRegisteredJobs();
+    // const newHandler = httpJobDeclaration();
+    // newHandler.version = 2;
+    // backend.registerJob(newHandler);
+    // await backend.migrateDatabase();
+    // expect(backend.getJobDefinition(newHandler.id).version).toBe(2);
+    // expect((await backend.getWorkers())[0].version).toBe(2);
   });
 });

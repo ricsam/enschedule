@@ -8,6 +8,7 @@
   "scripts": {
     "build": "remix build && cp ./build.d.ts ./build/index.d.ts",
     "dev": "remix dev",
+    "build:dev": "NODE_ENV=development remix build",
     "start": "echo 'You probably want to run yarn run dev'; exit 1; remix-serve build",
     "docker:start": "NODE_ENV=production remix-serve build/index.js",
     "typecheck": "tsc",

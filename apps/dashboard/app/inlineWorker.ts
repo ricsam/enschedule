@@ -2,6 +2,8 @@ import { Worker } from "@enschedule/worker";
 
 export const inlineWorker = () => {
   const worker = new Worker({
+    name: "Dashboard integrated worker",
+    workerId: "dashboard-integrated-worker",
     forkArgv: [__filename, "launch"],
   });
   worker.logJobs = true;

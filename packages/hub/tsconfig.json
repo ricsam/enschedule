@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
   },
-  "include": ["index.ts", "inline-worker.ts"],
+  "include": ["index.ts"],
   "ts-node": {
     "files": true
   }

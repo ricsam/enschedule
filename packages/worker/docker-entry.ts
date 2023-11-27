@@ -5,7 +5,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { Worker } from "./api.js";
 
-const worker = new Worker({});
+const worker = new Worker({
+  workerId: 'worker-1',
+  name: 'worker-1',
+});
 worker.logJobs = true;
 
 void (async () => {

@@ -175,6 +175,8 @@ export const enschedule = async (
     worker = new WorkerAPI(options.worker.apiKey, options.worker.url);
   } else {
     const iWorker = new PrivateBackend({
+      name: "Dashboard integrated worker",
+      workerId: 'dashboard-integrated-worker',
       forkArgv: [options.worker.filename, "__enschedule_worker_launch__"],
     });
     iWorker.logJobs = true;

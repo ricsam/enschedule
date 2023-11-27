@@ -1,64 +1,57 @@
-import type { PublicJobDefinition, PublicJobSchedule } from "@enschedule/types";
+import type { PublicWorkerSchema } from "@enschedule/types";
 import { Button } from "@mui/material";
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
+import type { z } from "zod";
 import { RootLayout } from "~/components/Layout";
-import SchedulesTable from "~/components/SchedulesTable";
+import WorkersTable from "~/components/WorkersTable";
 import { getWorker } from "~/createWorker";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
-type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
+export const useBreadcrumbs = (): Breadcrumb[] => {
+  return [
+    {
+      title: "Workers",
+      href: "/workers",
+    },
+  ];
+};
 
 export async function getLoaderData(
   params: Params<string>,
   worker: DashboardWorker
 ): Promise<{
-  schedules: PublicJobSchedule[];
-  definition?: PublicJobDefinition;
+  workers: z.output<typeof PublicWorkerSchema>[];
 }> {
-  const definitionId = params.definitionId;
-  const definition = definitionId
-    ? await worker.getLatestHandler(definitionId)
-    : undefined;
-  const schedules = await worker.getSchedules(definitionId);
-  return { schedules, definition };
+  const workers = await worker.getWorkers();
+  return { workers };
 }
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  return json<LoaderData>(
-    await getLoaderData(params, getWorker(context.worker))
-  );
+  const worker = getWorker(context.worker);
+  return json<LoaderData>(await getLoaderData(params, worker));
 };
 
-export { action } from "~/components/SchedulesTable";
+type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export const useData = () => {
   return useLoaderData<LoaderData>();
 };
 
 export function Page() {
-  const { schedules } = useData();
+  const { workers } = useData();
 
-  return <SchedulesTable schedules={schedules} />;
+  return <WorkersTable workers={workers} />;
 }
 
-export const useBreadcrumbs = (): Breadcrumb[] => {
-  return [
-    {
-      title: "Schedules",
-      href: "/schedules",
-    },
-  ];
-};
-
-export default function Schedules() {
+export default function Workers() {
   return (
     <RootLayout
       navbar={{
-        title: "Schedules",
-        subTitle: "All schedules",
+        title: "Workers",
+        subTitle: "These are the deployed workers",
         actions: (
           <>
             <Button

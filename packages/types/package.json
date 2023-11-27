@@ -2,7 +2,7 @@
   "name": "@enschedule/types",
   "version": "0.0.0",
   "module": "./index.ts",
-  "main": "./dist/index.js",
+  "dist-entry": "./dist/index.js",
   "types": "./index.ts",
   "license": "MIT",
   "scripts": {

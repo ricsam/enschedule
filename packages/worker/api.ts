@@ -63,14 +63,22 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   router.use(apiKeyMiddleware);
   router.use(parseJsonBody());
 
-  router.get("/job-definitions", (req, res) => {
-    const jobDefinitions = worker.getDefinitions();
-    res.json(jobDefinitions);
+  router.get("/job-definitions", (req, res, next) => {
+    worker
+      .getLatestHandlers()
+      .then((jobDefinitions) => {
+        res.json(jobDefinitions);
+      })
+      .catch(next);
   });
 
-  router.get("/job-definitions/:id", (req, res) => {
-    const jobDefinition = worker.getJobDefinition(req.params.id);
-    res.json(jobDefinition);
+  router.get("/job-definitions/:id", (req, res, next) => {
+    worker
+      .getLatestHandler(req.params.id)
+      .then((jobDefinition) => {
+        res.json(jobDefinition);
+      })
+      .catch(next);
   });
 
   router.get("/schedules", (req, res, next) => {
@@ -86,19 +94,34 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .catch(next);
   });
 
+  router.get("/workers", (req, res, next) => {
+    worker
+      .getWorkers()
+      .then((workers) => {
+        res.json(workers);
+      })
+      .catch(next);
+  });
+
   router.post("/schedules", (req, res, next) => {
     const ScheduleSchema = z.object({
       jobId: z.string(),
+      handlerVersion: z.number().int().positive(),
       data: z.unknown(),
       options: ScheduleJobOptionsSchema,
     });
-    const { jobId, data, options } = ScheduleSchema.parse(req.body);
+    const { jobId, data, options, handlerVersion } = ScheduleSchema.parse(
+      req.body
+    );
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     worker
-      .scheduleJob(jobId, data, options)
+      .scheduleJob(jobId, handlerVersion, data as any, options)
       .then((newSchedule) => {
         res.json(newSchedule);
       })
       .catch(next);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   });
 
   router.get("/schedules/:id", (req, res, next) => {

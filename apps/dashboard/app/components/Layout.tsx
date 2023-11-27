@@ -81,7 +81,7 @@ export function RootLayout({
         </NavLink>
       </Box>
       <List>
-        {["definitions", "schedules", "runs"].map((text, index) => {
+        {["definitions", "schedules", "runs", "workers"].map((text, index) => {
           return (
             <ListItem key={text} disablePadding>
               <ListItemButton

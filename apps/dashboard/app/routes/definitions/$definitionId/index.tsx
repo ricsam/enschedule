@@ -32,7 +32,7 @@ export async function getLoaderData(
   worker: DashboardWorker
 ) {
   const id = getDefinitionId(params);
-  const def = await worker.getJobDefinition(id);
+  const def = await worker.getLatestHandler(id);
   return { def };
 }
 

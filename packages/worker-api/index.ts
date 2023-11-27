@@ -8,11 +8,13 @@ import type {
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
+  PublicWorker,
   ScheduleJobOptions,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import {
   ListRunsOptionsSerialize,
+  PublicWorkerSchema,
   publicJobDefinitionSchema,
   publicJobRunSchema,
   publicJobScheduleSchema,
@@ -164,7 +166,7 @@ export class WorkerAPI {
     }
   }
 
-  async getDefinitions(): Promise<PublicJobDefinition[]> {
+  async getLatestHandlers(): Promise<PublicJobDefinition[]> {
     const jobDefinitions = await this.request("GET", "/job-definitions");
     return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
   }
@@ -173,7 +175,7 @@ export class WorkerAPI {
     await this.request("POST", "/unschedule", ids);
   }
 
-  async getJobDefinition(id: string): Promise<PublicJobDefinition> {
+  async getLatestHandler(id: string): Promise<PublicJobDefinition> {
     const definition = await this.request("GET", `/job-definitions/${id}`);
     return publicJobDefinitionSchema.parse(definition);
   }
@@ -183,13 +185,20 @@ export class WorkerAPI {
     return z.array(publicJobScheduleSchema).parse(schedules);
   }
 
+  async getWorkers(): Promise<PublicWorker[]> {
+    const workers = await this.request("GET", "/workers");
+    return z.array(PublicWorkerSchema).parse(workers);
+  }
+
   async scheduleJob(
     jobId: string,
+    handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<PublicJobSchedule> {
     const newSchedule = await this.request("POST", "/schedules", {
       jobId,
+      handlerVersion,
       data,
       options,
     });

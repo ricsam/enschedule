@@ -7,7 +7,7 @@ import { getWorker } from "~/createWorker";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
 async function getLoaderData(worker: DashboardWorker) {
-  const definitions = worker.getDefinitions();
+  const definitions = worker.getLatestHandlers();
   return definitions;
 }
 

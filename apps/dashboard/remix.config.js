@@ -21,7 +21,8 @@ module.exports = {
     // uses the v1 convention, works in v1.15+ and v2
     return createRoutesFromFolders(defineRoutes);
   },
-  serverMainFields: process.env.MONO_REPO_BUILD
-    ? ["dist-entry", "main", "module"]
-    : ["main", "module"],
+  // serverMainFields: ["dist-entry"]
+  // process.env.MONO_REPO_BUILD
+  //   ? ["dist-entry"]
+  //   : ["module", "main"],
 };

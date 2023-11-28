@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: 'add moreutils'
         run: |
-          apt-get install moreutils
+          sudo apt-get install moreutils
       - name: Checkout
         uses: actions/checkout@v3
         with:

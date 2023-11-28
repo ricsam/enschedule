@@ -42,7 +42,7 @@ export default function Settings() {
         <Stack sx={{ width: "100%" }} spacing={2}>
           <Alert variant="outlined" severity="error" action={<DeleteButton />}>
             <AlertTitle>Reset Enscheudle</AlertTitle>
-            Delete all runs and schedules in the system
+            Delete all runs, schedules and workers in the system
           </Alert>
         </Stack>
       </Box>
@@ -78,7 +78,7 @@ function DeleteButton() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This will delete all runs and all schedules
+            This will delete all runs, schedules and workers
           </DialogContentText>
         </DialogContent>
         <DialogActions>

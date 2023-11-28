@@ -27,4 +27,6 @@ export {
   DateStringSchema,
   PublicWorkerSchema,
   WorkerStatus,
+  JobDefinitionSchema,
+  typeAssert,
 } from "./types";

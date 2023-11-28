@@ -7,6 +7,8 @@ import {
   RunHandlerInCpSchema,
   ScheduleStatus,
   WorkerStatus,
+  JobDefinitionSchema,
+  typeAssert,
 } from "@enschedule/types";
 import type {
   JobDefinition,
@@ -203,17 +205,14 @@ interface CreateJobScheduleOptions {
   failureTrigger?: number;
   workerId?: string;
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const assert = <T, U extends T>() => {
-  // do nothing
-};
-assert<
+
+typeAssert<
   // omit desc and title because they are passed as arguments to createJobSchedule
   Required<Omit<ScheduleJobOptions, "description" | "title">>,
   Required<CreateJobScheduleOptions>
 >();
 // and the opposite
-assert<
+typeAssert<
   Required<CreateJobScheduleOptions>,
   Required<Omit<ScheduleJobOptions, "description" | "title">>
 >();
@@ -808,8 +807,10 @@ export class PrivateBackend {
     await Schedule.truncate({
       cascade: true,
     });
+    await Worker.truncate({
+      cascade: true,
+    });
     await this.registerWorker();
-    // await this.sequelize.sync({ force: true });
   }
 
   public async deleteRun(runId: number): Promise<PublicJobRun> {
@@ -1264,6 +1265,7 @@ export class PrivateBackend {
   > = {};
 
   public registerJob<T extends ZodType = ZodType>(job: JobDefinition<T>) {
+    JobDefinitionSchema.parse(job);
     const id = job.id;
     if (!this.definedJobs[id]) {
       this.definedJobs[id] = {};

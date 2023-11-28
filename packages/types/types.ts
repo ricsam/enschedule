@@ -1,6 +1,11 @@
 import type { ZodType } from "zod";
 import { z } from "zod";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const typeAssert = <T, U extends T>() => {
+  // do nothing
+};
+
 //#region Enums
 export enum ScheduleStatus {
   RETRYING = "RETRYING",
@@ -276,3 +281,14 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   example: z.infer<T>;
   version: number;
 }
+export const JobDefinitionSchema = z.object({
+  dataSchema: z.any(),
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  job: z.any(),
+  example: z.any(),
+  version: z.number().int().positive(),
+});
+typeAssert<keyof JobDefinition, keyof z.output<typeof JobDefinitionSchema>>();
+typeAssert<keyof z.output<typeof JobDefinitionSchema>, keyof JobDefinition>();

@@ -28,7 +28,7 @@ services:
       - DB_PORT=5432
       - DEBUG=pg-driver
     volumes:
-      - "${PWD}/JobDefinitions:/app/packages/worker/definitions"
+      - "${PWD}/charts/enschedule/files:/app/packages/worker/definitions"
   dashboard:
     depends_on:
       postgres:

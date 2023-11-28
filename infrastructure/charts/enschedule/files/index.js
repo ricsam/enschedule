@@ -3,11 +3,12 @@ const { z } = require("zod");
 module.exports = async (worker) => {
   worker.registerJob({
     id: "send-http-request",
+    version: 1,
     title: "Send HTTP request",
     dataSchema: z.object({
       url: z.string(),
     }),
-    job: (data, console) => {
+    job: (data) => {
       console.log("pretending to fetch", data.url);
     },
     description: "Provide HTTP parameters as data to send a request",
@@ -17,11 +18,12 @@ module.exports = async (worker) => {
   });
   worker.registerJob({
     id: "log-job",
+    version: 1,
     title: "Log message",
     dataSchema: z.object({
       message: z.string(),
     }),
-    job: (data, console) => {
+    job: (data) => {
       console.log(data.message);
     },
     description: "Will print the message on the server",
@@ -31,6 +33,7 @@ module.exports = async (worker) => {
   });
   worker.registerJob({
     id: "error-job",
+    version: 1,
     title: "Throw message",
     dataSchema: z.object({
       message: z.string(),
@@ -45,11 +48,12 @@ module.exports = async (worker) => {
   });
   worker.registerJob({
     id: "mix-job",
+    version: 1,
     title: "Throw message and log stuff",
     dataSchema: z.object({
       message: z.string(),
     }),
-    job: (data, console) => {
+    job: (data) => {
       console.log("Will throw an error now");
       throw new Error(data.message);
     },

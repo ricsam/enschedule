@@ -16,6 +16,6 @@ docker container run \
   -e DEBUG='worker-api,pg-driver' \
   -p 3030:3000 \
   -i \
-  -v ${PWD}/JobDefinitions:/app/packages/worker/definitions \
+  -v ${PWD}/charts/enschedule/files:/app/packages/worker/definitions \
   --network enschedule-2_default \
   ghcr.io/ricsam/enschedule-worker:latest

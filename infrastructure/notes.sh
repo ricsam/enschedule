@@ -26,7 +26,8 @@ helm upgrade --install enschedule ./charts/enschedule \
   --set dashboard.service.type=NodePort \
   --set dashboard.service.port=3000
 
-# minikube service dashboard-service --url
+# Get the URL to access the dashboard
+minikube service dashboard-service --url
 
 # dashboard
 export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/name=dashboard" -o jsonpath="{.items[0].metadata.name}")

@@ -14,6 +14,7 @@ import { z } from "zod";
     },
     handlers: [
       createHandler({
+        version: 1,
         id: "send-http-request",
         title: "Send HTTP request",
         dataSchema: z.object({
@@ -29,6 +30,7 @@ import { z } from "zod";
       }),
       createHandler({
         id: "log-job",
+        version: 1,
         title: "Log message",
         dataSchema: z.object({
           message: z.string(),
@@ -43,6 +45,7 @@ import { z } from "zod";
       }),
       createHandler({
         id: "error-job",
+        version: 1,
         title: "Throw message",
         dataSchema: z.object({
           message: z.string(),
@@ -60,6 +63,7 @@ import { z } from "zod";
       }),
       createHandler({
         id: "mix-job",
+        version: 1,
         title: "Throw message and log stuff",
         dataSchema: z.object({
           message: z.string(),

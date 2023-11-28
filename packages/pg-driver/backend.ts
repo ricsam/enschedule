@@ -896,6 +896,7 @@ export class PrivateBackend {
       .filter((value): value is JobDefinition => Boolean(value))
       .map((def) => createPublicJobDefinition(def));
   }
+
   public async getSchedules(definitionId?: string) {
     const dbSchedules = await this.getDbSchedules();
     return dbSchedules
@@ -905,7 +906,7 @@ export class PrivateBackend {
             return false;
           }
         }
-        return Boolean(this.definedJobs[schedule.target]);
+        return true;
       })
       .map((schedule) => {
         const jobDef =
@@ -1051,11 +1052,6 @@ export class PrivateBackend {
       }
     }
 
-    const def = this.definedJobs[defId]?.[migratedVersion];
-
-    if (!def) {
-      throw new Error("You must create a JobDefinition first");
-    }
     const {
       cronExpression,
       eventId,
@@ -1102,17 +1098,6 @@ export class PrivateBackend {
       },
     });
   }
-  public getPublicHandler(
-    handlerId: string,
-    handlerVersion: number
-  ): PublicJobDefinition {
-    const jobDef = this.definedJobs[handlerId]?.[handlerVersion];
-    console.log(this.definedJobs);
-    if (!jobDef) {
-      throw new Error("invalid definitionId");
-    }
-    return createPublicJobDefinition(jobDef);
-  }
 
   public async scheduleJob(
     jobId: string,
@@ -1134,9 +1119,6 @@ export class PrivateBackend {
     options: ScheduleJobOptions
   ): Promise<PublicJobSchedule> {
     const defId = typeof def === "string" ? def : def.id;
-    if (!this.definedJobs[defId]) {
-      throw new Error("You have not declared / registered a job with this id");
-    }
 
     let runAt: Date | undefined = options.runAt;
     const cronExpression: string | undefined = options.cronExpression;

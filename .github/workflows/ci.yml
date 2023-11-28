@@ -47,6 +47,12 @@ jobs:
         run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2
+        with:
+          version: '1.6'
+      - name: modify package jsons main fields
+        run: ./release-package.sh
       - name: Build all packages
         run: NODE_ENV=production pnpm run build
       - name: corepack enable

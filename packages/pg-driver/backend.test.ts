@@ -805,7 +805,7 @@ describe("multiple workers", () => {
     backend.workerInstance.instanceId = "new-instance-id";
     backend.definedJobs[handler.id] = { "2": handler } as any;
 
-    expect(backend.getPublicHandler(handler.id, handler.version).version).toBe(
+    expect(backend.definedJobs[handler.id]?.[handler.version]?.version).toBe(
       2
     );
 

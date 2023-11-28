@@ -1,9 +1,9 @@
 {
   "name": "@enschedule/worker",
   "version": "0.0.0",
-  "types": "index.ts",
-  "module": "index.ts",
-  "main": "./dist/index.js",
+  "types": "./index.ts",
+  "module": "./index.ts",
+  "main": "./index.ts",
   "dist-entry": "./dist/index.js",
   "license": "MIT",
   "scripts": {

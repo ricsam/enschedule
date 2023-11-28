@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "run-p -l worker:*",
-    "worker:rest": "ENSCHEDULE_API=true nodemon --watch 'worker.ts' --watch '../../packages/worker/*.ts' --watch '../../packages/types/*.ts' --watch '../../packages/pg-driver/*.ts' ./worker.ts",
-    "worker:work": "nodemon --watch 'worker.ts' --watch '../../packages/worker/*.ts' --watch '../../packages/types/*.ts' --watch '../../packages/pg-driver/*.ts' ./worker.ts",
+    "worker:rest": "ENSCHEDULE_API=true run-p spawn_worker",
+    "worker:work": "run-p spawn_worker",
+    "worker:special": "SPECIAL_HANDLERS=true run-p spawn_worker",
+    "spawn_worker": "nodemon --watch 'worker.ts' --watch '../../packages/worker/*.ts' --watch '../../packages/types/*.ts' --watch '../../packages/pg-driver/*.ts' ./worker.ts",
     "serve": "ts-node ./worker.ts",
     "lint": "eslint -f visualstudio .",
     "create-db": "PGPASSWORD=postgres dropdb  -h localhost -U postgres -p 6543 ${DB_DATABASE:-dev} || true && PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -p 6543 -c \"create database ${DB_DATABASE:-dev};\"",

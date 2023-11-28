@@ -161,9 +161,11 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Num retries",
   }),
-  columnHelper.accessor("jobDefinition.title", {
+  columnHelper.accessor("jobDefinition", {
     cell: (info) => {
-      return info.getValue();
+      return typeof info.getValue() === "string"
+        ? info.getValue()
+        : info.getValue().title;
     },
     header: "Job definition",
   }),

@@ -570,7 +570,7 @@ function DataCard({
           </>
         )}
       </CardContent>
-      {typeof schedule.jobDefinition === "string" && (
+      {typeof schedule.jobDefinition !== "string" && (
         <CardActions>
           <input type="hidden" name="data" value="" ref={dataRef} />
           <Button

@@ -51,7 +51,6 @@ export const useBreadcrumbs = (
 export const useNavbar = (action: string, runRedirect: string): NavBar => {
   const data = useData();
 
-  const def = data.schedule.jobDefinition;
   return {
     title: data.schedule.title,
     subTitle: data.schedule.description,

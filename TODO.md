@@ -7,3 +7,4 @@
 * Add timeout on jobs (or claimed jobs must be able to be unclaimed)
 * Add docs + comments to the docker entry file describing it
 * mark as schedule as "claimedBy workerx" and pending after clicking the run now button for example
+* fix horizontal scroll on data on runs

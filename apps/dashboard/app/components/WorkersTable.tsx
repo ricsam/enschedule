@@ -2,9 +2,7 @@ import type { PublicWorkerSchema } from "@enschedule/types";
 import { WorkerStatus } from "@enschedule/types";
 import { Tooltip, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
-import MuiLink from "@mui/material/Link";
 import type { SerializeFrom } from "@remix-run/node";
-import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
@@ -42,17 +40,19 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
   columnHelper.accessor("title", {
     cell: (info) => {
-      const workerId = info.row.original.id;
-      return (
-        <MuiLink
-          to={String(workerId)}
-          component={RemixLink}
-          onClick={(ev) => ev.stopPropagation()}
-          data-testid="worker-link"
-        >
-          {info.getValue()}
-        </MuiLink>
-      );
+      return info.getValue();
+      // when item page is implemented
+      // const workerId = info.row.original.id;
+      // return (
+      //   <MuiLink
+      //     to={String(workerId)}
+      //     component={RemixLink}
+      //     onClick={(ev) => ev.stopPropagation()}
+      //     data-testid="worker-link"
+      //   >
+      //     {info.getValue()}
+      //   </MuiLink>
+      // );
     },
     header: "Title",
   }),

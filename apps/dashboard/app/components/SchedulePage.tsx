@@ -570,21 +570,23 @@ function DataCard({
           </>
         )}
       </CardContent>
-      <CardActions>
-        <input type="hidden" name="data" value="" ref={dataRef} />
-        <Button
-          disabled={!isValid}
-          type="submit"
-          data-testid="submit-edit-data"
-          onClick={() => {
-            if (dataValueRef.current) {
-              dataRef.current?.setAttribute("value", dataValueRef.current());
-            }
-          }}
-        >
-          Save
-        </Button>
-      </CardActions>
+      {typeof schedule.jobDefinition === "string" && (
+        <CardActions>
+          <input type="hidden" name="data" value="" ref={dataRef} />
+          <Button
+            disabled={!isValid}
+            type="submit"
+            data-testid="submit-edit-data"
+            onClick={() => {
+              if (dataValueRef.current) {
+                dataRef.current?.setAttribute("value", dataValueRef.current());
+              }
+            }}
+          >
+            Save
+          </Button>
+        </CardActions>
+      )}
     </Card>
   );
 }
@@ -592,9 +594,12 @@ function DataCard({
 export function Actions({
   action,
   runRedirect,
+  pollInterval,
 }: {
   action: string;
   runRedirect: string;
+  // TODO use this!
+  pollInterval?: number;
 }) {
   const navigation = useNavigation();
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
@@ -614,7 +619,9 @@ export function Actions({
           setSnackbarOpen(false);
         }}
         data-testid="run-now-snackbar"
-        message="This job has been marked to be claimed by a worker. It will run on the next tick."
+        message={`This job has been marked to be claimed by a worker. It will run on the next tick${
+          pollInterval ? ` ${pollInterval}ms` : ""
+        }.`}
         action={
           <IconButton
             size="small"

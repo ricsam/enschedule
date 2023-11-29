@@ -266,6 +266,9 @@ export function ExpandableTable<T>({
                   );
                   return (
                     <TableCell
+                      sx={{
+                        whiteSpace: "nowrap",
+                      }}
                       key={header.id}
                       align="left"
                       padding={
@@ -322,7 +325,9 @@ export function ExpandableTable<T>({
                     {row.getVisibleCells().map((cell) => {
                       return (
                         <TableCell
-                          component="th"
+                          sx={{
+                            whiteSpace: "nowrap",
+                          }}
                           id={labelId}
                           scope="row"
                           key={cell.id}

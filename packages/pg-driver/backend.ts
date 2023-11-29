@@ -1122,11 +1122,11 @@ export class PrivateBackend {
     const where: WhereOptions<ScheduleAttributes> = eventId
       ? {
           eventId,
-          claimed: false,
+          // claimed: false, // when we have eventId then I as a user say that I only want one schedule to exist in the system with this eventId
         }
       : {
           signature,
-          claimed: false,
+          claimed: false, // maybe we want to re-schedule a one-time job that has been scheduled before, preferbly just run the schedule again though
         };
 
     return Schedule.findOrCreate({

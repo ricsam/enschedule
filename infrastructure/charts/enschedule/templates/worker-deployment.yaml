@@ -75,6 +75,12 @@ spec:
               value: "{{ .Values.database.service.port }}"
             - name: DEBUG
               value: "pg-driver,worker"
+            - name: WORKER_ID
+              value: "helm-deployed-worker"
+            - name: WORKER_NAME
+              value: "Default worker"
+            - name: WORKER_DESCRIPTION
+              value: "Worker deplyed with the helm chart"
       {{- with .Values.worker.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

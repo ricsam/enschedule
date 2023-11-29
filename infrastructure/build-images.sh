@@ -9,7 +9,7 @@ git_root=$(git rev-parse --show-toplevel)
 
 cd $git_root
 
-docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:latest
-docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:latest
+docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:latest --push
+docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:latest --push
 
 echo "Docker image build completed!"

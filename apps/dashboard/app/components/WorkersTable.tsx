@@ -89,7 +89,11 @@ const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor("lastReached", {
     cell: (info) => {
       const date = info.getValue();
-      return formatDate(new Date(date), false).label;
+      return (
+        <Typography suppressHydrationWarning variant="inherit" color="inherit">
+          {formatDate(new Date(date), false).label}
+        </Typography>
+      );
     },
     header: "Last reached",
     sortingFn: (a, b) => {

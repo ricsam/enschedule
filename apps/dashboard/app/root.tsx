@@ -2,7 +2,7 @@ import { Typography } from "@mui/material";
 import type {
   LinksFunction,
   LoaderFunction,
-  MetaFunction
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -11,8 +11,9 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration, useLoaderData,
-  useRouteError
+  ScrollRestoration,
+  useLoaderData,
+  useRouteError,
 } from "@remix-run/react";
 import styles from "~/style/global.css";
 import { MuiTheme } from "~/utils/MuiTheme";

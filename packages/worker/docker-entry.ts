@@ -3,13 +3,28 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import fs from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import { Worker } from "./api.js";
 
+if (!process.env.WORKER_ID) {
+  throw new Error("Missing WORKER_ID environment variable");
+}
+if (!process.env.WORKER_NAME) {
+  throw new Error("Missing WORKER_NAME environment variable");
+}
+
 const worker = new Worker({
-  workerId: 'worker-1',
-  name: 'worker-1',
+  workerId: process.env.WORKER_ID,
+  name: process.env.WORKER_NAME,
+  description: process.env.WORKER_DESCRIPTION,
 });
 worker.logJobs = true;
+const pollInterval = z
+  .number()
+  .int()
+  .positive()
+  .safeParse(process.env.POLL_INTERVAL);
+worker.tickDuration = pollInterval.success ? pollInterval.data : 10000;
 
 void (async () => {
   const defaultRegisterJob = path.join(

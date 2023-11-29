@@ -383,7 +383,7 @@ function createShortShaHash(input: string) {
 
 export class PrivateBackend {
   protected maxJobsPerTick = 4;
-  protected tickDuration = 5000;
+  public tickDuration = 5000;
   public logJobs = false;
   protected sequelize: Sequelize;
   protected Run: typeof Run;
@@ -1380,6 +1380,7 @@ export class PrivateBackend {
     const now = Date.now();
     setTimeout(() => {
       setInterval(() => {
+        log("Tick", String(new Date()));
         void this.tick();
       }, this.tickDuration);
     }, 1000 - (now - Math.floor(now / 1000) * 1000));

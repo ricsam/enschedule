@@ -86,6 +86,18 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Instance ID",
   }),
+  columnHelper.accessor("versionHash", {
+    cell: (info) => {
+      return info.getValue();
+    },
+    header: "Version hash",
+  }),
+  columnHelper.accessor("pollInterval", {
+    cell: (info) => {
+      return info.getValue();
+    },
+    header: "Poll interval (ms)",
+  }),
   columnHelper.accessor("lastReached", {
     cell: (info) => {
       const date = info.getValue();

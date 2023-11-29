@@ -23,7 +23,7 @@ const pollInterval = z
   .number()
   .int()
   .positive()
-  .safeParse(process.env.POLL_INTERVAL);
+  .safeParse(Number(process.env.POLL_INTERVAL));
 worker.tickDuration = pollInterval.success ? pollInterval.data : 10000;
 
 void (async () => {
@@ -44,7 +44,12 @@ void (async () => {
   if (process.env.REGISTER_JOBS_SCRIPT) {
     await require(process.env.REGISTER_JOBS_SCRIPT)();
   }
-  await worker.startPolling();
+
+  const ranJob = await worker.listenForIncomingRuns();
+  if (ranJob) {
+    return;
+  }
+
   if (process.env.ENSCHEDULE_API) {
     worker
       .serve({
@@ -53,4 +58,6 @@ void (async () => {
       })
       .listen();
   }
+
+  await worker.startPolling();
 })();

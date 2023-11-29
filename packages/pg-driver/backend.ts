@@ -53,6 +53,26 @@ import type { SeqConstructorOptions } from "./env-sequalize-options";
 import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
 
+function createWorkerHash(
+  title: string,
+  description: undefined | null | string,
+  pollInterval: number,
+  definitions: PublicJobDefinition[]
+) {
+  return createShortShaHash(
+    title +
+      (description || "") +
+      String(pollInterval) +
+      definitions
+        .slice(0)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((definition) => {
+          return definition.id + String(definition.version);
+        })
+        .join("")
+  );
+}
+
 const createPublicWorker = (dbWorker: Worker): PublicWorker => {
   const pollInterval = dbWorker.pollInterval;
   const currentTime = Date.now();
@@ -70,6 +90,12 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
   }
 
   return {
+    versionHash: createWorkerHash(
+      dbWorker.title,
+      dbWorker.description,
+      dbWorker.pollInterval,
+      dbWorker.definitions
+    ),
     createdAt: dbWorker.createdAt,
     definitions: dbWorker.definitions,
     description: dbWorker.description ?? undefined,
@@ -917,26 +943,6 @@ export class PrivateBackend {
       });
   }
 
-  private workerHash(
-    title: string,
-    description: undefined | null | string,
-    pollInterval: number,
-    definitions: PublicJobDefinition[]
-  ) {
-    return (
-      title +
-      (description || "") +
-      String(pollInterval) +
-      definitions
-        .slice(0)
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((definition) => {
-          return definition.id + String(definition.version);
-        })
-        .join("")
-    );
-  }
-
   public async registerWorker(attempt = 0): Promise<Worker> {
     try {
       return this.sequelize.transaction(async (transaction) => {
@@ -957,7 +963,7 @@ export class PrivateBackend {
         workers.forEach((worker) => {
           version = Math.max(worker.version, version);
           hashes.push(
-            this.workerHash(
+            createWorkerHash(
               worker.title,
               worker.description,
               worker.pollInterval,
@@ -966,7 +972,7 @@ export class PrivateBackend {
           );
         });
 
-        const thisWorkerHash = this.workerHash(
+        const thisWorkerHash = createWorkerHash(
           this.workerInstance.title,
           this.workerInstance.description,
           this.tickDuration,

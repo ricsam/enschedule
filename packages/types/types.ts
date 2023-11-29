@@ -116,6 +116,7 @@ export const PublicWorkerSchema = z.object({
   runs: z.array(serializedRunSchema),
   lastRun: serializedRunSchema.optional(),
   status: z.nativeEnum(WorkerStatus),
+  versionHash: z.string(),
 });
 export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
 //#endregion

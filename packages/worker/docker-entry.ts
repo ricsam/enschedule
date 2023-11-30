@@ -37,12 +37,13 @@ void (async () => {
   } catch (err) {
     // ignore
   }
+  let returns: unknown;
   if (fileExists) {
     console.log("Will load mounted job definitions", defaultRegisterJob);
-    await require(defaultRegisterJob)(worker);
+    returns = await require(defaultRegisterJob)(worker);
   }
   if (process.env.REGISTER_JOBS_SCRIPT) {
-    await require(process.env.REGISTER_JOBS_SCRIPT)(worker);
+    await require(process.env.REGISTER_JOBS_SCRIPT)(worker, returns);
   }
 
   const ranJob = await worker.listenForIncomingRuns();

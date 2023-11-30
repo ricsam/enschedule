@@ -42,7 +42,7 @@ void (async () => {
     await require(defaultRegisterJob)(worker);
   }
   if (process.env.REGISTER_JOBS_SCRIPT) {
-    await require(process.env.REGISTER_JOBS_SCRIPT)();
+    await require(process.env.REGISTER_JOBS_SCRIPT)(worker);
   }
 
   const ranJob = await worker.listenForIncomingRuns();

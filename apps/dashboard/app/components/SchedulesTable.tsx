@@ -77,7 +77,11 @@ const columns: ColumnDef<RowData, any>[] = [
     {
       cell: (info) => {
         return (
-          <Typography variant="inherit" data-testid="runAt">
+          <Typography
+            variant="inherit"
+            data-testid="runAt"
+            suppressHydrationWarning
+          >
             {info.getValue()}
           </Typography>
         );
@@ -102,7 +106,11 @@ const columns: ColumnDef<RowData, any>[] = [
           return "-";
         }
         const value = formatDate(new Date(info.getValue()), false);
-        return value.label;
+        return (
+          <Typography variant="inherit" suppressHydrationWarning>
+            {value.label}
+          </Typography>
+        );
       },
       header: "Last run",
       id: "last-run",

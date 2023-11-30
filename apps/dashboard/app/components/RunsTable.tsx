@@ -109,6 +109,12 @@ export default function RunsTable({
   return (
     <ExpandableTable
       id="RunsTable"
+      defaultSorting={[
+        {
+          id: "startedAt",
+          desc: true,
+        },
+      ]}
       rows={runs}
       title="Runs"
       columns={columns}

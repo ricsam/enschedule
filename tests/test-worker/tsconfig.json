@@ -1,7 +1,0 @@
-{
-  "extends": "tsconfig/library.json",
-  "compilerOptions": {
-    "outDir": "dist"
-  },
-  "include": ["worker.ts", "migrate.ts"]
-}

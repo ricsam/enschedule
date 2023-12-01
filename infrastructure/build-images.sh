@@ -18,7 +18,7 @@ if [ -n "$1" ]; then
   tag=$1
 fi
 
-docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:latest $tag $push_flag
-docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:latest $tag $push_flag
+docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:$tag $push_flag
+docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:$tag $push_flag
 
 echo "Docker image build completed!"

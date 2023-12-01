@@ -1,0 +1,194 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'add moreutils'
+        run: |
+          sudo apt-get install moreutils
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: ss
+        run: ss -l -p -n
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 8.7.0
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Start postgres for testing
+        run: docker compose up -d
+      - name: Wait for postgres to be up
+        run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
+      - name: Run unit tests
+        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+      - name: modify package jsons main fields
+        run: ./release-package.sh
+      - name: Build all packages
+        run: NODE_ENV=production pnpm run build
+      - name: corepack enable
+        run: corepack enable
+      - name: All playwright tests
+        run: pnpm run playwright test
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 1
+      - name: Build images
+        run: infrastructure/build-images.sh
+      - name: start minikube
+        uses: medyagh/setup-minikube@master
+      - name: Load images into minikube
+        run: |
+          minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:latest'
+          minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:latest'
+      - name: Get helm
+        uses: WyriHaximus/github-action-helm3@v3
+      - name: Lint chart
+        run: helm lint infrastructure/charts/enschedule
+      - name: Install chart
+        run: |
+          helm upgrade --install enschedule infrastructure/charts/enschedule \
+            --set worker.image.pullPolicy=Never \
+            --set dashboard.image.pullPolicy=Never \
+            --set dashboard.service.type=NodePort \
+            --set dashboard.service.port=3000
+      - name: Test service URLs
+        run: |
+          minikube service list
+          kubectl get pods
+          kubectl wait --for=condition=available --timeout=20m deployment/dashboard
+          kubectl wait --for=condition=available --timeout=20m deployment/database
+          kubectl wait --for=condition=available --timeout=20m deployment/worker
+          kubectl get pods
+          minikube service dashboard-service --url
+
+      - name: Playwright on helm
+        run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) pnpm run playwright test
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: helm-playwright-report
+          path: helm-playwright-report/
+          retention-days: 1
+
+      # DOCKER
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker Worker meta
+        id: workerMeta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/ricsam/enschedule-worker
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=raw,latest
+      - name: Build and push worker
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.workerMeta.outputs.tags }}
+          labels: ${{ steps.workerMeta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          target: worker
+      - name: Docker Dashboard meta
+        id: dashboardMeta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/ricsam/enschedule-dashboard
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=raw,latest
+      - name: Build and push dashboard
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.dashboardMeta.outputs.tags }}
+          labels: ${{ steps.dashboardMeta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          target: dashboard
+      # - name: helm login, package and push (requires a GITHUB_TOKEN with push to registry rights)
+      #   run: |
+      #     echo $GITHUB_TOKEN | helm registry login $OCI_REGISTRY/$GITHUB_USERNAME --username $GITHUB_USERNAME --password-stdin
+      #     cd infrastructure/charts/enschedule && helm package .
+      #     helm push $(ls | grep .tgz) oci://$OCI_REGISTRY/$GITHUB_USERNAME
+      #   env:
+      #     OCI_REGISTRY: ghcr.io
+      #     GITHUB_USERNAME: ${{ github.actor }}
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    # depending on default permission settings for your org (contents being read-only or read-write for workloads), you will have to add permissions
+    # see: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        # with:
+        #   charts_dir: infrastructure/charts
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_PACKAGES_WITH_INDEX: true
+          CR_RELEASE_NAME_TEMPLATE: "{{ .Version }}"
+          CR_PACKAGE_PATH: "infrastructure/charts"

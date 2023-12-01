@@ -10,11 +10,15 @@ git_root=$(git rev-parse --show-toplevel)
 cd $git_root
 
 push_flag=""
-if [ "$1" == "--push" ]; then
+if [ "$2" == "--push" ]; then
   push_flag="--push"
 fi
+tag="alpha"
+if [ -n "$1" ]; then
+  tag=$1
+fi
 
-docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:latest $push_flag
-docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:latest $push_flag
+docker build . --target worker --tag ghcr.io/ricsam/enschedule-worker:latest $tag $push_flag
+docker build . --target dashboard --tag ghcr.io/ricsam/enschedule-dashboard:latest $tag $push_flag
 
 echo "Docker image build completed!"

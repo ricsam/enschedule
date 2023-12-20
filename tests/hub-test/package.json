@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node index.ts"
+    "dev": "ts-node index.ts",
+    "build": "tsc",
+    "serve": "node dist/index.js"
   },
   "dependencies": {
     "@enschedule/hub": "workspace:*"

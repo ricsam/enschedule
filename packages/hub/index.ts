@@ -158,6 +158,7 @@ interface EnscheduleOptions {
   handlers?: JobDefinition[];
   logJobs?: boolean;
   retryStrategy?: () => number;
+  app?: Express;
 }
 
 export const createHandler = <T extends ZodType = ZodType>(
@@ -197,7 +198,7 @@ export const enschedule = async (
     worker = iWorker;
   }
 
-  const app = express();
+  const app = options.app || express();
 
   app.disable("x-powered-by");
 

@@ -1,6 +1,17 @@
 {
+  "version": 2,
   "installCommand": "NODE_ENV=development pnpm install --shamefully-hoist --force",
-  "buildCommand": "./release-package.js && NODE_ENV=production turbo build && mkdir -p api && cp tests/hub-test/dist/index.js api/index.js",
-  "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "buildCommand": "./release-package.js && NODE_ENV=production turbo build",
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "tests/hub-test/dist/index.js"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "tests/hub-test/dist/index.js"
+    }
+  ]
 }

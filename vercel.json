@@ -4,10 +4,5 @@
   "buildCommand": "./release-package.js && NODE_ENV=production turbo build",
   "outputDirectory": "tests/hub-test/dist",
   "framework": null,
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "tests/hub-test/dist/index.js"
-    }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "tests/hub-test/dist" }]
 }

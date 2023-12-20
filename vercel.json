@@ -4,12 +4,6 @@
   "buildCommand": "./release-package.js && NODE_ENV=production turbo build",
   "outputDirectory": "tests/hub-test/dist",
   "framework": null,
-  "builds": [
-    {
-      "src": "tests/hub-test/dist/index.js",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",

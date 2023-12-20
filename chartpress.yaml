@@ -9,10 +9,10 @@
 # https://github.com/jupyterhub/chartpress
 #
 charts:
-  - name: jupyterhub
+  - name: enschedule
     # Dev: imagePrefix can be useful to override if you want to trial something
     #      locally developed in a remote k8s cluster.
-    imagePrefix: quay.io/jupyterhub/k8s-
+    imagePrefix: ghcr.io/ricsam/enschedule-
     # baseVersion should be a -0.dev suffixed version, where the version should
     # be the next major, minor, or patch version depending on what we have
     # merged so far into the main branch. If for example we have merged a

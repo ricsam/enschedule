@@ -59,7 +59,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
       };
     }
     if (dialect.type === "sqlite") {
-      return options;
+      return { ...options, dialect: 'sqlite', storage: dialect.value };
     }
     const [dbUser, dbHost, dbPassword, dbDatabase, dbPort] = assertEnvs(
       "DB_USER",

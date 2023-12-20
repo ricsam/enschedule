@@ -300,6 +300,11 @@ export class Schedule extends Model<
   declare runNow: CreationOptional<boolean>;
   declare signature: string;
   declare createdAt: CreationOptional<Date>;
+  /**
+   * Just to select claimed schedules after sql update
+   */
+  declare claimId: CreationOptional<string>;
+
   declare title: string;
   declare description: string;
   /** job definition target, i.e. the definition that the schedule executes */
@@ -523,6 +528,10 @@ export class PrivateBackend {
         createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
+        },
+        claimId: {
+          type: DataTypes.STRING,
+          allowNull: true,
         },
         eventId: {
           type: DataTypes.STRING,
@@ -1056,6 +1065,7 @@ export class PrivateBackend {
       // `result` is whatever was returned from the transaction callback (the `user`, in this case)
     } catch (error) {
       if (attempt >= 3) {
+        console.log("Failed to register worker after 3 attempts");
         throw error;
       }
       await new Promise((resolve) => {
@@ -1255,10 +1265,12 @@ export class PrivateBackend {
     if (jobKeys.length === 0) {
       throw new Error("You have no registered jobs on this client");
     }
-    const overdueJobs = await Schedule.update(
+    const claimId = createShortShaHash(String(Math.random()));
+    await Schedule.update(
       {
         claimed: true,
         runNow: false,
+        claimId,
       },
       {
         limit: this.maxJobsPerTick,
@@ -1267,7 +1279,7 @@ export class PrivateBackend {
           [Op.and]: [
             {
               target: {
-                [Op.any]: jobKeys,
+                [Op.in]: jobKeys,
               },
               claimed: {
                 [Op.eq]: false,
@@ -1306,7 +1318,8 @@ export class PrivateBackend {
         },
       }
     );
-    return { overdueJobs };
+
+    return Schedule.findAll({ where: { claimId } });
   }
 
   protected definedJobs: Record<
@@ -1753,8 +1766,8 @@ export class PrivateBackend {
 
   protected async runOverdueJobs() {
     const claimed = await this.claimUnclaimedOverdueJobs();
-    const numJobs = claimed.overdueJobs[0];
-    const overdueJobs = claimed.overdueJobs[1];
+    const numJobs = claimed.length;
+    const overdueJobs = claimed;
     if (numJobs > 0) {
       log(
         `Claimed ${numJobs} jobs that run in the following definition(schedule):`,
@@ -1768,56 +1781,59 @@ export class PrivateBackend {
           .join(", ")
       );
     }
-    await Promise.all(
-      overdueJobs.map(async (schedule) => {
-        const run = await this.scheduleSingleRun(schedule);
-        const noMaxRetries = schedule.maxRetries === -1;
 
-        const shouldRetry =
-          noMaxRetries || schedule.retries < schedule.maxRetries - 1;
+    // We are not using parallel because sqlite can not handle parallel transactions
+    // (which are used in this.scheduleSingleRun() -> this.registerWorker())
+    // so no Promise.all, but a for loop instead
+    // await Promise.all(overdueJobs.map(async (schedule) => {}));
+    /* eslint-disable no-await-in-loop */
+    for (const schedule of overdueJobs) {
+      const run = await this.scheduleSingleRun(schedule);
+      const noMaxRetries = schedule.maxRetries === -1;
 
-        if (schedule.retryFailedJobs === true) {
-          if (run.exitSignal !== "0") {
-            if (shouldRetry) {
-              const nextRun = this.retryStrategy(
-                createPublicJobSchedule(
-                  schedule,
-                  createPublicJobDefinition(
-                    this.getJobDef(schedule.target, schedule.handlerVersion)
-                  )
+      const shouldRetry =
+        noMaxRetries || schedule.retries < schedule.maxRetries - 1;
+
+      if (schedule.retryFailedJobs === true) {
+        if (run.exitSignal !== "0") {
+          if (shouldRetry) {
+            const nextRun = this.retryStrategy(
+              createPublicJobSchedule(
+                schedule,
+                createPublicJobDefinition(
+                  this.getJobDef(schedule.target, schedule.handlerVersion)
                 )
-              );
-              schedule.runAt = new Date(Date.now() + nextRun);
-              schedule.claimed = false;
-              schedule.retries += 1;
-              await schedule.save();
-              return;
-            }
-            const trigger = await schedule.getFailureTrigger();
-            if (trigger) {
-              await this.runScheduleNow(trigger.id);
-            }
+              )
+            );
+            schedule.runAt = new Date(Date.now() + nextRun);
+            schedule.claimed = false;
+            schedule.retries += 1;
+            await schedule.save();
+            return;
+          }
+          const trigger = await schedule.getFailureTrigger();
+          if (trigger) {
+            await this.runScheduleNow(trigger.id);
           }
         }
-        if (schedule.cronExpression) {
-          const runAt = parseExpression(schedule.cronExpression)
-            .next()
-            .toDate();
-          schedule.runAt = runAt;
-          schedule.claimed = false;
+      }
+      if (schedule.cronExpression) {
+        const runAt = parseExpression(schedule.cronExpression).next().toDate();
+        schedule.runAt = runAt;
+        schedule.claimed = false;
+      }
+      if (schedule.retryFailedJobs === true) {
+        if (run.exitSignal === "0") {
+          // success reset the retries:
+          schedule.retries = -1;
+        } else if (schedule.retries >= schedule.maxRetries - 1) {
+          // we will not retry anymore
+          schedule.retries = schedule.maxRetries;
         }
-        if (schedule.retryFailedJobs === true) {
-          if (run.exitSignal === "0") {
-            // success reset the retries:
-            schedule.retries = -1;
-          } else if (schedule.retries >= schedule.maxRetries - 1) {
-            // we will not retry anymore
-            schedule.retries = schedule.maxRetries;
-          }
-        }
-        await schedule.save();
-      })
-    );
+      }
+      await schedule.save();
+    }
+    /* eslint-enable no-await-in-loop */
     return claimed;
   }
   public async deleteSchedules(scheduleIds: number[]) {

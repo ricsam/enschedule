@@ -32,7 +32,7 @@ export const useBreadcrumbs = (
 };
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  return json(await getLoaderData(params, getWorker(context.worker)));
+  return json(await getLoaderData(params, await getWorker(context.worker)));
 };
 
 function useData() {

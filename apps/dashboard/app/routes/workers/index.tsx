@@ -30,7 +30,7 @@ export async function getLoaderData(
 }
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  const worker = getWorker(context.worker);
+  const worker = await getWorker(context.worker);
   return json<LoaderData>(await getLoaderData(params, worker));
 };
 

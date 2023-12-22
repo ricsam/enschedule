@@ -28,7 +28,7 @@ export const action: ActionFunction = async ({ request, context }) => {
     .union([z.literal("reset-enschedule"), z.literal("placeholder")])
     .parse(fd.get("action"));
   if (action === "reset-enschedule") {
-    await getWorker(context.worker).reset();
+    await (await getWorker(context.worker)).reset();
   }
   return json({ success: true });
 };

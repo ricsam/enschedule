@@ -17,7 +17,9 @@ export const loader: LoaderFunction = async ({ request, context }) => {
   // const url = new URL(request.url);
   // const params = url.searchParams;
 
-  const runs: PublicJobRun[] = await getWorker(context.worker).getRuns({});
+  const runs: PublicJobRun[] = await (
+    await getWorker(context.worker)
+  ).getRuns({});
   return json({ runs });
 };
 

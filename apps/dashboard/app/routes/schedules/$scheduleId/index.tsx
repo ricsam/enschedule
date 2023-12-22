@@ -31,7 +31,7 @@ export const getLoaderData = async (
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  const loaderData = await getLoaderData(params, getWorker(context.worker));
+  const loaderData = await getLoaderData(params, await getWorker(context.worker));
   return json(loaderData);
 };
 

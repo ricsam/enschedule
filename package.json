@@ -6,8 +6,7 @@
     "lint": "CI=true NODE_ENV=production turbo run lint",
     "typecheck": "turbo run typecheck",
     "playwright": "playwright",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "vercel-build": "./release-package.js && NODE_ENV=production turbo build"
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
     "@playwright/test": "^1.38.1",

@@ -38,6 +38,12 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
     storage: process.env.SQLITE_STORAGE,
   };
 
+  console.log({
+    sqlite3: require.resolve("sqlite3"),
+    pwd: process.cwd(),
+    nm: require.resolve("sequelize"),
+  });
+
   if (process.env.SEQUALIZE_DIALECT_MODULE_PATH) {
     options.dialectModulePath = process.env.SEQUALIZE_DIALECT_MODULE_PATH;
   }

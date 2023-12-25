@@ -38,6 +38,10 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
     storage: process.env.SQLITE_STORAGE,
   };
 
+  if (process.env.SEQUALIZE_DIALECT_MODULE_PATH) {
+    options.dialectModulePath = process.env.SEQUALIZE_DIALECT_MODULE_PATH;
+  }
+
   let dialect: { value: string; type: Dialect } | undefined;
 
   for (const dialectType of dialects) {
@@ -59,7 +63,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
       };
     }
     if (dialect.type === "sqlite") {
-      return { ...options, dialect: 'sqlite', storage: dialect.value };
+      return { ...options, dialect: "sqlite", storage: dialect.value };
     }
     const [dbUser, dbHost, dbPassword, dbDatabase, dbPort] = assertEnvs(
       "DB_USER",

@@ -1,4 +1,5 @@
 import { Worker } from "@enschedule/worker";
+import path from "path";
 
 export const inlineWorker = async () => {
   const worker = new Worker({
@@ -8,9 +9,16 @@ export const inlineWorker = async () => {
   });
   worker.logJobs = true;
   worker.retryStrategy = () => 5000;
-  if (process.env.DASHBOARD_INTEGRATED_WORKER_REGISTER_JOBS_SCRIPT) {
-    await require(process.env.DASHBOARD_INTEGRATED_WORKER_REGISTER_JOBS_SCRIPT)(worker);
+  const handlersEnv =
+    process.env.DASHBOARD_INTEGRATED_WORKER_REGISTER_JOBS_SCRIPT;
+  if (handlersEnv) {
+    let handlerPath = handlersEnv;
+    if (!handlersEnv.startsWith("/")) {
+      handlerPath = path.join(process.cwd(), handlersEnv);
+    }
+    await require(handlerPath)(worker);
   }
+  await worker.startPolling();
   return worker;
 };
 

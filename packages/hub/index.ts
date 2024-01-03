@@ -146,6 +146,9 @@ interface EnscheduleOptions {
   worker:
     | {
         type: "inline";
+      }
+    | {
+        type: "file";
         filename: string;
       }
     | {
@@ -177,8 +180,12 @@ export const enschedule = async (
   } else {
     const iWorker = new PrivateBackend({
       name: "Dashboard integrated worker",
-      workerId: 'dashboard-integrated-worker',
-      forkArgv: [options.worker.filename, "__enschedule_worker_launch__"],
+      workerId: "dashboard-integrated-worker",
+      forkArgv:
+        options.worker.type === "file"
+          ? [options.worker.filename, "__enschedule_worker_launch__"]
+          : undefined,
+      inlineWorker: options.worker.type === "inline",
     });
     iWorker.logJobs = true;
     iWorker.retryStrategy = () => 5000;

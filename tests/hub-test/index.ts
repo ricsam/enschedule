@@ -16,7 +16,6 @@ module.exports = vercelApp;
     retryStrategy: () => 5000,
     worker: {
       type: "inline",
-      filename: __filename,
     },
     handlers: [
       createHandler({

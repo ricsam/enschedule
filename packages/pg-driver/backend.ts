@@ -394,6 +394,7 @@ export interface BackendOptions {
   workerId: string;
   name: string;
   description?: string;
+  inlineWorker?: boolean;
 }
 
 interface WorkerInstance {
@@ -421,6 +422,7 @@ export class PrivateBackend {
   protected Worker: typeof Worker;
   private forkArgv: string[] | undefined;
   protected workerInstance: WorkerInstance;
+  protected inlineWorker: boolean;
 
   constructor(backendOptions: BackendOptions) {
     const {
@@ -429,7 +431,11 @@ export class PrivateBackend {
       workerId,
       name,
       description,
+      inlineWorker,
     } = backendOptions;
+
+    this.inlineWorker = Boolean(inlineWorker);
+
     this.workerInstance = {
       workerId,
       title: name,
@@ -1599,6 +1605,26 @@ export class PrivateBackend {
     runMessage: RunHandlerInCp,
     { stdout, stderr, toggleBuffering }: StreamHandle
   ) {
+    if (this.inlineWorker) {
+      const definition = this.getJobDef(
+        runMessage.definitionId,
+        runMessage.version
+      );
+      const origConsole = console;
+      global.console = this.createConsole(stdout, stderr);
+      global.console.Console = console.Console;
+      let exitSignal = "0";
+      toggleBuffering(true);
+      try {
+        await definition.job(runMessage.data);
+      } catch (err) {
+        console.error(err);
+        exitSignal = "1";
+      }
+      toggleBuffering(false);
+      global.console = origConsole;
+      return exitSignal;
+    }
     return new Promise<string>((resolve, reject) => {
       const argv = this.forkArgv ?? process.argv.slice(1);
       log("Launching", ...process.execArgv, argv[0], ...argv.slice(1));
@@ -1634,10 +1660,10 @@ export class PrivateBackend {
         if (msg === "done") {
           toggleBuffering(false);
           child.send("done", (err) => {
-            log(
-              'There was an error when sending the "done" signal to the child process'
-            );
             if (err) {
+              log(
+                'There was an error when sending the "done" signal to the child process'
+              );
               log(err);
             }
           });

@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`can have two instances pg backends should log errors 1`] = `
+"Error: Error
+    at Object.<anonymous> (backend.test.ts)
+"
+`;
+
+exports[`can have two instances sqlite backends should log errors 1`] = `
+"Error: Error
+    at Object.<anonymous> (backend.test.ts)
+"
+`;

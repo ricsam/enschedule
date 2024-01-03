@@ -19,6 +19,7 @@ const pgBackend = () => {
     name: "test worker",
     workerId: "test-worker",
     database: { ...envSequalizeOptions(), logging: false },
+    inlineWorker: true,
   });
   sequalizeInstances.push(backend);
   return backend;
@@ -28,6 +29,7 @@ const sqliteBackend = () => {
     name: "test worker",
     workerId: "test-worker",
     database: { dialect: "sqlite", storage: ":memory:", logging: false },
+    inlineWorker: true,
   });
   sequalizeInstances.push(backend);
   return backend;
@@ -49,35 +51,6 @@ const httpJobDeclaration = (
       url: "wef",
     },
   });
-
-const patchBackend = (backend: TestBackend) => {
-  backend.fork = async function (
-    runMessage: RunHandlerInCp,
-    streamHandle: StreamHandle
-  ) {
-    const definition = backend.getJobDef(
-      runMessage.definitionId,
-      runMessage.version
-    );
-    const origConsole = console;
-    global.console = backend.createConsole(
-      streamHandle.stdout,
-      streamHandle.stderr
-    );
-    global.console.Console = Console;
-    let exitSignal = "0";
-    streamHandle.toggleBuffering(true);
-    try {
-      await definition.job(runMessage.data);
-    } catch (err) {
-      console.error(err);
-      exitSignal = "1";
-    }
-    streamHandle.toggleBuffering(false);
-    global.console = origConsole;
-    return exitSignal;
-  }.bind(backend);
-};
 
 const startInstance = async (backend: TestBackend) => {
   try {
@@ -119,7 +92,6 @@ const registerTests = (cb: (getBackend: () => TestBackend) => void) => {
           jest.useFakeTimers().setSystemTime(0);
           backend = instanciateDialect();
           await startInstance(backend);
-          patchBackend(backend);
         });
         afterEach(async () => {
           await closeInstance(backend);
@@ -357,11 +329,7 @@ registerTests((getBackend: () => TestBackend) => {
           .split("\n")
           .slice(0, 3)
           .join("\n")
-      ).toMatchInlineSnapshot(`
-    "Error: Error
-        at Object.<anonymous> (backend.test.ts)
-        at TestBackend.<anonymous> (backend.test.ts)"
-  `);
+      ).toMatchSnapshot();
     });
 
     it("should create a signature", () => {

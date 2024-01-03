@@ -61,14 +61,16 @@ export const action: ActionFunction = async ({ request, context }) => {
   const jsonString = z.string().parse(body.get("jsonData"));
 
   const jsonValue = JSON.parse(jsonString);
-  
+
   const serializedEv = SerializedJobEventSchema.parse(jsonValue);
 
   const data = JSON.parse(serializedEv.data);
   const target = serializedEv.target;
   const handlerVersion = serializedEv.handlerVersion;
 
-  const response = await getWorker(context.worker).scheduleJob(
+  const response = await (
+    await getWorker(context.worker)
+  ).scheduleJob(
     target,
     handlerVersion,
     data,

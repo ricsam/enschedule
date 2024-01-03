@@ -42,7 +42,9 @@ export const editDetailsAction: ActionFunction = async ({
   context,
 }) => {
   const scheduleId = getScheduleId(params);
-  const schedule = await getWorker(context.worker).getSchedule(scheduleId);
+  const schedule = await (
+    await getWorker(context.worker)
+  ).getSchedule(scheduleId);
   if (!schedule) {
     throw new Error("Invalid scheduleId");
   }
@@ -102,7 +104,9 @@ export const editDetailsAction: ActionFunction = async ({
     }
   }
   if (updated) {
-    await getWorker(context.worker).updateSchedule(scheduleUpdatePayload);
+    await (
+      await getWorker(context.worker)
+    ).updateSchedule(scheduleUpdatePayload);
   }
   return redirect(getParentUrl(request.url));
 };
@@ -676,10 +680,10 @@ export const action: ActionFunction = async (arg) => {
   const id = getScheduleId(params);
   if (action === "run") {
     const redirectTo = z.string().parse(fd.get("redirect"));
-    await getWorker(context.worker).runScheduleNow(id);
+    await (await getWorker(context.worker)).runScheduleNow(id);
     return redirect(redirectTo);
   } else {
-    await getWorker(context.worker).deleteSchedule(id);
+    await (await getWorker(context.worker)).deleteSchedule(id);
     return redirect(getParentUrl(request.url));
   }
 };

@@ -245,11 +245,11 @@ export const action: ActionFunction = async ({ request, context }) => {
     .parse(fd.get("action"));
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
   if (action === "run") {
-    await getWorker(context.worker).runSchedulesNow(selected);
+    await (await getWorker(context.worker)).runSchedulesNow(selected);
   } else if (action === "delete") {
-    await getWorker(context.worker).deleteSchedules(selected);
+    await (await getWorker(context.worker)).deleteSchedules(selected);
   } else if (action === "unschedule") {
-    await getWorker(context.worker).unschedule(selected);
+    await (await getWorker(context.worker)).unschedule(selected);
   }
   return json({ success: true });
 };

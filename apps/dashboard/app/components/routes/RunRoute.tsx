@@ -21,7 +21,7 @@ export const action: ActionFunction = async ({ request, context }) => {
     .int()
     .positive()
     .parse(Number(fd.get("id")));
-  await getWorker(context.worker).deleteRun(id);
+  await (await getWorker(context.worker)).deleteRun(id);
   return redirect(url);
 };
 

@@ -136,7 +136,9 @@ export const action: ActionFunction = async ({ request, context }) => {
   const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
 
   if (action === "delete") {
-    const deletedIds = await getWorker(context.worker).deleteRuns(selected);
+    const deletedIds = await (
+      await getWorker(context.worker)
+    ).deleteRuns(selected);
     return json(deletedIds);
   }
   return json({

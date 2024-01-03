@@ -1691,6 +1691,7 @@ export class PrivateBackend {
             .finally(() => {
               log("job fn done");
               resolve(true);
+              process.exit(0);
             });
         });
         log("Child process is ready");

@@ -1,15 +1,9 @@
 import "dotenv/config";
 import { createHandler, enschedule } from "@enschedule/hub";
 import { z } from "zod";
-import express from "express";
-
-const vercelApp = express();
-
-module.exports = vercelApp;
 
 (async () => {
   const app = await enschedule({
-    app: vercelApp,
     api: true,
     dashboard: true,
     logJobs: true,

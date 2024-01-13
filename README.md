@@ -16,7 +16,7 @@ docker container run -it --rm \
 Test [here](https://enschedule-demo.onrender.com/) (the server has a cold startup time of about 1-2 minutes)
 
 ## Overview
-Enschedule is structured for straightforward task automation and scheduling. It integrates a UI dashboard with a backend database, facilitating task management and scheduling. The architecture is centered around three core elements: workers, handlers, and scheduling mechanisms. Workers connect the system logic with the database, while handlers, defined within workers, javascript functions. Schedules can be created via the UI or programmatically, triggering handler functions based on cron jobs or scheduled jobs. This structure is designed to offer a flexible and direct way to handle task automation.
+Enschedule is structured for straightforward task automation and scheduling. It integrates a UI dashboard with a backend database, facilitating task management and scheduling. The architecture is centered around three core elements: workers, handlers, and scheduling mechanisms. Workers connect the system logic with the database, while handlers, defined within workers, execute specific javascript functions. Schedules can be created via the UI or programmatically, triggering handler functions based on cron jobs or scheduled jobs. This structure is designed to offer a flexible and direct way to handle task automation.
 
 ### Key Components:
 1. **Workers and Handlers:** 

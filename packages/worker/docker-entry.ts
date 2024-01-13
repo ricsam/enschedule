@@ -37,11 +37,20 @@ void (async () => {
   } catch (err) {
     // ignore
   }
-  let returns: unknown;
+  const returns: Record<string, unknown> = {};
   if (fileExists) {
     console.log("Will load mounted job definitions", defaultRegisterJob);
-    returns = await require(defaultRegisterJob)(worker);
+    returns.default = await require(defaultRegisterJob)(worker);
   }
+
+  if (process.env.IMPORT_HANDLERS) {
+    const imports = process.env.IMPORT_HANDLERS.split(",");
+    for (const imp of imports) {
+      // eslint-disable-next-line no-await-in-loop
+      returns[imp] = await require(imp)(worker);
+    }
+  }
+
   if (process.env.REGISTER_JOBS_SCRIPT) {
     await require(process.env.REGISTER_JOBS_SCRIPT)(worker, returns);
   }

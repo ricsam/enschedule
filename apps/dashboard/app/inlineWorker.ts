@@ -18,6 +18,12 @@ export const inlineWorker = async () => {
     }
     await require(handlerPath)(worker);
   }
+  if (process.env.IMPORT_HANDLERS) {
+    const imports = process.env.IMPORT_HANDLERS.split(",");
+    for (const imp of imports) {
+      await require(imp)(worker);
+    }
+  }
   await worker.startPolling();
   return worker;
 };

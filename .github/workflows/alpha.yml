@@ -61,6 +61,39 @@ jobs:
           retention-days: 1
       - name: Build images
         run: infrastructure/build-images.sh alpha
+
+      - name: Test docker images, run images
+        run: |
+          docker network create enschedule_docker_test
+
+          docker container run -itd --rm \
+            --name simple-http-server \
+            --network enschedule_docker_test \
+            -p 3000:3000 node:alpine \
+            /bin/sh -c "echo \"const http = require('http'); const server = http.createServer((req, res) => { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(JSON.stringify({ message: 'Hello World' })); }); server.listen(3000, () => console.log('Server running on port 3000'));\" > server.js && node server.js"
+
+          docker container run -itd --rm \
+            --name enschedule-dashboard \
+            --network enschedule_docker_test \
+            -e SQLITE=":memory:" \
+            -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \
+            -p 3333:3000 \
+            ghcr.io/ricsam/enschedule-dashboard:alpha
+
+      - name: Wait for service to be up
+        run: |
+          until [ "$(curl -s http://localhost:3333/healthz | jq -r '.message')" == "Endpoint is healthy" ]; do echo "Waiting for the dashboard endpoint to become healthy..."; sleep 1; done
+          until [ "$(curl -s http://localhost:3000 | jq -r '.message')" == "Hello World" ]; do echo "Waiting for the test endpoint to become healthy..."; sleep 1; done
+
+      - name: Test docker images, playwright
+        run: TEST_HELM=true DASHBOARD_URL=http://localhost:3333 pnpm run playwright test
+      
+      - name: Test docker images, stop container
+        run: |
+          docker container stop enschedule-dashboard
+          docker container stop simple-http-server
+          docker network remove enschedule_docker_test
+
       - name: start minikube
         uses: medyagh/setup-minikube@master
       - name: Load images into minikube

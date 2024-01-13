@@ -49,6 +49,10 @@ const createRun = async (
     maxRetry?: number;
     trigger?: boolean;
     manual?: boolean;
+    data?: {
+      globalEditorRefName: string;
+      data: unknown
+    };
   } = {}
 ) => {
   await page.goto(`${baseUrl()}/run`);
@@ -60,6 +64,13 @@ const createRun = async (
     await page.keyboard.press("ArrowDown"); // Press the arrow down key
   }
   await page.keyboard.press("Enter"); // Press the enter key
+
+  if (options.data) {
+    const ref = `window['${options.data.globalEditorRefName}']`;
+    await page.waitForFunction(`!!${ref}`);
+    await page.evaluate(`${ref}.setValue(\`${options.data.data}\`)`);
+  }
+
   await page.getByTestId("SendIcon").click();
 
   if (!options?.runTomorrow) {

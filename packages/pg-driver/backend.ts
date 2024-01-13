@@ -1004,6 +1004,7 @@ export class PrivateBackend {
   }
 
   public async registerWorker(attempt = 0): Promise<Worker> {
+    log(`Registering this worker (attempt: ${attempt}`);
     try {
       return this.sequelize.transaction(async (transaction) => {
         // As a user I have 3 server running.
@@ -1437,13 +1438,20 @@ export class PrivateBackend {
   }
 
   public async startPolling(
-    settings: { dontMigrate: boolean } = {
+    {
+      dontRegisterWorker = false,
+      dontMigrate = false,
+    }: { dontMigrate?: boolean; dontRegisterWorker?: boolean } = {
       dontMigrate: false,
+      dontRegisterWorker: false,
     }
   ) {
-    if (!settings.dontMigrate) {
+    if (!dontMigrate) {
       log("Migrating the database");
       await this.sequelize.sync();
+    }
+    if (!dontRegisterWorker) {
+      await this.registerWorker();
     }
     log("Polling the database for jobs");
     const now = Date.now();

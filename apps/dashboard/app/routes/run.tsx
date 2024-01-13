@@ -976,6 +976,7 @@ the last Wednesday of the month:
               }}
             >
               <Editor
+                globalEditorRefName="schedule-data-editor"
                 jsonSchema={selectedDef.jsonSchema}
                 example={selectedDef.example}
                 getValueRef={dataValueRef}

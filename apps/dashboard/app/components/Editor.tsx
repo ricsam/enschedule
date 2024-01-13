@@ -13,12 +13,14 @@ export function Editor({
   getValueRef,
   setIsValid,
   height,
+  globalEditorRefName,
 }: {
   jsonSchema: Record<string, unknown>;
   example: unknown;
   getValueRef: React.MutableRefObject<undefined | (() => string)>;
   setIsValid: (valid: boolean) => void;
   height?: number;
+  globalEditorRefName?: string;
 }) {
   const editorRef = React.useRef<
     ReturnType<Monaco["editor"]["create"]> | undefined
@@ -54,6 +56,9 @@ export function Editor({
       beforeMount={handleEditorWillMount}
       onMount={(editor, monaco) => {
         editorRef.current = editor;
+        if (globalEditorRefName) {
+          (window as any)[globalEditorRefName] = editor;
+        }
       }}
       loading={<EditorLoading />}
       onChange={(value) => {

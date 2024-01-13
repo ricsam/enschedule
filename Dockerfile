@@ -19,7 +19,14 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 # INSTALL BASE
 FROM base as install-base
 COPY . .
-RUN turbo prune --scope="@enschedule/worker" --scope="@enschedule/dashboard" --docker
+RUN ./release-package.sh
+RUN turbo prune \
+  --scope="@enschedule/worker" \
+  --scope="@enschedule/dashboard" \
+  --scope="@enschedule/log-handler" \
+  --scope="@enschedule/fetch-handler" \
+  --docker
+
 RUN rm -rf /app/out/**/node_modules
 
 FROM base AS prod-deps
@@ -51,18 +58,23 @@ RUN rm -rf /app/packages/worker/node_modules
 COPY --from=prod-deps /app/packages/worker/node_modules/ /app/packages/worker/node_modules
 COPY --from=build /app/packages/worker/dist /app/packages/worker/dist
 
+# Install handlers
+## fetch-handler
+RUN rm -rf /app/handlers/fetch-handler/node_modules
+COPY --from=prod-deps /app/handlers/fetch-handler/node_modules/ /app/handlers/fetch-handler/node_modules
+## log-handler
+RUN rm -rf /app/handlers/log-handler/node_modules
+COPY --from=prod-deps /app/handlers/log-handler/node_modules/ /app/handlers/log-handler/node_modules
+
 # Root node_modules
 COPY --from=prod-deps /app/node_modules/ /app/node_modules
-
-# Modify the JSON files in a loop
-RUN for pkg in pg-driver types worker; do \
-        jq '.main = "./dist/index.js" | .types = "./dist/index.d.ts"' /app/packages/$pkg/package.json | sponge /app/packages/$pkg/package.json; \
-    done
 
 # Create the folder where the user can mount job definitions
 RUN mkdir /app/packages/worker/definitions
 
 WORKDIR /app/packages/worker
+
+RUN cp -r /app/handlers/* ./node_modules/@enschedule/
 
 RUN echo "API_HOSTNAME=0.0.0.0 node dist/docker-entry.js" > docker-entry.sh && \
     chmod +x docker-entry.sh
@@ -88,14 +100,20 @@ COPY --from=prod-deps /app/apps/dashboard/node_modules/ /app/apps/dashboard/node
 COPY --from=build /app/apps/dashboard/build /app/apps/dashboard/build
 COPY --from=build /app/apps/dashboard/public/build /app/apps/dashboard/public/build
 
+# Install handlers
+## fetch-handler
+RUN rm -rf /app/handlers/fetch-handler/node_modules
+COPY --from=prod-deps /app/handlers/fetch-handler/node_modules/ /app/handlers/fetch-handler/node_modules
+## log-handler
+RUN rm -rf /app/handlers/log-handler/node_modules
+COPY --from=prod-deps /app/handlers/log-handler/node_modules/ /app/handlers/log-handler/node_modules
+
 # Root node_modules
 COPY --from=prod-deps /app/node_modules/ /app/node_modules
 
-RUN for pkg in worker-api types; do \
-        jq '.main = "./dist/index.js" | .types = "./dist/index.d.ts"' /app/packages/$pkg/package.json | sponge /app/packages/$pkg/package.json; \
-    done
-
 WORKDIR /app/apps/dashboard
+
+RUN cp -r /app/handlers/* ./node_modules/@enschedule/
 
 RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
     chmod +x docker-entry.sh

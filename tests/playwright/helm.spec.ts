@@ -16,22 +16,37 @@ test.describe("Single-Run", () => {
   test("Should create new runs via chatbot", async ({ page }) => {
     await reset(page);
 
-    // create 4 runs + 4 schedules
-    for (let i = 1; i < 5; i += 1) {
-      await createRun(page, i);
+    // create 2 runs + 2 schedules
+    const defs = [
+      {
+        definitionNumber: 1,
+        data: {
+          globalEditorRefName: "schedule-data-editor",
+          data: `{"url": "http://simple-http-server:3000"}`,
+        },
+      },
+      {
+        definitionNumber: 2,
+      },
+    ];
+    for (let i = 0; i < defs.length; i += 1) {
+      const def = defs[i];
+      await createRun(page, def.definitionNumber, {
+        data: def.data ? def.data : undefined,
+      });
     }
 
     await page.goto(`${baseURL}/runs`);
-    await waitForNumRows(page, 4);
+    await waitForNumRows(page, 2);
 
     // There should be 4 runs / schedules in the tables
     await page.goto(`${baseURL}/runs`);
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-    expect(await numRows(page)).toBe(4);
+    expect(await numRows(page)).toBe(2);
 
     await page.goto(`${baseURL}/schedules`);
     expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
-    expect(await numRows(page)).toBe(4);
+    expect(await numRows(page)).toBe(2);
   });
   test("Visit all pages that render a run, and then delete all runs", async ({
     page,
@@ -40,24 +55,22 @@ test.describe("Single-Run", () => {
     // /runs/$runId
     // /schedules/$scheduleId/runs/$runId
     // /definitions/$definitionId/schedules/$scheduleId/runs/$runId
-    for (let i = 0; i < 3; i += 1) {
-      const runPageVisit = await visitRunPages(page);
+    const runPageVisit = await visitRunPages(page);
 
-      await page.goto(runPageVisit.runsTableUrls[0]); // /runs
-      expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-      expect(await numRows(page)).toBe(4 - i);
+    await page.goto(runPageVisit.runsTableUrls[0]); // /runs
+    expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(2);
 
-      await page.goto(runPageVisit.runsTableUrls[1]); // /schedules/$scheduleId/runs
-      expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-      expect(await numRows(page)).toBe(1);
+    await page.goto(runPageVisit.runsTableUrls[1]); // /schedules/$scheduleId/runs
+    expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(1);
 
-      await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$definitionId/schedules/$scheduleId/runs
-      expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
-      expect(await numRows(page)).toBe(1);
+    await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$definitionId/schedules/$scheduleId/runs
+    expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
+    expect(await numRows(page)).toBe(1);
 
-      await page.goto(runPageVisit.runPageUrls[i]);
-      await page.getByTestId("delete-run").click();
-      expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
-    }
+    await page.goto(runPageVisit.runPageUrls[0]);
+    await page.getByTestId("delete-run").click();
+    expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
   });
 });

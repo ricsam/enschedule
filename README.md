@@ -109,9 +109,11 @@ const app = await enschedule({
   logJobs: true, // log the output from the handlers to stdout / stderr
   retryStrategy: () => 5000, // if a job should retry, it will retry after 5 seconds
   worker: {
+    // the worker will run in the same process as the dashboard, see worker types
     type: "inline",
   },
   handlers: [
+    // define handler functions
     createHandler({
       id: "log-job",
       version: 1,
@@ -129,6 +131,9 @@ const app = await enschedule({
     }),
   ],
 });
+// The returned app is an express app.
+// When the worker claims a job and will execute a handler it must execute this file again
+// to get the handler. In that scenario you don't want to run the http server from this file and app will be undefined.
 if (app) {
   const PORT = process.env.PORT ?? 3000;
   app.listen(PORT, () => {
@@ -138,10 +143,26 @@ if (app) {
 }
 ```
 
-#### Configuring Workers:
+#### Worker types
 - **Inline Worker:** You can configure the worker to run inline, executing on the same thread as the dashboard Node.js process. While this is straightforward, it captures stdout/stderr by overriding the global `console.log` and `console.error` functions, which may be less optimal.
 - **File-based Worker:** Alternatively, setting the worker type to 'file' runs the specified file in a child process. This method offers improved stdout/stderr capture, as it's the child process that runs the worker.
 - **External Worker:** For an external worker, set the worker type to 'external' and provide a URL pointing to a worker running the worker REST API.
+
+```ts
+type WorkerConfig = 
+  | {
+      type: "inline";
+    }
+  | {
+      type: "file";
+      filename: string;
+    }
+  | {
+      type: "external";
+      url: string;
+      apiKey: string;
+    };
+```
 
 ### Standalone Worker Deployment:
 Workers can also run independently, either by using the `@enschedule/hub` or the `@enschedule/worker` package. Additionally, workers can be deployed using the Docker image `ghcr.io/ricsam/enschedule-worker`.

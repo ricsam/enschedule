@@ -81,7 +81,8 @@ import { z } from "zod";
   if (app) {
     const PORT = process.env.PORT ?? 3000;
     app.listen(PORT, () => {
-      console.log(`Listening on http://localhost:${PORT}`);
+      console.log(`Dashboard: http://localhost:${PORT}`);
+      console.log(`Worker REST API: http://localhost:${PORT}/api/v1`);
     });
   }
 })()

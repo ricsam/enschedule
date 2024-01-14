@@ -35,7 +35,6 @@ const dialects: Dialect[] = [
 export const envSequalizeOptions = (): SeqConstructorOptions => {
   const options: SeqConstructorOptions = {
     logging: Boolean(process.env.ORM_LOGGING),
-    storage: process.env.SQLITE_STORAGE,
   };
 
   if (process.env.SEQUALIZE_DIALECT_MODULE_PATH) {

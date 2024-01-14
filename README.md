@@ -37,39 +37,106 @@ Enschedule is structured for straightforward task automation and scheduling. It 
 
 In the quick start we are running the `ghcr.io/ricsam/enschedule-dashboard` image as a container. This container runs the `@enschedule/dashboard` npm package. This package is just a packaged Remix app and runs using `remix-serve` in the container. 
 
-If you are familiar with remix you can run the @enschedule/dashboard in environments that support remix.
+If you are familiar with remix you can run the `@enschedule/dashboard` in environments that support remix.
 
-Configuration of the @enschedule/dashboard is primarily handled through environment variables.
+Configuration of the `@enschedule/dashboard` is primarily handled through environment variables.
 
 #### Inline Worker:
 - By default, if no worker URL is specified as an environment variable, the `@enschedule/dashboard` package runs an "inline" worker. This means the worker operates within the same Node.js process as the dashboard.
 
-#### Env options
-| Environment Variable | Description | Accepted Values | Default |
-|----------------------|-------------|-----------------|---------|
-| `WORKER_URL` | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL |  |
-| `API_KEY` | The API key for authenticating with the worker service. | string |  |
-| `POSTGRES` | Determines if a PostgreSQL database is used and its connection URI. Providing a `WORKER_URL` supersedes this setting. | `true` or a [Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database) |  |
-| `MYSQL` | Determines if a MySQL database is used and its connection URI. Providing a `WORKER_URL` supersedes this setting. | `true` or a [Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database) |  |
-| `SQLITE` | Determines if a SQLite database is used and its connection URI. Providing a `WORKER_URL` supersedes this setting. | `true` or a [Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database)  or :memory: to use an in-memory sqlite database |  |
-| `MSSQL` | Determines if a Microsoft SQL Server database is used and its connection URI. Providing a `WORKER_URL` supersedes this setting. | `true` or a [Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database) |  |
-| `MARIADB` | Determines if a MariaDB database is used and its connection URI. Providing a `WORKER_URL` supersedes this setting. | `true` or a [Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database) |  |
-| `DB_USER` | The username for the database. Not used if `WORKER_URL` is provided. | string |  |
-| `DB_HOST` | The host address of the database. Not used if `WORKER_URL` is provided. | string |  |
-| `DB_PASSWORD` | The password for the database. Not used if `WORKER_URL` is provided. | string |  |
-| `DB_DATABASE` | The name of the database to connect to. Not used if `WORKER_URL` is provided. | string |  |
-| `DB_PORT` | The port number on which the database server is running. Not used if `WORKER_URL` is provided. | integer |  |
-| `ORM_LOGGING` | Enables or disables ORM logging. Not used if `WORKER_URL` is provided. | `true`, `false` | `false` |
-| `SQLITE_STORAGE` | The storage location for the SQLite database. Not used if `WORKER_URL` is provided. | `path/to/database.sqlite` or `:memory:` | `:memory:` |
+#### @enschedule/dashboard environment variables
+Only a `WORKER_URL` or database connection variables are required to run `@enschedule/dashboard`
 
-Database connection URI format:
+| Variable | Description | Accepted Values |
+|----------------------|-------------|-----------------|
+| `WORKER_URL` | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL | 
+| `API_KEY` | The API key for authenticating with the worker service. | `string` | 
+| `DB_USER` | The username for the database. Not used if `WORKER_URL` is provided. | `string` | 
+| `DB_HOST` | The host address of the database. Not used if `WORKER_URL` is provided. | `string` | 
+| `DB_PASSWORD` | The password for the database. Not used if `WORKER_URL` is provided. | `string` | 
+| `DB_DATABASE` | The name of the database to connect to. Not used if `WORKER_URL` is provided. | `string` | 
+| `DB_PORT` | The port number on which the database server is running. Not used if `WORKER_URL` is provided. | `integer` | 
+| `ORM_LOGGING` | Enables or disables ORM logging. Not used if `WORKER_URL` is provided. | `bool` default `"false"` | 
+
+
+##### Database dialect options
+
+You have to provide a valid database connection for enschedule to run OR a `WORKER_URL` that the dashboard connects to instead. 
+
+Enschedule uses sequalize as the ORM. The dialects supported by sequalize v6 are supported by enschedule.
+
+One of these environment variables must be provided to run enschedule:
+
+* `POSTGRES`
+* `MYSQL`
+* `SQLITE`
+* `MSSQL`
+* `MARIADB`
+
+
+You can connect to the database using a database URI or by providing the database options as `DB_` variables.
+
+###### Using _DB variables
+Note that the dialect is specified by setting `POSTGRES=true`
+```bash
+POSTGRES=true
+DB_USER=postgres
+DB_HOST=127.0.0.1
+DB_PASSWORD=postgres
+DB_DATABASE=dev
+DB_PORT=6543
 ```
-postgres://user:password@host:port/database
+
+###### Using database URI
+The format is `postgres://user:password@host:port/database`, see [the Sequelize connection URI](https://sequelize.org/docs/v6/getting-started/#connecting-to-a-database)
+e.g.
+```bash
+POSTGRES=postgres://postgres:postgres@127.0.0.1:6543/dev
 ```
 
 
-### Advanced Configuration with `@enschedule/hub`:
-For more control and configuration options, you can use the `@enschedule/hub` package. This JavaScript API allows for starting the Enschedule dashboard service with additional settings.
+
+### Javascript API through `@enschedule/hub`:
+Instead of configuring Enschedule using environment variables and the `@enschedule/dashboard`, you can use the `@enschedule/hub` package. This provides a JavaScript API to start and configure the Enschedule services.
+
+```typescript
+import { createHandler, enschedule } from "@enschedule/hub";
+import { z } from "zod";
+
+const app = await enschedule({
+  api: true, // enable the worker REST API, see http://localhost:3000/api/v1/healthz
+  dashboard: true, // enable the enschedule dashboard
+  logJobs: true, // log the output from the handlers to stdout / stderr
+  retryStrategy: () => 5000, // if a job should retry, it will retry after 5 seconds
+  worker: {
+    type: "inline",
+  },
+  handlers: [
+    createHandler({
+      id: "log-job",
+      version: 1,
+      title: "Log message",
+      dataSchema: z.object({
+        message: z.string(),
+      }),
+      job: (data) => {
+        console.log(data.message);
+      },
+      description: "Will print the message on the server",
+      example: {
+        message: "some message",
+      },
+    }),
+  ],
+});
+if (app) {
+  const PORT = process.env.PORT ?? 3000;
+  app.listen(PORT, () => {
+    console.log(`Dashboard: http://localhost:${PORT}`);
+    console.log(`Worker REST API: http://localhost:${PORT}/api/v1`);
+  });
+}
+```
 
 #### Configuring Workers:
 - **Inline Worker:** You can configure the worker to run inline, executing on the same thread as the dashboard Node.js process. While this is straightforward, it captures stdout/stderr by overriding the global `console.log` and `console.error` functions, which may be less optimal.
@@ -217,7 +284,6 @@ can be deployed to any platform using a remix adapter
 | `DB_DATABASE` | The name of the database to connect to. Not used if `WORKER_URL` is provided. | string |  |
 | `DB_PORT` | The port number on which the database server is running. Not used if `WORKER_URL` is provided. | integer |  |
 | `ORM_LOGGING` | Enables or disables ORM logging. Not used if `WORKER_URL` is provided. | `true`, `false` | `false` |
-| `SQLITE_STORAGE` | The storage location for the SQLite database. Not used if `WORKER_URL` is provided. | `path/to/database.sqlite` or `:memory:` | `:memory:` |
 
 Database connection URI format:
 ```

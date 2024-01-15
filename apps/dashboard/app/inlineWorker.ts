@@ -1,5 +1,6 @@
 import { Worker } from "@enschedule/worker";
 import path from "path";
+import fs from "fs";
 
 export const inlineWorker = async () => {
   const worker = new Worker({
@@ -12,11 +13,15 @@ export const inlineWorker = async () => {
   const handlersEnv =
     process.env.DASHBOARD_INTEGRATED_WORKER_REGISTER_JOBS_SCRIPT;
   if (handlersEnv) {
-    let handlerPath = handlersEnv;
-    if (!handlersEnv.startsWith("/")) {
-      handlerPath = path.join(process.cwd(), handlersEnv);
+    const filePath = path.join(process.cwd(), "__enschedule_handlers.js");
+
+    try {
+      await fs.promises.access(filePath, fs.constants.F_OK);
+    } catch (error) {
+      await fs.promises.writeFile(filePath, handlersEnv);
+    } finally {
+      await require(filePath)(worker);
     }
-    await require(handlerPath)(worker);
   }
   if (process.env.IMPORT_HANDLERS) {
     const imports = process.env.IMPORT_HANDLERS.split(",");

@@ -1,7 +1,7 @@
 import { Worker } from "@enschedule/worker";
 import path from "path";
 import fs from "fs";
-import zodModule from "zod";
+import * as zodModule from "zod";
 
 export const inlineWorker = async () => {
   const worker = new Worker({

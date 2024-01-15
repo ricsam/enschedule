@@ -13,7 +13,7 @@ export const inlineWorker = async () => {
   const handlersEnv =
     process.env.DASHBOARD_INTEGRATED_WORKER_REGISTER_JOBS_SCRIPT;
   if (handlersEnv) {
-    const filePath = path.join(process.cwd(), "__enschedule_handlers.js");
+    const filePath = path.join("/tmp", "__enschedule_handlers.js");
 
     try {
       await fs.promises.access(filePath, fs.constants.F_OK);

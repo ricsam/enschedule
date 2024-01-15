@@ -1,4 +1,6 @@
 import type { Dialect, Options } from "sequelize";
+import pg from "pg";
+import sqlite from "sqlite3";
 
 const assertEnvs = (...envs: string[]): string[] => {
   const missingEnvs: string[] = [];
@@ -55,6 +57,14 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
   }
 
   if (dialect) {
+    if (process.env.VERCEL) {
+      if (dialect.type === "sqlite") {
+        options.dialectModule = sqlite;
+      }
+      if (dialect.type === "postgres") {
+        options.dialectModule = pg;
+      }
+    }
     if (dialect.value.startsWith(`${dialect.type}://`)) {
       return {
         ...options,

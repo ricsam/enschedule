@@ -1,7 +1,7 @@
 import { Worker } from "@enschedule/worker";
 import path from "path";
 import fs from "fs";
-import { z } from "zod";
+import zodModule from "zod";
 
 export const inlineWorker = async () => {
   const worker = new Worker({
@@ -26,7 +26,7 @@ export const inlineWorker = async () => {
       const originalRequire = Module.prototype.require;
       Module.prototype.require = (moduleName: string) => {
         if (moduleName === "zod") {
-          return z;
+          return zodModule;
         }
         return originalRequire(moduleName);
       };

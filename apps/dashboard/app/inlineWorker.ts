@@ -15,6 +15,15 @@ export const inlineWorker = async () => {
   if (handlersEnv) {
     const filePath = path.join("/tmp", "__enschedule_handlers.js");
 
+    // Add code to create symbolic link for zod module
+    const zodModulePath = path.dirname(require.resolve('zod'));
+    const symlinkPath = path.join("/tmp", "node_modules", "zod");
+    try {
+      await fs.promises.access(symlinkPath, fs.constants.F_OK);
+    } catch (error) {
+      await fs.promises.symlink(zodModulePath, symlinkPath);
+    }
+
     try {
       await fs.promises.access(filePath, fs.constants.F_OK);
     } catch (error) {

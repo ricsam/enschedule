@@ -1,6 +1,7 @@
 import { Worker } from "@enschedule/worker";
 import path from "path";
 import fs from "fs";
+import { z } from "zod";
 
 export const inlineWorker = async () => {
   const worker = new Worker({
@@ -15,21 +16,23 @@ export const inlineWorker = async () => {
   if (handlersEnv) {
     const filePath = path.join("/tmp", "__enschedule_handlers.js");
 
-    // Add code to create symbolic link for zod module
-    const zodModulePath = path.dirname(require.resolve('zod'));
-    const symlinkPath = path.join("/tmp", "node_modules", "zod");
-    try {
-      await fs.promises.access(symlinkPath, fs.constants.F_OK);
-    } catch (error) {
-      await fs.promises.symlink(zodModulePath, symlinkPath);
-    }
-
     try {
       await fs.promises.access(filePath, fs.constants.F_OK);
     } catch (error) {
       await fs.promises.writeFile(filePath, handlersEnv);
     } finally {
+      // Override require to point to the z variable
+      var Module = require("module");
+      const originalRequire = Module.prototype.require;
+      Module.prototype.require = (moduleName: string) => {
+        if (moduleName === "zod") {
+          return z;
+        }
+        return originalRequire(moduleName);
+      };
       await require(filePath)(worker);
+      // Restore the original require function
+      module.require = originalRequire;
     }
   }
   if (process.env.IMPORT_HANDLERS) {

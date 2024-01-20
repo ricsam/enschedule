@@ -9,6 +9,7 @@ export type {
   ListRunsOptions,
   PublicWorker,
   JobDefinition,
+  ScheduleJobResult,
 } from "./types";
 
 export {
@@ -29,4 +30,6 @@ export {
   WorkerStatus,
   JobDefinitionSchema,
   typeAssert,
+  ScheduleSchema,
+  ScheduleJobResultSchema,
 } from "./types";

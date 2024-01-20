@@ -100,6 +100,16 @@ export const publicJobScheduleSchema = z.object({
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion
 
+export const ScheduleJobResultSchema = z.object({
+  schedule: publicJobScheduleSchema,
+  status: z.union([
+    z.literal("updated"),
+    z.literal("created"),
+    z.literal("unchanged"),
+  ]),
+});
+export type ScheduleJobResult = z.output<typeof ScheduleJobResultSchema>;
+
 //#region PublicWorker
 export const PublicWorkerSchema = z.object({
   id: z.number(),
@@ -293,3 +303,12 @@ export const JobDefinitionSchema = z.object({
 });
 typeAssert<keyof JobDefinition, keyof z.output<typeof JobDefinitionSchema>>();
 typeAssert<keyof z.output<typeof JobDefinitionSchema>, keyof JobDefinition>();
+
+//#region API types
+export const ScheduleSchema = z.object({
+  handlerId: z.string(),
+  handlerVersion: z.number().int().positive(),
+  data: z.unknown(),
+  options: ScheduleJobOptionsSchema,
+});
+//#endregion

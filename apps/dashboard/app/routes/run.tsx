@@ -1,7 +1,11 @@
-import type { PublicJobDefinition, PublicJobSchedule } from "@enschedule/types";
+import type {
+  PublicJobDefinition,
+  PublicJobSchedule,
+  ScheduleJobResult,
+} from "@enschedule/types";
 import {
-  publicJobScheduleSchema,
   ScheduleJobOptionsSchema,
+  ScheduleJobResultSchema,
 } from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
 import type { SxProps } from "@mui/material";
@@ -270,9 +274,9 @@ export default function Run() {
     parsedCron = cronParser.parseExpression(cronExpression).stringify(true);
   } catch (err) {}
 
-  const hasSaved = React.useRef<undefined | PublicJobSchedule>(undefined);
+  const hasSaved = React.useRef<undefined | ScheduleJobResult>(undefined);
   if (hasSaved.current === undefined && fetcher.data) {
-    hasSaved.current = publicJobScheduleSchema.parse(fetcher.data);
+    hasSaved.current = ScheduleJobResultSchema.parse(fetcher.data);
   }
 
   const saveJob = selectedDef && (
@@ -339,7 +343,7 @@ export default function Run() {
                 Successfully saved the job to the database! Click{" "}
                 <MuiLink
                   data-testid="schedule-link"
-                  to={`/schedules/${hasSaved.current.id}`}
+                  to={`/schedules/${hasSaved.current.schedule.id}`}
                   component={Link}
                 >
                   here

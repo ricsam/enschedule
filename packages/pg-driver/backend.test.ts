@@ -410,7 +410,7 @@ registerTests((getBackend: () => TestBackend) => {
       const job = httpJobDeclaration(spy);
       backend.registerJob(job);
       await backend.registerWorker();
-      const schedule = await backend.scheduleJob(
+      const result = await backend.scheduleJob(
         job,
         1,
         {
@@ -423,7 +423,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
 
-      expect(schedule.runAt!.getTime()).toBe(1000);
+      expect(result.schedule.runAt!.getTime()).toBe(1000);
 
       jest.useFakeTimers().setSystemTime(backend.tickDuration);
 
@@ -488,7 +488,7 @@ registerTests((getBackend: () => TestBackend) => {
       jest.useFakeTimers().setSystemTime(0);
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      await backend.createJobSchedule(
+      const [, status1] = await backend.createJobSchedule(
         "http_request",
         "title",
         "description",
@@ -499,7 +499,8 @@ registerTests((getBackend: () => TestBackend) => {
           eventId: "superevent",
         }
       );
-      await backend.createJobSchedule(
+      expect(status1).toBe("created");
+      const [s2, status2] = await backend.createJobSchedule(
         "http_request",
         "title",
         "description",
@@ -510,6 +511,8 @@ registerTests((getBackend: () => TestBackend) => {
           runAt: new Date(1000),
         }
       );
+      expect(status2).toBe("updated");
+      expect(s2.runAt).toEqual(new Date(1000));
       expect((await backend.getDbSchedules()).length).toBe(1);
     });
   });

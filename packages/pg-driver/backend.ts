@@ -20,6 +20,7 @@ import type {
   PublicWorkerSchema,
   RunHandlerInCp,
   ScheduleJobOptions,
+  ScheduleJobResult,
   ScheduleUpdatePayloadSchema,
   SerializedRun,
 } from "@enschedule/types";
@@ -1086,7 +1087,7 @@ export class PrivateBackend {
   }
 
   protected createSignature(
-    jobId: string,
+    handlerId: string,
     runAt: Date | undefined,
     data: unknown,
     cronExpression: string | undefined
@@ -1094,7 +1095,7 @@ export class PrivateBackend {
     const rounded = runAt
       ? Math.floor(runAt.getTime() / 1000) * 1000
       : "manual";
-    let signature = `${jobId}-${rounded}-${JSON.stringify(data)}`;
+    let signature = `${handlerId}-${rounded}-${JSON.stringify(data)}`;
     if (cronExpression) {
       signature += `-${parseExpression(cronExpression).stringify(true)}`;
     }
@@ -1125,8 +1126,8 @@ export class PrivateBackend {
       cronExpression,
       eventId,
       runAt,
-      retryFailedJobs,
-      maxRetries,
+      retryFailedJobs = false,
+      maxRetries = -1,
       failureTrigger,
       workerId,
     } = options;
@@ -1145,48 +1146,81 @@ export class PrivateBackend {
           signature,
           claimed: false, // maybe we want to re-schedule a one-time job that has been scheduled before, preferbly just run the schedule again though
         };
+    // normalize the cron expression
+    const normalizedCronExpression = cronExpression
+      ? parseExpression(cronExpression).stringify(true)
+      : undefined;
 
-    return Schedule.findOrCreate({
+    const serializedData = JSON.stringify(migratedData);
+    const defaults = {
+      handlerVersion: migratedVersion,
+      retryFailedJobs,
+      workerId,
+      maxRetries,
+      target: defId,
+      cronExpression: normalizedCronExpression,
+      runAt,
+      data: serializedData,
+      signature,
+      title,
+      description,
+      failureTriggerId: failureTrigger,
+    };
+    const result = await Schedule.findOrCreate({
       where,
-      defaults: {
-        handlerVersion: migratedVersion,
-        retryFailedJobs,
-        workerId,
-        maxRetries,
-        target: defId,
-        // normalize the cron expression
-        cronExpression: cronExpression
-          ? parseExpression(cronExpression).stringify(true)
-          : undefined,
-        runAt,
-        data: JSON.stringify(migratedData),
-        signature,
-        title,
-        description,
-        failureTriggerId: failureTrigger,
-      },
+      defaults,
     });
+    let status: "created" | "updated" | "unchanged" = "unchanged";
+    const [schedule, created] = result;
+    if (created) {
+      status = "created";
+    }
+    if (!created && eventId) {
+      /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-condition */
+      // update the schedule
+      let updated = false;
+
+      Object.keys(defaults).forEach((_key) => {
+        const key = _key as keyof typeof defaults;
+
+        const value = defaults[key] as any;
+
+        if (schedule[key] !== value) {
+          (schedule as Record<string, any>)[key] = value;
+          updated = true;
+        }
+      });
+
+      if (updated) {
+        status = "updated";
+      }
+      /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-condition */
+
+      await schedule.save();
+    }
+
+    return [schedule, status] as const;
   }
 
   public async scheduleJob(
-    jobId: string,
+    handlerId: string,
     handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
-  ): Promise<PublicJobSchedule>;
+  ): Promise<ScheduleJobResult>;
   public async scheduleJob<T extends ZodType = ZodType>(
     job: JobDefinition<T>,
     handlerVersion: number,
     data: z.infer<T>,
     options: ScheduleJobOptions
-  ): Promise<PublicJobSchedule>;
+  ): Promise<ScheduleJobResult>;
   public async scheduleJob(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     def: string | JobDefinition<any>,
     handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
-  ): Promise<PublicJobSchedule> {
+  ): Promise<ScheduleJobResult> {
     const defId = typeof def === "string" ? def : def.id;
 
     let runAt: Date | undefined = options.runAt;
@@ -1198,7 +1232,7 @@ export class PrivateBackend {
 
     const { retryFailedJobs, maxRetries, failureTrigger } = options;
 
-    const [dbSchedule] = await this.createJobSchedule(
+    const [dbSchedule, status] = await this.createJobSchedule(
       defId,
       options.title,
       options.description,
@@ -1213,10 +1247,13 @@ export class PrivateBackend {
         failureTrigger,
       }
     );
-    return createPublicJobSchedule(
-      dbSchedule,
-      await this.getHandler(dbSchedule.target, dbSchedule.handlerVersion)
-    );
+    return {
+      schedule: createPublicJobSchedule(
+        dbSchedule,
+        await this.getHandler(dbSchedule.target, dbSchedule.handlerVersion)
+      ),
+      status,
+    };
   }
 
   public async runScheduleNow(scheduleId: number) {
@@ -1346,7 +1383,7 @@ export class PrivateBackend {
   }
 
   /**
-   * e.g. `{ "jobId": { "1": { targetVersion: 2, migrateFn: (data) => data } }`
+   * e.g. `{ "handlerId": { "1": { targetVersion: 2, migrateFn: (data) => data } }`
    */
   private migrations: Record<
     string,
@@ -1920,7 +1957,7 @@ export class TestBackend extends PrivateBackend {
   > = this.definedJobs;
 
   public async createJobSchedule(
-    jobId: string,
+    handlerId: string,
     title: string,
     description: string,
     handlerVersion: number,
@@ -1928,7 +1965,7 @@ export class TestBackend extends PrivateBackend {
     options: CreateJobScheduleOptions = {}
   ) {
     return super.createJobSchedule(
-      jobId,
+      handlerId,
       title,
       description,
       handlerVersion,
@@ -1964,12 +2001,12 @@ export class TestBackend extends PrivateBackend {
     return super.runOverdueJobs();
   }
   public createSignature(
-    jobId: string,
+    handlerId: string,
     runAt: Date,
     data: unknown,
     cronExpression?: string
   ): string {
-    return super.createSignature(jobId, runAt, data, cronExpression);
+    return super.createSignature(handlerId, runAt, data, cronExpression);
   }
 
   public async tick() {

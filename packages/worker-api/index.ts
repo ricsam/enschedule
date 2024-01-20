@@ -10,11 +10,13 @@ import type {
   PublicJobSchedule,
   PublicWorker,
   ScheduleJobOptions,
+  ScheduleJobResult,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import {
   ListRunsOptionsSerialize,
   PublicWorkerSchema,
+  ScheduleJobResultSchema,
   publicJobDefinitionSchema,
   publicJobRunSchema,
   publicJobScheduleSchema,
@@ -146,15 +148,14 @@ export class WorkerAPI {
         return response;
       } catch (error) {
         attempt += 1;
-        const errorMessage = error instanceof Error ? error.message : "";
-        requestLog(`Attempt ${attempt} failed:`, errorMessage);
+        requestLog(`Attempt ${attempt} failed:`, String(error));
 
         // If we've used all retries, throw the error
         if (attempt >= retries) {
           throw new Error(
             `Req: ${method} ${this.url}${decodeURI(
               options.path
-            )} failed after ${attempt} attempts: ${errorMessage}`
+            )} failed after ${attempt} attempts: ${String(error)}`
           );
         }
 
@@ -191,18 +192,18 @@ export class WorkerAPI {
   }
 
   async scheduleJob(
-    jobId: string,
+    handlerId: string,
     handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
-  ): Promise<PublicJobSchedule> {
-    const newSchedule = await this.request("POST", "/schedules", {
-      jobId,
+  ): Promise<ScheduleJobResult> {
+    const result = await this.request("POST", "/schedules", {
+      handlerId,
       handlerVersion,
       data,
       options,
     });
-    return publicJobScheduleSchema.parse(newSchedule);
+    return ScheduleJobResultSchema.parse(result);
   }
 
   async getSchedule(id: number): Promise<PublicJobSchedule> {

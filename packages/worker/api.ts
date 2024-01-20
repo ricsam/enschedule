@@ -3,7 +3,7 @@ import { PrivateBackend } from "@enschedule/pg-driver";
 import type { ScheduleUpdatePayload } from "@enschedule/types";
 import {
   ListRunsOptionsSerializedSchema,
-  ScheduleJobOptionsSchema,
+  ScheduleSchema,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import type { WorkerAPI } from "@enschedule/worker-api";
@@ -104,19 +104,13 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.post("/schedules", (req, res, next) => {
-    const ScheduleSchema = z.object({
-      jobId: z.string(),
-      handlerVersion: z.number().int().positive(),
-      data: z.unknown(),
-      options: ScheduleJobOptionsSchema,
-    });
-    const { jobId, data, options, handlerVersion } = ScheduleSchema.parse(
+    const { handlerId, data, options, handlerVersion } = ScheduleSchema.parse(
       req.body
     );
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     worker
-      .scheduleJob(jobId, handlerVersion, data as any, options)
+      .scheduleJob(handlerId, handlerVersion, data as any, options)
       .then((newSchedule) => {
         res.json(newSchedule);
       })

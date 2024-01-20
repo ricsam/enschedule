@@ -1185,6 +1185,20 @@ export class PrivateBackend {
 
         const value = defaults[key] as any;
 
+        if (key === "runAt") {
+          // because we are comparing date objects
+          if (String(schedule[key]) === String(value)) {
+            return;
+          }
+        }
+
+        // sequelize returns null for undefined values
+        if (schedule[key] === null) {
+          if (value === undefined) {
+            return;
+          }
+        }
+
         if (schedule[key] !== value) {
           (schedule as Record<string, any>)[key] = value;
           updated = true;

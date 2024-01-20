@@ -1,13 +1,30 @@
 {
-  "extends": "tsconfig/library.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "target": "ES6",
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleResolution": "node",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "module": "CommonJS",
+    "outDir": "dist",
+  },
   "exclude": [
     "dist",
     "build",
     "node_modules"
   ],
-  "compilerOptions": {
-    "outDir": "dist",
-  },
   "include": [
     "src"
   ]

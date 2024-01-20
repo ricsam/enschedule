@@ -1,0 +1,46 @@
+apiVersion: "v1"
+kind: "schedule"
+metadata:
+  name: "other-test-schedule"
+spec:
+  options:
+    title: "Test Schedule"
+    description: "This is a test schedule"
+    cronExpression: "0 0 * * *"
+  handlerId: "log-job"
+  handlerVersion: 1
+  data:
+    message: "foo bar"
+
+---
+
+apiVersion: "v1"
+kind: "schedule"
+metadata:
+  name: "other-test-schedule-2"
+spec:
+  options:
+    title: "Other yaml Schedule"
+    description: "This is a test schedule, from a yaml file"
+    cronExpression: "0 0 * * *"
+  handlerId: "log-job"
+  handlerVersion: 1
+  data:
+    message: "foo bar again"
+
+
+---
+
+apiVersion: "v1"
+kind: "schedule"
+metadata:
+  name: "other-test-schedule-3"
+spec:
+  options:
+    title: "Other yaml Schedule"
+    description: "This is a test schedule, from a yaml file"
+    cronExpression: "0 0 * * *"
+  handlerId: "log-job-not-existing"
+  handlerVersion: 1
+  data:
+    message: "foo bar again"

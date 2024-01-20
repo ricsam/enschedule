@@ -96,6 +96,7 @@ export const publicJobScheduleSchema = z.object({
   numRuns: z.number(),
   data: z.string(),
   status: z.nativeEnum(ScheduleStatus),
+  eventId: z.string().optional(),
 });
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion

@@ -193,6 +193,7 @@ export const createPublicJobSchedule = (
     numRuns: schedule.numRuns,
     data: schedule.data,
     status,
+    eventId: schedule.eventId ?? undefined,
   };
 };
 

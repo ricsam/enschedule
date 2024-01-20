@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { ScheduleSchema } from "@enschedule/types";
-import { Command } from "commander"; // add this line
+import { Command } from "commander";
 import { glob } from "glob";
 import yaml from "js-yaml";
 import { z } from "zod";

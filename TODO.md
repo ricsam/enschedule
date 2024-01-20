@@ -1,4 +1,4 @@
-* write docs about eventId on schedules
+* write docs about eventId on schedules (and maybe rename eventId to scheduleName)
 * write docs about handlerVersion and migrations
 * highlight when schedule doesn't have an associated handler registered
 * rename definitions to handlers

@@ -21,6 +21,7 @@
     "@enschedule/types": "workspace:*",
     "@enschedule/worker-api": "workspace:*",
     "axios": "^1.6.5",
+    "cli-table": "^0.3.11",
     "commander": "^11.1.0",
     "cron-parser": "^4.6.0",
     "debug": "^4.3.4",
@@ -32,6 +33,7 @@
     "zod": "^3.22.2"
   },
   "devDependencies": {
+    "@types/cli-table": "^0.3.4",
     "@types/debug": "^4.1.8",
     "@types/jest": "^29.5.4",
     "@types/js-yaml": "^4.0.9",

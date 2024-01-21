@@ -5,6 +5,7 @@ import {
   ListRunsOptionsSerializedSchema,
   ScheduleSchema,
   ScheduleUpdatePayloadSchema,
+  SchedulesFilterSchema,
 } from "@enschedule/types";
 import type { WorkerAPI } from "@enschedule/worker-api";
 import { json as parseJsonBody } from "body-parser";
@@ -82,12 +83,9 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/schedules", (req, res, next) => {
-    const querySchema = z.object({
-      definitionId: z.string().optional(),
-    });
-    const validatedQuery = querySchema.parse(req.query);
+    const filters = SchedulesFilterSchema.parse(req.query);
     worker
-      .getSchedules(validatedQuery.definitionId)
+      .getSchedules(filters)
       .then((schedules) => {
         res.json(schedules);
       })

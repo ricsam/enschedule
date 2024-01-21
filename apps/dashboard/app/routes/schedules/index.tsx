@@ -22,7 +22,7 @@ export async function getLoaderData(
   const definition = definitionId
     ? await worker.getLatestHandler(definitionId)
     : undefined;
-  const schedules = await worker.getSchedules(definitionId);
+  const schedules = await worker.getSchedules({definitionId});
   return { schedules, definition };
 }
 

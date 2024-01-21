@@ -32,4 +32,5 @@ export {
   typeAssert,
   ScheduleSchema,
   ScheduleJobResultSchema,
+  SchedulesFilterSchema,
 } from "./types";

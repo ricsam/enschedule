@@ -23,7 +23,7 @@ export async function getLoaderData(
   const definitionId = params.definitionId;
   assert(definitionId, "You must have a definitionId");
   const jobDefinition = await worker.getLatestHandler(definitionId);
-  const schedules = await worker.getSchedules(definitionId);
+  const schedules = await worker.getSchedules({definitionId});
   return { schedules, jobDefinition };
 }
 

@@ -1,4 +1,4 @@
-import { ScheduleStatus } from "@enschedule/types";
+import { PublicJobSchedule, ScheduleStatus } from "@enschedule/types";
 import Table from "cli-table";
 import { Command } from "commander"; // add this line
 import { getWorker } from "../get-worker";
@@ -13,7 +13,23 @@ getCommand.addCommand(getSchedulesCommand);
 
 getScheduleCommand
   .description("Get a schedule by id")
-  .argument("<string>", "id of the schedule to get");
+  .argument("<scheduleId>", "id of the schedule to get")
+  .option("-o, --output <type>", "output format")
+  .action(async (scheduleId: string, options: { output?: string }) => {
+    const worker = await getWorker();
+    if (scheduleId.startsWith("db:")) {
+      const dbId = scheduleId.substring(3);
+      const schedule = await worker.getSchedule(parseInt(dbId, 10));
+      printSchedules([schedule], { ...options, single: true });
+      return;
+    }
+    const schedules = await worker.getSchedules({ eventId: scheduleId });
+    if (schedules.length === 0) {
+      console.log(`Schedule ${scheduleId} not found`);
+      return;
+    }
+    printSchedules(schedules, { ...options, single: true });
+  });
 
 const getHumanTime = (ms: number) => {
   const seconds = Math.floor(ms / 1000);
@@ -59,65 +75,75 @@ getSchedulesCommand
   .action(async (options: { output?: string }) => {
     const worker = await getWorker();
     const schedules = await worker.getSchedules();
+    printSchedules(schedules, options);
+  });
 
-    if (options.output === "json") {
-      console.log(JSON.stringify(schedules, null, 2));
+function printSchedules(
+  schedules: PublicJobSchedule[],
+  options: { output?: string; single?: boolean }
+) {
+  if (options.output === "json") {
+    if (options.single) {
+      console.log(JSON.stringify(schedules[0], null, 2));
       return;
     }
-    const head = ["ID", "Title", "Status", "Run at"];
-    if (options.output === "wide") {
-      head.splice(2, 0, "Description", "Handler");
-    }
-    const table = new Table({
-      head,
-      chars: {
-        top: "",
-        "top-mid": "",
-        "top-left": "",
-        "top-right": "",
-        bottom: "",
-        "bottom-mid": "",
-        "bottom-left": "",
-        "bottom-right": "",
-        left: "",
-        "left-mid": "",
-        mid: "",
-        "mid-mid": "",
-        right: "",
-        "right-mid": "",
-        middle: " ",
-      },
-      style: { "padding-left": 0, "padding-right": 0 },
-    });
-
-    // Loop through your schedules and push rows to the table
-    schedules.forEach((schedule) => {
-      let time = "-";
-      if (schedule.runAt) {
-        const now = Date.now();
-        const ra = schedule.runAt.getTime();
-        const distance = ra - now;
-
-        if (distance < 0) {
-          time = `${getHumanTime(-distance)} ago`;
-        } else {
-          time = `in ${getHumanTime(distance)}`;
-        }
-      }
-      const cols = [
-        schedule.eventId ?? `db:${schedule.id}`,
-        schedule.title,
-        verboseStatus(schedule.status),
-        time,
-      ];
-      if (options.output === "wide") {
-        cols.splice(2, 0, schedule.description, schedule.target);
-      }
-
-      table.push(cols);
-    });
-    console.table(table.toString());
+    console.log(JSON.stringify(schedules, null, 2));
+    return;
+  }
+  const head = ["ID", "Title", "Status", "Run at"];
+  if (options.output === "wide") {
+    head.splice(2, 0, "Description", "Handler");
+  }
+  const table = new Table({
+    head,
+    chars: {
+      top: "",
+      "top-mid": "",
+      "top-left": "",
+      "top-right": "",
+      bottom: "",
+      "bottom-mid": "",
+      "bottom-left": "",
+      "bottom-right": "",
+      left: "",
+      "left-mid": "",
+      mid: "",
+      "mid-mid": "",
+      right: "",
+      "right-mid": "",
+      middle: " ",
+    },
+    style: { "padding-left": 0, "padding-right": 0 },
   });
+
+  // Loop through your schedules and push rows to the table
+  schedules.forEach((schedule) => {
+    let time = "-";
+    if (schedule.runAt) {
+      const now = Date.now();
+      const ra = schedule.runAt.getTime();
+      const distance = ra - now;
+
+      if (distance < 0) {
+        time = `${getHumanTime(-distance)} ago`;
+      } else {
+        time = `in ${getHumanTime(distance)}`;
+      }
+    }
+    const cols = [
+      schedule.eventId ?? `db:${schedule.id}`,
+      schedule.title,
+      verboseStatus(schedule.status),
+      time,
+    ];
+    if (options.output === "wide") {
+      cols.splice(2, 0, schedule.description, schedule.handlerId);
+    }
+
+    table.push(cols);
+  });
+  console.table(table.toString());
+}
 
 // applyCommand
 //   .description("Apply a schedule from a file or folder")

@@ -90,8 +90,8 @@ export const publicJobScheduleSchema = z.object({
   cronExpression: z.string().optional(),
   lastRun: serializedRunSchema.optional(),
   createdAt: DateSchema,
-  /** job definition target */
-  target: z.string(),
+  /** job definition handlerId */
+  handlerId: z.string(),
   jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
   numRuns: z.number(),
   data: z.string(),
@@ -311,5 +311,9 @@ export const ScheduleSchema = z.object({
   handlerVersion: z.number().int().positive(),
   data: z.unknown(),
   options: ScheduleJobOptionsSchema,
+});
+export const SchedulesFilterSchema = z.object({
+  definitionId: z.string().optional(),
+  eventId: z.string().optional(),
 });
 //#endregion

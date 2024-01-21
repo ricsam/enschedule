@@ -12,6 +12,7 @@ import type {
   ScheduleJobOptions,
   ScheduleJobResult,
   ScheduleUpdatePayloadSchema,
+  SchedulesFilterSchema,
 } from "@enschedule/types";
 import {
   ListRunsOptionsSerialize,
@@ -181,8 +182,10 @@ export class WorkerAPI {
     return publicJobDefinitionSchema.parse(definition);
   }
 
-  async getSchedules(definitionId?: string): Promise<PublicJobSchedule[]> {
-    const schedules = await this.request("GET", "/schedules", { definitionId });
+  async getSchedules(
+    filter: z.output<typeof SchedulesFilterSchema> = {}
+  ): Promise<PublicJobSchedule[]> {
+    const schedules = await this.request("GET", "/schedules", filter);
     return z.array(publicJobScheduleSchema).parse(schedules);
   }
 

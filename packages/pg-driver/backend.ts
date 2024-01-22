@@ -742,9 +742,29 @@ export class PrivateBackend {
     return runs;
   }
   protected async getDbSchedules(where?: WhereOptions<Schedule>) {
+    /**
+     * Sanitize the where clause, sequalize does not like undefined values
+     */
+    let sequalizeSanitizedWhere: WhereOptions<Schedule> | undefined = where
+      ? { ...where }
+      : undefined;
+    if (sequalizeSanitizedWhere) {
+      Object.entries(sequalizeSanitizedWhere).forEach(([key, value]) => {
+        if (value === undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-dynamic-delete
+          delete (sequalizeSanitizedWhere as any)[key];
+        }
+      });
+    }
+    if (
+      sequalizeSanitizedWhere &&
+      Object.keys(sequalizeSanitizedWhere).length > 0
+    ) {
+      sequalizeSanitizedWhere = undefined;
+    }
     const jobs = await Schedule.findAll({
       order: [["createdAt", "DESC"]],
-      where,
+      where: sequalizeSanitizedWhere,
       include: {
         model: Run,
         as: "lastRun",
@@ -1570,7 +1590,10 @@ export class PrivateBackend {
 
   private async runDbSchedule(schedule: Schedule) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
-    const definition = this.getJobDef(schedule.handlerId, schedule.handlerVersion);
+    const definition = this.getJobDef(
+      schedule.handlerId,
+      schedule.handlerVersion
+    );
     const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
     return this.runDefinition({
       handlerId: schedule.handlerId,
@@ -1781,7 +1804,10 @@ export class PrivateBackend {
   }
 
   private async scheduleSingleRun(schedule: Schedule) {
-    const definition = this.getJobDef(schedule.handlerId, schedule.handlerVersion);
+    const definition = this.getJobDef(
+      schedule.handlerId,
+      schedule.handlerVersion
+    );
     log(
       "Will run",
       definition.title,
@@ -1855,7 +1881,8 @@ export class PrivateBackend {
           .map(
             (schedule) =>
               `${
-                this.getJobDef(schedule.handlerId, schedule.handlerVersion).title
+                this.getJobDef(schedule.handlerId, schedule.handlerVersion)
+                  .title
               }${schedule.title}`
           )
           .join(", ")

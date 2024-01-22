@@ -196,7 +196,7 @@ export interface SerializedRun {
 }
 
 export const RunHandlerInCpSchema = z.object({
-  definitionId: z.string(),
+  handlerId: z.string(),
   data: z.unknown(),
   version: z.number(),
 });
@@ -313,7 +313,7 @@ export const ScheduleSchema = z.object({
   options: ScheduleJobOptionsSchema,
 });
 export const SchedulesFilterSchema = z.object({
-  definitionId: z.string().optional(),
+  handlerId: z.string().optional(),
   eventId: z.string().optional(),
 });
 //#endregion

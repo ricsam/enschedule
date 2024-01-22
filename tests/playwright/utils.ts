@@ -173,15 +173,15 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   await clickOnFirstRow();
   expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
 
-  // Click on the definitions link /definitions/$definitionId
+  // Click on the definitions link /definitions/$handlerId
   await navigate(baseUrl(), page, page.getByTestId("definition-link"));
   expect(await page.waitForSelector("div#DefinitionPage")).toBeTruthy();
 
-  // Click on the schedules tab to navigate to the RunsTable /definitions/$definitionId/schedules
+  // Click on the schedules tab to navigate to the RunsTable /definitions/$handlerId/schedules
   await navigate(baseUrl(), page, page.getByRole("tab", { name: "Schedules" }));
   expect(await page.waitForSelector("div#SchedulesTable")).toBeTruthy();
 
-  // Click on the first row and navigate to the SchedulePage /definitions/$definitionId/schedules/$scheduleId
+  // Click on the first row and navigate to the SchedulePage /definitions/$handlerId/schedules/$scheduleId
   await navigate(
     baseUrl(),
     page,
@@ -189,13 +189,13 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   );
   expect(await page.waitForSelector("div#SchedulePage")).toBeTruthy();
 
-  // Click on the runs tab to navigate to the RunsTable /definitions/$definitionId/schedules/$scheduleId/runs
+  // Click on the runs tab to navigate to the RunsTable /definitions/$handlerId/schedules/$scheduleId/runs
   runsTableUrls.push(
     await navigate(baseUrl(), page, page.getByRole("tab", { name: "Runs" }))
   );
   expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
 
-  // Click on the first row and navigate to the RunPage /definitions/$definitionId/schedules/$scheduleId/runs/$runId
+  // Click on the first row and navigate to the RunPage /definitions/$handlerId/schedules/$scheduleId/runs/$runId
   await clickOnFirstRow();
   expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
 

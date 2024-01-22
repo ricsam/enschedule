@@ -20,10 +20,10 @@ export async function getLoaderData(
   schedules: PublicJobSchedule[];
   jobDefinition: PublicJobDefinition;
 }> {
-  const definitionId = params.definitionId;
-  assert(definitionId, "You must have a definitionId");
-  const jobDefinition = await worker.getLatestHandler(definitionId);
-  const schedules = await worker.getSchedules({definitionId});
+  const handlerId = params.handlerId;
+  assert(handlerId, "You must have a handlerId");
+  const jobDefinition = await worker.getLatestHandler(handlerId);
+  const schedules = await worker.getSchedules({handlerId});
   return { schedules, jobDefinition };
 }
 

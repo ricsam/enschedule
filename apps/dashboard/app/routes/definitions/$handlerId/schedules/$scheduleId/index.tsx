@@ -61,7 +61,7 @@ export const useNavbar = (action: string, runRedirect: string) => {
 
   const def = data.schedule.jobDefinition;
 
-  const definitionId = typeof def === "string" ? def : def.id;
+  const handlerId = typeof def === "string" ? def : def.id;
 
   return {
     title: data.schedule.title,
@@ -69,11 +69,11 @@ export const useNavbar = (action: string, runRedirect: string) => {
     tabs: [
       {
         label: "Details",
-        to: `/definitions/${definitionId}/schedules/${data.schedule.id}`,
+        to: `/definitions/${handlerId}/schedules/${data.schedule.id}`,
       },
       {
         label: "Runs",
-        to: `/definitions/${definitionId}/schedules/${data.schedule.id}/runs`,
+        to: `/definitions/${handlerId}/schedules/${data.schedule.id}/runs`,
       },
     ],
     actions: <Actions action={action} runRedirect={runRedirect} />,

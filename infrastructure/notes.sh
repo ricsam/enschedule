@@ -59,6 +59,9 @@ TEST_HELM=true DASHBOARD_URL=http://127.0.0.1:3000 pnpm run playwright test
 # you need to run NODE_ENV=production yarn run build in the dashboard dir first
 pnpm run playwright test
 
+# debug playwright tests
+pnpm run dev && SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
+
 # start dev server
 yarn run dev # in root
 

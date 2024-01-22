@@ -1573,7 +1573,7 @@ export class PrivateBackend {
     const definition = this.getJobDef(schedule.handlerId, schedule.handlerVersion);
     const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
     return this.runDefinition({
-      definitionId: schedule.handlerId,
+      handlerId: schedule.handlerId,
       data,
       version: schedule.handlerVersion,
     });
@@ -1630,7 +1630,7 @@ export class PrivateBackend {
     const _console = this.createConsole(stdoutStream, stderrStream);
     let exitSignal = "0";
     try {
-      log("Creating a worker process to run", runMessage.definitionId);
+      log("Creating a worker process to run", runMessage.handlerId);
       exitSignal = await this.fork(runMessage, streamHandle);
     } catch (err) {
       _console.error(err);
@@ -1660,7 +1660,7 @@ export class PrivateBackend {
   ) {
     if (this.inlineWorker) {
       const definition = this.getJobDef(
-        runMessage.definitionId,
+        runMessage.handlerId,
         runMessage.version
       );
       const origConsole = console;
@@ -1734,9 +1734,9 @@ export class PrivateBackend {
     if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
       return new Promise<boolean>((resolve) => {
         process.once("message", (message) => {
-          const { definitionId, data, version } =
+          const { handlerId, data, version } =
             RunHandlerInCpSchema.parse(message);
-          const definition = this.getJobDef(definitionId, version);
+          const definition = this.getJobDef(handlerId, version);
           (async () => {
             try {
               await definition.job(data);

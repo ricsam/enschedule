@@ -748,6 +748,7 @@ export class PrivateBackend {
     let sequalizeSanitizedWhere: WhereOptions<Schedule> | undefined = where
       ? { ...where }
       : undefined;
+
     if (sequalizeSanitizedWhere) {
       Object.entries(sequalizeSanitizedWhere).forEach(([key, value]) => {
         if (value === undefined) {
@@ -758,7 +759,7 @@ export class PrivateBackend {
     }
     if (
       sequalizeSanitizedWhere &&
-      Object.keys(sequalizeSanitizedWhere).length > 0
+      Object.keys(sequalizeSanitizedWhere).length === 0
     ) {
       sequalizeSanitizedWhere = undefined;
     }

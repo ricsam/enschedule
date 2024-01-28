@@ -1,10 +1,9 @@
 import type { PublicWorkerSchema } from "@enschedule/types";
-import { Button } from "@mui/material";
-import type { LoaderFunction } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { Link as RemixLink, useLoaderData } from "@remix-run/react";
-import type { z } from "zod";
+import { useLoaderData } from "@remix-run/react";
+import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import WorkersTable from "~/components/WorkersTable";
 import { getWorker } from "~/createWorker";
@@ -46,24 +45,22 @@ export function Page() {
   return <WorkersTable workers={workers} />;
 }
 
+export const action: ActionFunction = async ({ request, context }) => {
+  const fd = await request.formData();
+  const action = z.literal("delete").parse(fd.get("action"));
+  const selected = z.array(z.number().int()).parse(fd.getAll("id").map(Number));
+  if (action === "delete") {
+    await (await getWorker(context.worker)).deleteWorkers(selected);
+  }
+  return json({ success: true });
+};
+
 export default function Workers() {
   return (
     <RootLayout
       navbar={{
         title: "Workers",
         subTitle: "These are the deployed workers",
-        actions: (
-          <>
-            <Button
-              variant="contained"
-              LinkComponent={RemixLink}
-              component={RemixLink}
-              to={"/run"}
-            >
-              Create schedule
-            </Button>
-          </>
-        ),
       }}
       breadcrumbs={useBreadcrumbs()}
     >

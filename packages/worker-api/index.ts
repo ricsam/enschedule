@@ -189,6 +189,11 @@ export class WorkerAPI {
     return z.array(publicJobScheduleSchema).parse(schedules);
   }
 
+  async deleteWorkers(ids: number[]): Promise<number[]> {
+    const workers = await this.request("POST", "/workers", { ids });
+    return z.array(z.number()).parse(workers);
+  }
+
   async getWorkers(): Promise<PublicWorker[]> {
     const workers = await this.request("GET", "/workers");
     return z.array(PublicWorkerSchema).parse(workers);

@@ -9,6 +9,7 @@ import { sentenceCase } from "sentence-case";
 import type { z } from "zod";
 import { formatDate } from "~/utils/formatDate";
 import { ExpandableTable } from "./Table";
+import { createMsButtons } from "./createMsButtons";
 
 export type RowData = SerializeFrom<z.output<typeof PublicWorkerSchema>>;
 
@@ -250,11 +251,19 @@ const columns: ColumnDef<RowData, any>[] = [
   // }),
 ];
 
+
+const { ToolbarWrapper, MsButtons } = createMsButtons({
+  formAction: "/workers?index",
+});
+
+
 export default function WorkersTable({ workers }: { workers: RowData[] }) {
   return (
     <Box sx={{ width: "100%" }} id="WorkersTable">
       <ExpandableTable
         id="WorkersTable"
+        msButtons={<MsButtons />}
+        ToolbarWrapper={ToolbarWrapper}
         defaultSorting={[{ id: "lastReached", desc: true }]}
         rows={workers}
         title="Workers"

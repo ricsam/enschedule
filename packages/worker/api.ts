@@ -92,6 +92,16 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .catch(next);
   });
 
+  router.post("/workers", (req, res, next) => {
+    const { ids } = z.object({ ids: z.array(z.number()) }).parse(req.body);
+    worker
+      .deleteWorkers(ids)
+      .then((deletedIds) => {
+        res.json(deletedIds);
+      })
+      .catch(next);
+  });
+
   router.get("/workers", (req, res, next) => {
     worker
       .getWorkers()

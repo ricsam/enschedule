@@ -1019,6 +1019,15 @@ export class PrivateBackend {
     );
   }
 
+  public async deleteWorkers(workerIds: number[]): Promise<number[]> {
+    await Worker.destroy({
+      where: {
+        id: workerIds,
+      },
+    });
+    return workerIds;
+  }
+
   public async registerWorker(attempt = 0): Promise<Worker> {
     log(`Registering this worker (attempt: ${attempt}`);
     try {

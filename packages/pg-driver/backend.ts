@@ -200,7 +200,7 @@ export const createPublicJobSchedule = (
 
 export const createPublicJobRun = (
   run: Run,
-  schedule: Schedule,
+  schedule: Schedule | string,
   jobDef: PublicJobDefinition | string
 ): PublicJobRun => {
   return {
@@ -212,9 +212,13 @@ export const createPublicJobRun = (
     finishedAt: run.finishedAt,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
-    jobSchedule: createPublicJobSchedule(schedule, jobDef),
+    jobDefinition: jobDef,
+    jobSchedule:
+      typeof schedule === "string"
+        ? schedule
+        : createPublicJobSchedule(schedule, jobDef),
     data: run.data,
-    worker: createPublicWorker(run.worker),
+    worker: run.worker ? createPublicWorker(run.worker) : undefined,
   };
 };
 
@@ -275,7 +279,7 @@ export class Worker extends Model<
   declare createdAt: CreationOptional<Date>;
   declare hostname: string;
   declare lastReached: Date;
-  declare runs?: NonAttribute<Run[]>;
+  declare runs?: NonAttribute<Run[]> | null;
 
   declare workerPk: ForeignKey<Worker["id"]>;
 
@@ -347,7 +351,7 @@ export class Schedule extends Model<
   declare createLastRun: HasOneCreateAssociationMixin<Run>;
 
   declare lastRun?: NonAttribute<Run> | null;
-  declare runs?: NonAttribute<Run[]>;
+  declare runs?: NonAttribute<Run[]> | null;
 
   declare failureTriggerId?: ForeignKey<Schedule["id"]> | null;
   declare workerId?: CreationOptional<string> | null; // optional, a user can say a schedule must run on a worker with a specific workerId
@@ -379,12 +383,15 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare scheduleId: ForeignKey<Schedule["id"]>;
   declare workerId: ForeignKey<Worker["id"]>;
 
-  declare getSchedule: HasOneGetAssociationMixin<Schedule>; // Note the null assertions!
+  declare getSchedule: HasOneGetAssociationMixin<Schedule | null>; // schedule can be deleted, so it is nullable
   declare setSchedule: HasOneSetAssociationMixin<Schedule, number>;
   declare createSchedule: HasOneCreateAssociationMixin<Schedule>;
 
-  declare schedule: NonAttribute<Schedule>;
-  declare worker: NonAttribute<Worker>;
+  declare handlerId: string; // same as schedule.handlerId, but in case schedule is deleted the handlerId can still be found
+  declare handlerVersion: number; // same as schedule.handlerVersion, but in case schedule is deleted the handlerVersion can still be found
+  declare scheduleTitle: string; // same as `${schedule.title}, #${schedule.id}`, but in case schedule is deleted a scheduleTitle can still be found
+  declare schedule?: NonAttribute<Schedule> | null;
+  declare worker?: NonAttribute<Worker> | null;
 }
 
 export const createJobDefinition = <T extends ZodType = ZodType>(
@@ -643,6 +650,18 @@ export class PrivateBackend {
           type: DataTypes.DATE,
           allowNull: false,
         },
+        handlerId: {
+          type: DataTypes.STRING(),
+          allowNull: false,
+        },
+        handlerVersion: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        scheduleTitle: {
+          type: DataTypes.STRING(),
+          allowNull: false,
+        },
       },
       {
         modelName: "Run",
@@ -658,7 +677,7 @@ export class PrivateBackend {
     Schedule.hasMany(Run, {
       foreignKey: {
         name: "scheduleId", // run.scheduleId
-        allowNull: false,
+        allowNull: true, // on schedule deletion, runs are not deleted
       },
       as: "runs",
     });
@@ -666,7 +685,7 @@ export class PrivateBackend {
     Run.belongsTo(Schedule, {
       foreignKey: {
         name: "scheduleId",
-        allowNull: false,
+        allowNull: true, // on schedule deletion, runs are not deleted
       },
       as: "schedule",
     });
@@ -810,12 +829,8 @@ export class PrivateBackend {
           const jobSchedule = run.schedule;
           return createPublicJobRun(
             run,
-            jobSchedule,
-            await this.getHandler(
-              jobSchedule.handlerId,
-              jobSchedule.handlerVersion,
-              workers
-            )
+            jobSchedule ?? run.scheduleTitle,
+            await this.getHandler(run.handlerId, run.handlerVersion, workers)
           );
         })
       );
@@ -871,11 +886,11 @@ export class PrivateBackend {
         },
       ],
     });
-    const definition = await this.getHandler(
-      schedule.handlerId,
-      schedule.handlerVersion
+    return createPublicJobRun(
+      run,
+      schedule ?? run.scheduleTitle,
+      await this.getHandler(run.handlerId, run.handlerVersion)
     );
-    return createPublicJobRun(run, schedule, definition);
   }
 
   public async reset(): Promise<void> {
@@ -938,6 +953,7 @@ export class PrivateBackend {
     }
     const workers = _workers ?? (await this.getWorkers());
     const workersThatAreUp = workers.filter((worker) => {
+      // prioritize workers that are up
       return worker.status === WorkerStatus.UP;
     });
     for (const worker of [...workersThatAreUp, ...workers]) {
@@ -1199,6 +1215,7 @@ export class PrivateBackend {
     if (created) {
       status = "created";
     }
+    // to support the enschedule apply, we want to update the schedule if it already exists
     if (!created && eventId) {
       /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-condition */
       // update the schedule
@@ -1853,6 +1870,9 @@ export class PrivateBackend {
         data: schedule.data,
         exitSignal,
         workerId: (await this.registerWorker()).id,
+        handlerId: definition.id,
+        handlerVersion: definition.version,
+        scheduleTitle: `${schedule.title}, #${schedule.id}`,
       },
       {
         include: {

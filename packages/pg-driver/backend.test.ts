@@ -899,7 +899,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       const run = await backend.runSchedule(schedule.id);
-      expect(run.worker.id).toBe(worker.id);
+      expect(run.worker?.id).toBe(worker.id);
       expect((await backend.getWorkers())[0].id).toBe(worker.id);
       expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
     });
@@ -1037,14 +1037,6 @@ registerTests((getBackend: () => TestBackend) => {
       const runC = await backend.runSchedule(oldSchedule.id);
       expect(spyA).not.toHaveBeenCalled();
       expect(spyB).toBeCalledWith("http://other_url:1234");
-
-      // backend.clearRegisteredJobs();
-      // const newHandler = httpJobDeclaration();
-      // newHandler.version = 2;
-      // backend.registerJob(newHandler);
-      // await backend.migrateDatabase();
-      // expect(backend.getJobDefinition(newHandler.id).version).toBe(2);
-      // expect((await backend.getWorkers())[0].version).toBe(2);
     });
   });
 });

@@ -1,4 +1,8 @@
-import type { PublicJobSchedule, SerializedRun } from "@enschedule/types";
+import type {
+  PublicJobDefinition,
+  PublicJobSchedule,
+  SerializedRun,
+} from "@enschedule/types";
 import {
   Button,
   Card,
@@ -13,20 +17,36 @@ import { Link, useHref } from "@remix-run/react";
 import { ReadOnlyEditor } from "~/components/Editor";
 import { formatDate } from "~/utils/formatDate";
 
+const ScheduleLink = ({
+  title,
+  id,
+}: {
+  title: string;
+  id: number;
+}): JSX.Element => {
+  const link = useHref("../../../../schedules/" + id, { relative: "path" });
+  return (
+    <MuiLink
+      component={Link}
+      to={link}
+      underline="hover"
+      data-testid="schedule-link"
+    >
+      {title}
+    </MuiLink>
+  );
+};
+
 export default function RunPage({
   run,
   schedule,
+  handler,
 }: {
   run: SerializeFrom<SerializedRun>;
-  schedule: SerializeFrom<PublicJobSchedule>;
+  schedule: SerializeFrom<PublicJobSchedule | string>;
+  handler: SerializeFrom<PublicJobDefinition | string>;
 }) {
-  const scheduleLink = useHref("../../../../schedules/" + schedule.id, {
-    relative: "path",
-  });
-  const jobDefinitionId =
-    typeof schedule.jobDefinition === "string"
-      ? schedule.jobDefinition
-      : schedule.jobDefinition.id;
+  const jobDefinitionId = typeof handler === "string" ? handler : handler.id;
   const definitionLink = useHref(
     "../../../../../../definitions/" + jobDefinitionId,
     {
@@ -51,18 +71,17 @@ export default function RunPage({
               </Typography>
               <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
                 <Typography color="text.secondary">Schedule</Typography>
-                <MuiLink
-                  underline="hover"
-                  component={Link}
-                  to={scheduleLink}
-                  data-testid="schedule-link"
-                >
-                  {schedule.title}
-                </MuiLink>
-                <Typography color="text.secondary">Definition</Typography>
-                {typeof schedule.jobDefinition === "string" ? (
+                {typeof schedule === "string" ? (
                   <Typography component="span">
-                    Job not defined on the server ({schedule.jobDefinition})
+                    Schedule not defined on the server ({schedule})
+                  </Typography>
+                ) : (
+                  <ScheduleLink title={schedule.title} id={schedule.id} />
+                )}
+                <Typography color="text.secondary">Definition</Typography>
+                {typeof handler === "string" ? (
+                  <Typography component="span">
+                    Job not defined on the server ({handler})
                   </Typography>
                 ) : (
                   <MuiLink
@@ -71,7 +90,7 @@ export default function RunPage({
                     to={definitionLink}
                     data-testid="definition-link"
                   >
-                    {schedule.jobDefinition.title}
+                    {handler.title}
                   </MuiLink>
                 )}
                 <Typography color="text.secondary">Started</Typography>
@@ -119,20 +138,21 @@ export default function RunPage({
               </Typography>
               <Typography color="text.secondary">
                 This run ran{" "}
-                {typeof schedule.jobDefinition === "string" ? (
+                {typeof handler === "string" ? (
                   <Typography component="span">
-                    a job that currently is not defined on the server ({schedule.jobDefinition})
+                    a job that currently is not defined on the server ({handler}
+                    )
                   </Typography>
                 ) : (
                   <>
                     the{" "}
                     <MuiLink component={Link} to="/" underline="hover">
-                      {schedule.jobDefinition.title}
+                      {handler.title}
                     </MuiLink>{" "}
                     definition
                   </>
-                )}
-                {' '}with the following data:
+                )}{" "}
+                with the following data:
               </Typography>
               <Box pb={1} />
               <Box maxWidth="320px" overflow="hidden">

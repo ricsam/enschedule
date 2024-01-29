@@ -23,15 +23,19 @@ export const getLoaderData = async (
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await worker.getRuns({ scheduleId: schedule.id });
+  // it doesn't look like we need runs here
+  // const runs = await worker.getRuns({ scheduleId: schedule.id });
 
-  return { schedule, runs };
+  return { schedule };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  const loaderData = await getLoaderData(params, await getWorker(context.worker));
+  const loaderData = await getLoaderData(
+    params,
+    await getWorker(context.worker)
+  );
   return json(loaderData);
 };
 
@@ -68,25 +72,20 @@ export const useNavbar = (action: string, runRedirect: string): NavBar => {
         to: `/schedules/${data.schedule.id}/runs`,
       },
     ],
-    actions: (
-      <Actions
-        action={action}
-        runRedirect={runRedirect}
-      />
-    ),
+    actions: <Actions action={action} runRedirect={runRedirect} />,
   };
 };
 
 export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
-  const { schedule, runs } = useLoaderData<LoaderData>();
+  const { schedule } = useLoaderData<LoaderData>();
 
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
       navbar={useNavbar("", "")}
     >
-      <SchedulePage schedule={schedule} runs={runs} editDetails={editDetails} />
+      <SchedulePage schedule={schedule} editDetails={editDetails} />
     </RootLayout>
   );
 }

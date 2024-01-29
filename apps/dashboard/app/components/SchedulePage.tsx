@@ -1,5 +1,4 @@
 import type {
-  PublicJobRun,
   PublicJobSchedule,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
@@ -299,11 +298,9 @@ function EditForm({
 
 export default function SchedulePage({
   schedule,
-  runs,
   editDetails,
 }: SerializeFrom<{
   schedule: PublicJobSchedule;
-  runs: PublicJobRun[];
   editDetails?: boolean;
 }>) {
   const lastRun = schedule.lastRun;
@@ -462,7 +459,11 @@ export default function SchedulePage({
               .
             </Typography>
           </Box>
-          <RunPage run={lastRun} schedule={schedule} />
+          <RunPage
+            run={lastRun}
+            schedule={schedule}
+            handler={schedule.jobDefinition}
+          />
         </>
       ) : null}
     </Box>

@@ -13,6 +13,11 @@ import { useBreadcrumbs as useParentBreadcrumbs } from "..";
 export const useBreadcrumbs = (
   data: SerializeFrom<LoaderData>
 ): Breadcrumb[] => {
+  if (typeof data.jobSchedule === "string") {
+    throw new Error(
+      `the schedule (${data.jobSchedule}) has been deleted, please view the run (#${data.id}) on the runs page`
+    );
+  }
   return extendBreadcrumbs(
     useParentBreadcrumbs(data.jobSchedule),
     useRunBreadcrumbs(data)

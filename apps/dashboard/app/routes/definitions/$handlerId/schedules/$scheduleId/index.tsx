@@ -29,9 +29,11 @@ export const getLoaderData = async (
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await worker.getRuns({ scheduleId: schedule.id });
 
-  return { schedule, runs };
+  // it doesn't look like we need runs here
+  // const runs = await worker.getRuns({ scheduleId: schedule.id });
+
+  return { schedule };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
@@ -82,13 +84,13 @@ export const useNavbar = (action: string, runRedirect: string) => {
 
 export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
-  const { schedule, runs } = useLoaderData<LoaderData>();
+  const { schedule } = useLoaderData<LoaderData>();
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
       navbar={useNavbar("", "")}
     >
-      <SchedulePage schedule={schedule} runs={runs} editDetails={editDetails} />
+      <SchedulePage schedule={schedule} editDetails={editDetails} />
     </RootLayout>
   );
 }

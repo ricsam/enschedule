@@ -52,7 +52,11 @@ export function RunRoute({
       breadcrumbs={breadcrumbs}
       navbar={{
         title: `Run #${run.id}`,
-        subTitle: `Ran ${run.jobSchedule.title} which completed ${
+        subTitle: `Ran ${
+          typeof run.jobSchedule === "string"
+            ? `deleted schedule (${run.jobSchedule})`
+            : run.jobSchedule.title
+        } which completed ${
           formatDate(run.finishedAt).label
         } and took ${differenceInMilliseconds(
           new Date(run.finishedAt),
@@ -61,7 +65,11 @@ export function RunRoute({
         actions: <Actions id={run.id} />,
       }}
     >
-      <RunPage run={run} schedule={run.jobSchedule} />
+      <RunPage
+        run={run}
+        schedule={run.jobSchedule}
+        handler={run.jobDefinition}
+      />
     </RootLayout>
   );
 }

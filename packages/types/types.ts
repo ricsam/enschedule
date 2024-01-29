@@ -135,8 +135,9 @@ export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
 //#region PublicJobRun
 export const publicJobRunSchema = serializedRunSchema.and(
   z.object({
-    jobSchedule: publicJobScheduleSchema,
-    worker: PublicWorkerSchema,
+    jobSchedule: z.union([publicJobScheduleSchema, z.string()]),
+    jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
+    worker: PublicWorkerSchema.optional(),
   })
 );
 export type PublicJobRun = z.infer<typeof publicJobRunSchema>;

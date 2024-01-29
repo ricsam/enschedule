@@ -11,12 +11,30 @@ import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { createMsButtons } from "./createMsButtons";
 import RunPage from "./RunPage";
+import { Tooltip, Typography } from "@mui/material";
 
 type RowData = SerializeFrom<PublicJobRun>;
 
 const columnHelper = createColumnHelper<RowData>();
 
 const columns: ColumnDef<RowData, any>[] = [
+  columnHelper.accessor("exitSignal", {
+    cell: (info) => {
+      const exitSignal = info.getValue();
+
+      return (
+        <Tooltip
+          title={exitSignal === "0" ? "Success" : "Fail️"}
+          disableInteractive
+        >
+          <Typography variant="inherit" sx={{ cursor: "default" }}>
+            {exitSignal === "0" ? "✅" : "⚠️"}
+          </Typography>
+        </Tooltip>
+      );
+    },
+    header: "Status",
+  }),
   columnHelper.accessor("id", {
     cell: (info) => {
       const runId = info.row.original.id;
@@ -121,7 +139,13 @@ export default function RunsTable({
       ToolbarWrapper={ToolbarWrapper}
       renderRow={(row) => {
         const run = row.original;
-        return <RunPage run={run} schedule={run.jobSchedule} />;
+        return (
+          <RunPage
+            run={run}
+            schedule={run.jobSchedule}
+            handler={run.jobDefinition}
+          />
+        );
       }}
       msButtons={<MsButtons />}
     />

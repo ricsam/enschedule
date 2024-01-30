@@ -113,6 +113,66 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Has stderr",
   }),
+  {
+    cell: (info) => {
+      const text = info.getValue();
+      const val = info.row.original.jobSchedule;
+      if (typeof val === "string") {
+        return `Deleted schedule (${text})`;
+      }
+      return (
+        <MuiLink
+          to={`/schedules/${val.id}`}
+          data-testid="schedule-link"
+          component={RemixLink}
+          onClick={(ev) => {
+            ev.stopPropagation();
+          }}
+        >
+          {text}
+        </MuiLink>
+      );
+    },
+    enableSorting: true,
+    header: "Schedule",
+    id: "schedule",
+    accessorFn: (run) => {
+      if (typeof run.jobSchedule === "string") {
+        return run.jobSchedule;
+      }
+      return run.jobSchedule.title;
+    },
+  },
+  {
+    cell: (info) => {
+      const text = info.getValue();
+      const val = info.row.original.jobDefinition;
+      if (typeof val === "string") {
+        return `Handler could not be found (${text})`;
+      }
+      return (
+        <MuiLink
+          to={`/definitions/${val.id}`}
+          data-testid="definition-link"
+          component={RemixLink}
+          onClick={(ev) => {
+            ev.stopPropagation();
+          }}
+        >
+          {text}
+        </MuiLink>
+      );
+    },
+    enableSorting: true,
+    header: "Handler",
+    id: "handler",
+    accessorFn: (run) => {
+      if (typeof run.jobDefinition === "string") {
+        return run.jobDefinition;
+      }
+      return run.jobDefinition.title;
+    },
+  },
 ];
 
 const { ToolbarWrapper, MsButtons } = createMsButtons({

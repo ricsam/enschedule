@@ -7,6 +7,8 @@ import { Theme, useTheme } from "~/utils/theme-provider";
 
 const ajv = new Ajv();
 
+const maxHeight = typeof window !== "undefined" ? window.innerHeight - 200 : 800;
+
 export function Editor({
   jsonSchema,
   example,
@@ -46,7 +48,7 @@ export function Editor({
     });
   }
   const [theme] = useTheme();
-  const calculatedHeight = height ?? initialValue.split("\n").length * 18;
+  const calculatedHeight = height ?? Math.min(initialValue.split("\n").length * 18, maxHeight);
   return (
     <MonacoEditor
       language="json"
@@ -101,7 +103,7 @@ export function ReadOnlyEditor({
 }) {
   const [appTheme] = useTheme();
   const editorTheme = appTheme === Theme.LIGHT ? "light" : "vs-dark";
-  const height = example.split("\n").length * 18 + 1;
+  const height = Math.min(example.split("\n").length * 18 + 1, maxHeight);
   return (
     <Box
       sx={{

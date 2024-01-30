@@ -287,9 +287,6 @@ export class Worker extends Model<
   declare getLastRun: HasOneGetAssociationMixin<Run>;
   declare setLastRun: HasOneSetAssociationMixin<Run, number>;
   declare createLastRun: HasOneCreateAssociationMixin<Run>;
-  // declare static associations: {
-  //   lastRun: Association<Worker, Run>;
-  // };
 }
 
 export class Schedule extends Model<
@@ -1045,7 +1042,7 @@ export class PrivateBackend {
   }
 
   public async registerWorker(attempt = 0): Promise<Worker> {
-    log(`Registering this worker (attempt: ${attempt}`);
+    log(`Registering this worker (attempt: ${attempt})`);
     try {
       return this.sequelize.transaction(async (transaction) => {
         // As a user I have 3 server running.

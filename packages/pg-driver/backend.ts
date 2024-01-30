@@ -305,7 +305,7 @@ export class Schedule extends Model<
   declare signature: string;
   declare createdAt: CreationOptional<Date>;
   /**
-   * Just to select claimed schedules after sql update
+   * Because createOrUpdate doesn't return whats created / updated, we just do an UPDATE WHERE and add the claimId, and then query for those rows
    */
   declare claimId: CreationOptional<string>;
 
@@ -1576,6 +1576,9 @@ export class PrivateBackend {
     );
   }
 
+  /**
+   * When updating the schedule from the schedule details page with the update button (this is the modal)
+   */
   public async updateSchedule(
     updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
   ) {
@@ -1593,6 +1596,7 @@ export class PrivateBackend {
       schedule.data = updatePayload.data;
     }
     if (updatePayload.runAt === null) {
+      // if we have a job that is repeating on failure, this is the escape hatch to stop it
       schedule.runAt = null;
       schedule.claimed = true;
     } else if (updatePayload.runAt instanceof Date) {

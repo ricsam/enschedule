@@ -57,12 +57,13 @@ export const serializedRunSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   createdAt: DateSchema,
-  exitSignal: z.string(),
-  finishedAt: DateSchema,
+  exitSignal: z.string().optional(),
+  finishedAt: OptionalDateSchema,
   startedAt: DateSchema,
   scheduledToRunAt: DateSchema,
   data: z.string(),
 });
+export type SerializedRun = z.output<typeof serializedRunSchema>;
 //#endregion
 
 //#region PublicJobDefinition
@@ -140,7 +141,7 @@ export const publicJobRunSchema = serializedRunSchema.and(
     worker: PublicWorkerSchema.optional(),
   })
 );
-export type PublicJobRun = z.infer<typeof publicJobRunSchema>;
+export type PublicJobRun = z.output<typeof publicJobRunSchema>;
 //#endregion
 
 //#region ScheduleJobOptions
@@ -184,17 +185,6 @@ export type ScheduleUpdatePayload = z.infer<typeof ScheduleUpdatePayloadSchema>;
 //#endregion
 
 //#region Interfaces
-export interface SerializedRun {
-  id: number;
-  stdout: string;
-  stderr: string;
-  createdAt: Date;
-  exitSignal: string;
-  finishedAt: Date;
-  startedAt: Date;
-  scheduledToRunAt: Date;
-  data: string;
-}
 
 export const RunHandlerInCpSchema = z.object({
   handlerId: z.string(),

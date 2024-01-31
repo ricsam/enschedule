@@ -4,7 +4,7 @@ const TEST_DB = "enschedule_test";
 
 Object.assign(process.env, {
   // `postgres://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`
-  POSTGRES: 'true',
+  POSTGRES: "true",
   DB_USER: "postgres",
   DB_HOST: "localhost",
   DB_PASSWORD: "postgres",

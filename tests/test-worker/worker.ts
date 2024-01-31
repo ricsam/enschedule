@@ -85,6 +85,40 @@ if (!process.env.SPECIAL_HANDLERS) {
       message: "some message",
     },
   });
+  worker.registerJob({
+    id: "big-output",
+    title: "This job will output a lot of data",
+    dataSchema: z.any(),
+    version: 1,
+    job: () => {
+      for (let i = 0; i < 100000; i++) {
+        console.log("i", i);
+      }
+    },
+    description: "Provide HTTP parameters as data to send a request",
+    example: {
+      url: "http://localhost:3000",
+    },
+  });
+  worker.registerJob({
+    id: "long-running",
+    title: "This job will run for a while",
+    dataSchema: z.any(),
+    version: 1,
+    job: async () => {
+      for (let i = 0; i < 100; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1000);
+        });
+        console.log("i", i);
+      }
+    },
+    description: "Just run it",
+    example: {
+      url: "http://localhost:3000",
+    },
+  });
 } else {
   worker.registerJob({
     id: "special-job",

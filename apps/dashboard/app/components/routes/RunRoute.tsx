@@ -12,6 +12,7 @@ import { getWorker } from "~/createWorker";
 import type { Breadcrumb } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "../../utils/getParentUrl";
+import { Typography } from "@mui/material";
 
 export const action: ActionFunction = async ({ request, context }) => {
   const fd = await request.formData();
@@ -52,16 +53,29 @@ export function RunRoute({
       breadcrumbs={breadcrumbs}
       navbar={{
         title: `Run #${run.id}`,
-        subTitle: `Ran ${
-          typeof run.jobSchedule === "string"
-            ? `deleted schedule (${run.jobSchedule})`
-            : run.jobSchedule.title
-        } which completed ${
-          formatDate(run.finishedAt).label
-        } and took ${differenceInMilliseconds(
-          new Date(run.finishedAt),
-          new Date(run.startedAt)
-        )} ms to run`,
+        subTitle: (
+          <Typography suppressHydrationWarning component="span">
+            {run.finishedAt
+              ? `Ran ${
+                  typeof run.jobSchedule === "string"
+                    ? `deleted schedule (${run.jobSchedule})`
+                    : run.jobSchedule.title
+                } which completed ${
+                  formatDate(run.finishedAt).label
+                } and took ${differenceInMilliseconds(
+                  new Date(run.finishedAt),
+                  new Date(run.startedAt)
+                )} ms to run`
+              : `Running ${
+                  typeof run.jobSchedule === "string"
+                    ? `deleted schedule (${run.jobSchedule})`
+                    : run.jobSchedule.title
+                } for ${differenceInMilliseconds(
+                  new Date(),
+                  new Date(run.startedAt)
+                )} ms`}
+          </Typography>
+        ),
         actions: <Actions id={run.id} />,
       }}
     >

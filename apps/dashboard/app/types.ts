@@ -11,7 +11,7 @@ export type NavBarTab = {
 export type NavBar = {
   title: string;
   actions?: React.ReactNode;
-  subTitle?: string;
+  subTitle?: React.ReactNode;
   tabs?: NavBarTab[];
 };
 

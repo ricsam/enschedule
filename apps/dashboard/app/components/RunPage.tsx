@@ -97,16 +97,23 @@ export default function RunPage({
                 <Typography color="text.primary">
                   {formatDate(new Date(run.startedAt), false).label}
                 </Typography>
-                <Typography color="text.secondary">Duration</Typography>
-                <Typography color="text.primary">
-                  {new Date(run.finishedAt).getTime() -
-                    new Date(run.startedAt).getTime()}
+                <Typography color="text.secondary">
+                  Duration{run.finishedAt ? "" : " (running)"}
+                </Typography>
+                <Typography color="text.primary" suppressHydrationWarning>
+                  {(run.finishedAt
+                    ? new Date(run.finishedAt).getTime()
+                    : Date.now()) - new Date(run.startedAt).getTime()}
                   ms
                 </Typography>
-                <Typography color="text.secondary">Completed</Typography>
-                <Typography color="text.primary">
-                  {formatDate(new Date(run.finishedAt), false).label}
-                </Typography>
+                {run.finishedAt && (
+                  <>
+                    <Typography color="text.secondary">Completed</Typography>
+                    <Typography color="text.primary">
+                      {formatDate(new Date(run.finishedAt), false).label}
+                    </Typography>
+                  </>
+                )}
                 <Typography color="text.secondary">Scheduled for</Typography>
                 <Typography color="text.primary">
                   {formatDate(new Date(run.scheduledToRunAt), false).label}

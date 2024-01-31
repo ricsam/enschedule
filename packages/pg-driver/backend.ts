@@ -147,8 +147,8 @@ export const serializeRun = (run: Run): SerializedRun => {
     stdout: run.stdout,
     stderr: run.stderr,
     createdAt: run.createdAt,
-    exitSignal: run.exitSignal,
-    finishedAt: run.finishedAt,
+    exitSignal: run.exitSignal ?? undefined,
+    finishedAt: run.finishedAt ?? undefined,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
     data: run.data,
@@ -208,8 +208,8 @@ export const createPublicJobRun = (
     stdout: run.stdout,
     stderr: run.stderr,
     createdAt: run.createdAt,
-    exitSignal: run.exitSignal,
-    finishedAt: run.finishedAt,
+    exitSignal: run.exitSignal ?? undefined,
+    finishedAt: run.finishedAt ?? undefined,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
     jobDefinition: jobDef,
@@ -367,15 +367,15 @@ export class Schedule extends Model<
 
 class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare id: CreationOptional<number>;
-  declare stdout: string;
-  declare stderr: string;
+  declare stdout: CreationOptional<string>; // default ''
+  declare stderr: CreationOptional<string>; // default ''
   declare data: string;
   declare createdAt: CreationOptional<Date>;
-  declare finishedAt: Date;
+  declare finishedAt: CreationOptional<Date> | null;
   declare startedAt: Date;
   declare scheduledToRunAt: Date;
 
-  declare exitSignal: string;
+  declare exitSignal: CreationOptional<string> | null;
 
   declare scheduleId: ForeignKey<Schedule["id"]>;
   declare workerId: ForeignKey<Worker["id"]>;
@@ -422,6 +422,7 @@ function createShortShaHash(input: string) {
 export class PrivateBackend {
   protected maxJobsPerTick = 4;
   public tickDuration = 5000;
+  public logStoreInterval = 5000;
   public logJobs = false;
   protected sequelize: Sequelize;
   protected Run: typeof Run;
@@ -633,11 +634,11 @@ export class PrivateBackend {
         },
         exitSignal: {
           type: DataTypes.TEXT,
-          allowNull: false,
+          allowNull: true,
         },
         finishedAt: {
           type: DataTypes.DATE,
-          allowNull: false,
+          allowNull: true,
         },
         startedAt: {
           type: DataTypes.DATE,
@@ -1557,6 +1558,9 @@ export class PrivateBackend {
     await this.runOverdueJobs();
   }
 
+  /**
+   * Will run a scheduele directly
+   */
   protected async runSchedule(scheduleId: number) {
     const schedule = await Schedule.findByPk(scheduleId);
     if (!schedule) {
@@ -1616,22 +1620,25 @@ export class PrivateBackend {
     );
   }
 
-  private async runDbSchedule(schedule: Schedule) {
+  private async runDbSchedule(schedule: Schedule, run: Run) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
     const definition = this.getJobDef(
       schedule.handlerId,
       schedule.handlerVersion
     );
     const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
-    return this.runDefinition({
-      handlerId: schedule.handlerId,
-      data,
-      version: schedule.handlerVersion,
-    });
+    return this.runDefinition(
+      {
+        handlerId: schedule.handlerId,
+        data,
+        version: schedule.handlerVersion,
+      },
+      run
+    );
     /* eslint-enable */
   }
 
-  public async runDefinition(runMessage: RunHandlerInCp) {
+  public async runDefinition(runMessage: RunHandlerInCp, run: Run) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
     const stdoutStream = new stream.PassThrough();
@@ -1679,6 +1686,43 @@ export class PrivateBackend {
     };
 
     const _console = this.createConsole(stdoutStream, stderrStream);
+
+    let waitingForBufferingToBe = true;
+    let quickResolve: undefined | (() => void);
+
+    const saveOutput = async () => {
+      const stop = () => !buffering && !waitingForBufferingToBe;
+
+      if (!stop()) {
+        for (const key of ["stdout", "stderr"] as const) {
+          const buffer = output[key];
+          const currentOutput = Buffer.concat(buffer).toString("utf8");
+          run[key] = currentOutput;
+        }
+        await run.save();
+      }
+
+      if (stop()) {
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(() => {
+          resolve();
+        }, this.logStoreInterval);
+        quickResolve = () => {
+          clearTimeout(t);
+          resolve();
+        };
+      });
+
+      if (stop()) {
+        return;
+      }
+      await saveOutput();
+    };
+
+    const saveOutputPromise: Promise<void> = saveOutput();
+
     let exitSignal = "0";
     try {
       log("Creating a worker process to run", runMessage.handlerId);
@@ -1689,8 +1733,24 @@ export class PrivateBackend {
     }
     stdoutStream.end();
     stderrStream.end();
+
     const [stdout, stderr] = await Promise.all(promises);
-    return { stdout, stderr, exitSignal };
+    const finishedAt = new Date();
+
+    waitingForBufferingToBe = false;
+    if (quickResolve) {
+      quickResolve();
+    }
+    await saveOutputPromise;
+
+    run.stderr = stderr;
+    run.stdout = stdout;
+    run.exitSignal = exitSignal;
+    run.finishedAt = finishedAt;
+
+    await run.save();
+
+    return { stdout, stderr, exitSignal, finishedAt };
   }
 
   protected createConsole(
@@ -1844,18 +1904,6 @@ export class PrivateBackend {
       "schedule"
     );
     const startedAt = new Date();
-    const { stderr, stdout, exitSignal } = await this.runDbSchedule(schedule);
-    const finishedAt = new Date();
-    log(
-      "Finished running",
-      definition.title,
-      "according to the",
-      schedule.title,
-      "schedule",
-      "and it took",
-      `${String(finishedAt.getTime() - startedAt.getTime())}ms`
-    );
-
     /**
      * It is new Date if the runNow: true was used on the schedule
      */
@@ -1865,11 +1913,7 @@ export class PrivateBackend {
       {
         scheduledToRunAt: runAt,
         startedAt,
-        stderr,
-        stdout,
-        finishedAt,
         data: schedule.data,
-        exitSignal,
         workerId: (await this.registerWorker()).id,
         handlerId: definition.id,
         handlerVersion: definition.version,
@@ -1882,7 +1926,19 @@ export class PrivateBackend {
         },
       }
     );
+    const { finishedAt } = await this.runDbSchedule(schedule, run);
+    log(
+      "Finished running",
+      definition.title,
+      "according to the",
+      schedule.title,
+      "schedule",
+      "and it took",
+      `${String(finishedAt.getTime() - startedAt.getTime())}ms`
+    );
+
     await run.reload({ include: { model: Worker, as: "worker" } });
+
     log(
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
@@ -2009,6 +2065,7 @@ export class PrivateBackend {
 export class TestBackend extends PrivateBackend {
   public maxJobsPerTick = 4;
   public tickDuration = 5000;
+  public logStoreInterval = 1000;
   public sequelize: Sequelize = this.sequelize;
   public Run: typeof Run = this.Run;
   public Schedule: typeof Schedule = this.Schedule;

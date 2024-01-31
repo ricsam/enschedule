@@ -7,7 +7,21 @@ import { Theme, useTheme } from "~/utils/theme-provider";
 
 const ajv = new Ajv();
 
-const maxHeight = typeof window !== "undefined" ? window.innerHeight - 200 : 800;
+const useMaxHeight = () => {
+  let [windowHeight, setWindowHeight] = React.useState(1000);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    function updateHeight() {
+      setWindowHeight(window.innerHeight);
+    }
+    window.addEventListener("resize", updateHeight);
+    updateHeight();
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
+
+  const maxHeight = windowHeight - 200;
+  return maxHeight;
+};
 
 export function Editor({
   jsonSchema,
@@ -48,7 +62,9 @@ export function Editor({
     });
   }
   const [theme] = useTheme();
-  const calculatedHeight = height ?? Math.min(initialValue.split("\n").length * 18, maxHeight);
+  const maxHeight = useMaxHeight();
+  const calculatedHeight =
+    height ?? Math.min(initialValue.split("\n").length * 18, maxHeight);
   return (
     <MonacoEditor
       language="json"
@@ -103,6 +119,7 @@ export function ReadOnlyEditor({
 }) {
   const [appTheme] = useTheme();
   const editorTheme = appTheme === Theme.LIGHT ? "light" : "vs-dark";
+  const maxHeight = useMaxHeight();
   const height = Math.min(example.split("\n").length * 18 + 1, maxHeight);
   return (
     <Box
@@ -150,6 +167,9 @@ export function ReadOnlyEditor({
                   enabled: false,
                 },
                 scrollBeyondLastLine: false,
+                scrollbar: {
+                  alwaysConsumeMouseWheel: false,
+                },
               }
             : {
                 selectionHighlight: false,

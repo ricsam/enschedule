@@ -19,16 +19,27 @@ const columnHelper = createColumnHelper<RowData>();
 
 const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor("exitSignal", {
+    id: "status",
     cell: (info) => {
       const exitSignal = info.getValue();
 
       return (
         <Tooltip
-          title={exitSignal === "0" ? "Success" : "Fail️"}
+          title={
+            exitSignal === "0"
+              ? "Success"
+              : info.row.original.finishedAt
+              ? "Fail️"
+              : "Running"
+          }
           disableInteractive
         >
           <Typography variant="inherit" sx={{ cursor: "default" }}>
-            {exitSignal === "0" ? "✅" : "⚠️"}
+            {exitSignal === "0"
+              ? "✅"
+              : info.row.original.finishedAt
+              ? "⚠️"
+              : "🕑"}
           </Typography>
         </Tooltip>
       );
@@ -63,24 +74,27 @@ const columns: ColumnDef<RowData, any>[] = [
   {
     cell: ({ row, getValue }) => {
       return (
-        <>
+        <Typography suppressHydrationWarning>
           {getValue()}
           ms
-        </>
+        </Typography>
       );
     },
     enableSorting: true,
     header: "Duration",
     id: "duration",
     accessorFn: (run) => {
-      return (
-        new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()
-      );
+      return run.finishedAt
+        ? new Date(run.finishedAt).getTime()
+        : Date.now() - new Date(run.startedAt).getTime();
     },
   },
   columnHelper.accessor("finishedAt", {
     cell: (info) => {
       const value = info.getValue();
+      if (!value) {
+        return "-";
+      }
       return formatDate(new Date(value), false).label;
     },
     header: "Completed",

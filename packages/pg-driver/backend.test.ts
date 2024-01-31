@@ -2,14 +2,9 @@
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
 
-import { RunHandlerInCp } from "@enschedule/types";
+import { PublicJobRun, WorkerStatus } from "@enschedule/types";
 import { z } from "zod";
-import {
-  createJobDefinition,
-  Schedule,
-  StreamHandle,
-  TestBackend,
-} from "./backend";
+import { Schedule, TestBackend, createJobDefinition } from "./backend";
 import { envSequalizeOptions } from "./env-sequalize-options";
 
 let sequalizeInstances: TestBackend[] = [];
@@ -100,6 +95,59 @@ const registerTests = (cb: (getBackend: () => TestBackend) => void) => {
       });
     }
   });
+};
+
+/**
+ * runs backend.runOverdueJobs but will advance all timers that ticks to collect stdout / stderr
+ * as the timers are mocked and never progressed when using jest.useFakeTimers
+ */
+const awaitOverdueJobs = async (
+  backend: TestBackend
+): Promise<Schedule[] | undefined> => {
+  const p1 = backend.runOverdueJobs();
+  let done = false;
+  const result = await Promise.race([
+    p1,
+    new Promise(() => {
+      const u = async () => {
+        while (!done) {
+          await jest.runOnlyPendingTimersAsync();
+        }
+      };
+      u();
+    }),
+  ]);
+  done = true;
+  return result as Schedule[] | undefined;
+};
+
+/**
+ * same principle as awaitOverdueJobs but for backend.tick
+ */
+const awaitTick = async (backend: TestBackend) => {
+  await backend.registerWorker();
+  await awaitOverdueJobs(backend);
+};
+
+const awaitRunSchedule = async (
+  backend: TestBackend,
+  scheduleId: number
+): Promise<PublicJobRun> => {
+  const p1 = backend.runSchedule(scheduleId);
+  let done = false;
+  const result = await Promise.race([
+    p1,
+    new Promise(() => {
+      const u = async () => {
+        while (!done) {
+          await jest.runOnlyPendingTimersAsync();
+        }
+      };
+      u();
+    }),
+  ]);
+  done = true;
+  return result as PublicJobRun;
 };
 
 registerTests((getBackend: () => TestBackend) => {
@@ -227,7 +275,9 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       jest.useFakeTimers().setSystemTime(10);
-      await backend.runOverdueJobs();
+
+      await awaitOverdueJobs(backend);
+
       let runs = await job.getRuns();
       expect(jobFn).toHaveBeenCalledTimes(1);
       expect(jobFn).toHaveBeenLastCalledWith(jobData);
@@ -236,7 +286,8 @@ registerTests((getBackend: () => TestBackend) => {
       expect(run.stderr).toBe("");
       expect(run.stdout).toBe("comment\n");
 
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
+
       runs = await job.getRuns();
       expect(jobFn).toHaveBeenCalledTimes(1);
       expect(jobFn).toHaveBeenLastCalledWith(jobData);
@@ -263,17 +314,17 @@ registerTests((getBackend: () => TestBackend) => {
         return schedule;
       };
       const schedule = await createSchedule("pre");
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
       expect(spy).toHaveBeenCalledTimes(0);
 
       await backend.runScheduleNow(schedule.id);
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenLastCalledWith(jobData);
 
       await backend.runScheduleNow(schedule.id);
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
 
       expect(spy).toHaveBeenCalledTimes(2);
 
@@ -284,7 +335,7 @@ registerTests((getBackend: () => TestBackend) => {
       await b.reload();
       expect(a.runNow).toBe(true);
       expect(b.runNow).toBe(true);
-      const result = await backend.runOverdueJobs();
+      const result = await awaitOverdueJobs(backend);
       expect(result).toHaveLength(2);
       expect(spy).toHaveBeenCalledTimes(4);
     });
@@ -305,11 +356,11 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       jest.useFakeTimers().setSystemTime(10);
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenLastCalledWith(jobData);
 
-      await backend.runOverdueJobs();
+      await awaitOverdueJobs(backend);
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenLastCalledWith(jobData);
       await job.reload();
@@ -331,7 +382,6 @@ registerTests((getBackend: () => TestBackend) => {
           .join("\n")
       ).toMatchSnapshot();
     });
-
     it("should create a signature", () => {
       const sig = backend.createSignature(
         "http_request",
@@ -427,7 +477,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       jest.useFakeTimers().setSystemTime(backend.tickDuration);
 
-      await backend.tick();
+      await awaitTick(backend);
 
       let schedules = await backend.getDbSchedules();
       let runs = await backend.getDbRuns();
@@ -438,7 +488,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       jest.useFakeTimers().setSystemTime(backend.tickDuration * 2);
 
-      await backend.tick();
+      await awaitTick(backend);
 
       schedules = await backend.getDbSchedules();
       runs = await backend.getDbRuns();
@@ -536,8 +586,8 @@ registerTests((getBackend: () => TestBackend) => {
       expect(await schedule.getRuns()).toHaveLength(0);
       expect(schedule.id).toBe(1);
       expect(schedule.numRuns).toBe(0);
-      // RUN
-      const run = await backend.runSchedule(schedule.id);
+      // // RUN
+      const run = await awaitRunSchedule(backend, schedule.id);
       expect(await schedule.getRuns()).toHaveLength(1);
       await schedule.reload({
         include: {
@@ -636,8 +686,19 @@ registerTests((getBackend: () => TestBackend) => {
           runAt: new Date(0),
         }
       );
-      const run = await backend.runSchedule(schedule.id);
-      expect(run).toEqual(await backend.getRun(run.id));
+      const run = await awaitRunSchedule(backend, schedule.id);
+      const receivedSingleRun = await backend.getRun(run.id);
+      // last reached and status might diff, but that is okay
+      const now = new Date();
+      if (run.worker) {
+        run.worker.lastReached = now;
+        run.worker.status = WorkerStatus.UP;
+      }
+      if (receivedSingleRun.worker) {
+        receivedSingleRun.worker.lastReached = now;
+        receivedSingleRun.worker.status = WorkerStatus.UP;
+      }
+      expect(run).toEqual(receivedSingleRun);
     });
   });
 
@@ -703,7 +764,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       jest.useFakeTimers().setSystemTime(backend.tickDuration);
 
-      await backend.tick();
+      await awaitTick(backend);
 
       let runs = await backend.getDbRuns();
       expect(runs).toHaveLength(1);
@@ -716,7 +777,7 @@ registerTests((getBackend: () => TestBackend) => {
         jest
           .useFakeTimers()
           .setSystemTime((backend.tickDuration + 5000) * (n + 1));
-        await backend.tick();
+        await awaitTick(backend);
         runs = await backend.getDbRuns();
       };
       for (let n = 0; n < 10; n += 1) {
@@ -898,7 +959,7 @@ registerTests((getBackend: () => TestBackend) => {
           runAt: new Date(0),
         }
       );
-      const run = await backend.runSchedule(schedule.id);
+      const run = await awaitRunSchedule(backend, schedule.id);
       expect(run.worker?.id).toBe(worker.id);
       expect((await backend.getWorkers())[0].id).toBe(worker.id);
       expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
@@ -924,7 +985,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       expect(schedule.id).toBe(1);
-      const runA = await backend.runSchedule(schedule.id);
+      const runA = await awaitRunSchedule(backend, schedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
       expect(runA.data).toBe('{"url":"http://localhost:1234"}');
 
@@ -960,7 +1021,7 @@ registerTests((getBackend: () => TestBackend) => {
       expect(oldSchedule.id).toBe(2);
       expect(oldSchedule.data).toBe('{"url":"http://other_url:1234"}');
       expect(oldSchedule.handlerVersion).toBe(1);
-      const runC = await backend.runSchedule(oldSchedule.id);
+      const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://other_url:1234" });
     });
     it("should be able to migrate a definition", async () => {
@@ -984,7 +1045,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       expect(schedule.id).toBe(1);
-      const runA = await backend.runSchedule(schedule.id);
+      const runA = await awaitRunSchedule(backend, schedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
       expect(runA.data).toBe('{"url":"http://localhost:1234"}');
 
@@ -1008,7 +1069,7 @@ registerTests((getBackend: () => TestBackend) => {
         ({ url }) => url
       );
 
-      const runB = await backend.runSchedule(schedule.id);
+      const runB = await awaitRunSchedule(backend, schedule.id);
       expect(spyB).toHaveBeenCalledWith("http://localhost:1234");
       expect(runB.data).toBe('"http://localhost:1234"');
 
@@ -1034,7 +1095,7 @@ registerTests((getBackend: () => TestBackend) => {
       expect(oldSchedule.id).toBe(2);
       expect(oldSchedule.handlerVersion).toBe(2);
       expect(oldSchedule.data).toBe('"http://other_url:1234"');
-      const runC = await backend.runSchedule(oldSchedule.id);
+      const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).not.toHaveBeenCalled();
       expect(spyB).toBeCalledWith("http://other_url:1234");
     });

@@ -63,6 +63,7 @@ const verboseScheduleStatus: Record<ScheduleStatus, string> = {
   [ScheduleStatus.RETRYING]: "Retrying",
   [ScheduleStatus.SCHEDULED]: "Scheduled",
   [ScheduleStatus.UNSCHEDULED]: "Unscheduled",
+  [ScheduleStatus.RUNNING]: "Running",
 };
 
 const verboseStatus = (status: ScheduleStatus) => {

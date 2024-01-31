@@ -9,6 +9,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "start": "ts-node ./src/index.ts"
   },
   "bin": {

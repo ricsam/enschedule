@@ -13,11 +13,18 @@ export enum ScheduleStatus {
   FAILED = "FAILED",
   UNSCHEDULED = "UNSCHEDULED",
   SCHEDULED = "SCHEDULED",
+  RUNNING = "RUNNING",
 }
 export enum WorkerStatus {
   UP = "UP",
   DOWN = "DOWN",
   PENDING = "PENDING",
+}
+export enum RunStatus {
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+  RUNNING = "RUNNING",
+  LOST = "LOST",
 }
 //#endregion
 
@@ -62,6 +69,7 @@ export const serializedRunSchema = z.object({
   startedAt: DateSchema,
   scheduledToRunAt: DateSchema,
   data: z.string(),
+  status: z.nativeEnum(RunStatus),
 });
 export type SerializedRun = z.output<typeof serializedRunSchema>;
 //#endregion

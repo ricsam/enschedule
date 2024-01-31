@@ -34,6 +34,7 @@ import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
+import { sentenceCase } from "sentence-case";
 
 export const editDetailsAction: ActionFunction = async ({
   request,
@@ -326,10 +327,14 @@ export default function SchedulePage({
               Details
             </Typography>
             <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
+              <Typography color="text.secondary">Status</Typography>
+              <Typography color="text.primary">
+                {sentenceCase(schedule.status)}
+              </Typography>
               <Typography color="text.secondary">Next run</Typography>
               <Typography color="text.primary" data-testid="next-run">
                 {schedule.runAt ? (
-                  formatDate(new Date(schedule.runAt), false).label
+                  formatDate(new Date(schedule.runAt), { verbs: false }).label
                 ) : (
                   <>
                     Not scheduled, click{" "}
@@ -379,12 +384,16 @@ export default function SchedulePage({
               ) : null}
               <Typography color="text.secondary">Created</Typography>
               <Typography color="text.primary">
-                {formatDate(new Date(schedule.createdAt), false).label}
+                {
+                  formatDate(new Date(schedule.createdAt), { verbs: false })
+                    .label
+                }
               </Typography>
               <Typography color="text.secondary">Last run</Typography>
               <Typography color="text.primary">
                 {lastRun
-                  ? formatDate(new Date(lastRun.startedAt), false).label
+                  ? formatDate(new Date(lastRun.startedAt), { verbs: false })
+                      .label
                   : "-"}
               </Typography>
               <Typography color="text.secondary">Number of runs</Typography>

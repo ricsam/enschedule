@@ -14,8 +14,9 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { SerializeFrom } from "@remix-run/node";
 import { Link, useHref } from "@remix-run/react";
+import { sentenceCase } from "sentence-case";
 import { ReadOnlyEditor } from "~/components/Editor";
-import { formatDate } from "~/utils/formatDate";
+import { formatDate, formatDuration } from "~/utils/formatDate";
 
 const ScheduleLink = ({
   title,
@@ -70,6 +71,10 @@ export default function RunPage({
                 Details
               </Typography>
               <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
+                <Typography color="text.secondary">Status</Typography>
+                <Typography color="text.primary">
+                  {sentenceCase(run.status)}
+                </Typography>
                 <Typography color="text.secondary">Schedule</Typography>
                 {typeof schedule === "string" ? (
                   <Typography component="span">
@@ -95,28 +100,35 @@ export default function RunPage({
                 )}
                 <Typography color="text.secondary">Started</Typography>
                 <Typography color="text.primary">
-                  {formatDate(new Date(run.startedAt), false).label}
+                  {formatDate(new Date(run.startedAt), { verbs: false }).label}
                 </Typography>
                 <Typography color="text.secondary">
                   Duration{run.finishedAt ? "" : " (running)"}
                 </Typography>
                 <Typography color="text.primary" suppressHydrationWarning>
-                  {(run.finishedAt
-                    ? new Date(run.finishedAt).getTime()
-                    : Date.now()) - new Date(run.startedAt).getTime()}
-                  ms
+                  {formatDuration(
+                    (run.finishedAt
+                      ? new Date(run.finishedAt).getTime()
+                      : Date.now()) - new Date(run.startedAt).getTime()
+                  )}
                 </Typography>
                 {run.finishedAt && (
                   <>
                     <Typography color="text.secondary">Completed</Typography>
                     <Typography color="text.primary">
-                      {formatDate(new Date(run.finishedAt), false).label}
+                      {
+                        formatDate(new Date(run.finishedAt), { verbs: false })
+                          .label
+                      }
                     </Typography>
                   </>
                 )}
                 <Typography color="text.secondary">Scheduled for</Typography>
                 <Typography color="text.primary">
-                  {formatDate(new Date(run.scheduledToRunAt), false).label}
+                  {
+                    formatDate(new Date(run.scheduledToRunAt), { verbs: false })
+                      .label
+                  }
                 </Typography>
                 <Typography color="text.secondary">Exit signal</Typography>
                 <Typography color="text.primary">{run.exitSignal}</Typography>

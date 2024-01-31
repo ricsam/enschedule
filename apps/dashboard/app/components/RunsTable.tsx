@@ -1,45 +1,45 @@
 import type { PublicJobRun } from "@enschedule/types";
+import { RunStatus } from "@enschedule/types";
+import { Tooltip, Typography } from "@mui/material";
 import MuiLink from "@mui/material/Link";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
+import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { ExpandableTable } from "~/components/Table";
 import { getWorker } from "~/createWorker";
-import { formatDate } from "~/utils/formatDate";
-import { createMsButtons } from "./createMsButtons";
+import { formatDate, formatDuration } from "~/utils/formatDate";
 import RunPage from "./RunPage";
-import { Tooltip, Typography } from "@mui/material";
+import { createMsButtons } from "./createMsButtons";
 
 type RowData = SerializeFrom<PublicJobRun>;
 
 const columnHelper = createColumnHelper<RowData>();
 
 const columns: ColumnDef<RowData, any>[] = [
-  columnHelper.accessor("exitSignal", {
+  columnHelper.accessor("status", {
     id: "status",
     cell: (info) => {
-      const exitSignal = info.getValue();
+      const s: RunStatus = info.getValue();
+      const icons: { [key in RunStatus]: string } = {
+        [RunStatus.RUNNING]: "🚀",
+        [RunStatus.FAILED]: "⚠️",
+        [RunStatus.LOST]: "🤷‍♂️",
+        [RunStatus.SUCCESS]: "✅",
+      };
 
       return (
-        <Tooltip
-          title={
-            exitSignal === "0"
-              ? "Success"
-              : info.row.original.finishedAt
-              ? "Fail️"
-              : "Running"
-          }
-          disableInteractive
-        >
-          <Typography variant="inherit" sx={{ cursor: "default" }}>
-            {exitSignal === "0"
-              ? "✅"
-              : info.row.original.finishedAt
-              ? "⚠️"
-              : "🕑"}
+        <Tooltip title={sentenceCase(s)} disableInteractive>
+          <Typography
+            variant="inherit"
+            data-testid="status"
+            data-status={s}
+            sx={{ cursor: "default" }}
+          >
+            {icons[s]}
           </Typography>
         </Tooltip>
       );
@@ -67,26 +67,25 @@ const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor("startedAt", {
     cell: (info) => {
       const value = info.getValue();
-      return formatDate(new Date(value), false).label;
+      return formatDate(new Date(value), { verbs: false }).label;
     },
     header: "Started",
   }),
   {
     cell: ({ row, getValue }) => {
-      return (
-        <Typography suppressHydrationWarning>
-          {getValue()}
-          ms
-        </Typography>
-      );
+      return <Typography suppressHydrationWarning>{getValue()}</Typography>;
     },
     enableSorting: true,
     header: "Duration",
     id: "duration",
     accessorFn: (run) => {
-      return run.finishedAt
-        ? new Date(run.finishedAt).getTime()
-        : Date.now() - new Date(run.startedAt).getTime();
+      if (run.status === RunStatus.LOST) {
+        return "-";
+      }
+      return formatDuration(
+        (run.finishedAt ? new Date(run.finishedAt).getTime() : Date.now()) -
+          new Date(run.startedAt).getTime()
+      );
     },
   },
   columnHelper.accessor("finishedAt", {
@@ -95,14 +94,14 @@ const columns: ColumnDef<RowData, any>[] = [
       if (!value) {
         return "-";
       }
-      return formatDate(new Date(value), false).label;
+      return formatDate(new Date(value), { verbs: false }).label;
     },
     header: "Completed",
   }),
   columnHelper.accessor("scheduledToRunAt", {
     cell: (info) => {
       const value = info.getValue();
-      return formatDate(new Date(value), false).label;
+      return formatDate(new Date(value), { verbs: false }).label;
     },
     header: "Scheduled for",
   }),

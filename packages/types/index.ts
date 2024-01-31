@@ -28,6 +28,7 @@ export {
   DateStringSchema,
   PublicWorkerSchema,
   WorkerStatus,
+  RunStatus,
   JobDefinitionSchema,
   typeAssert,
   ScheduleSchema,

@@ -104,7 +104,7 @@ const columns: ColumnDef<RowData, any>[] = [
       const date = info.getValue();
       return (
         <Typography suppressHydrationWarning variant="inherit" color="inherit">
-          {formatDate(new Date(date), false).label}
+          {formatDate(new Date(date), { verbs: false }).label}
         </Typography>
       );
     },
@@ -122,7 +122,7 @@ const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor("createdAt", {
     cell: (info) => {
       const date = info.getValue();
-      return formatDate(new Date(date), false).label;
+      return formatDate(new Date(date), { verbs: false }).label;
     },
     header: "Age",
   }),
@@ -251,11 +251,9 @@ const columns: ColumnDef<RowData, any>[] = [
   // }),
 ];
 
-
 const { ToolbarWrapper, MsButtons } = createMsButtons({
   formAction: "/workers?index",
 });
-
 
 export default function WorkersTable({ workers }: { workers: RowData[] }) {
   return (

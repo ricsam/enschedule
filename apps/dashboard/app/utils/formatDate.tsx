@@ -1,11 +1,28 @@
-import { formatDuration, intervalToDuration, format } from "date-fns";
+import {
+  formatDuration as dateFnsFormatDuration,
+  intervalToDuration,
+  format,
+} from "date-fns";
+
+export const formatDuration = (durationMs: number): string => {
+  const result = formatDate(new Date(durationMs), {
+    start: new Date(0),
+    verbs: false,
+  }).dateFnsDuration;
+  return `${result}`;
+};
 
 export const formatDate = (
   _date: Date | string,
-  verbs?: { future: string; past: string } | false
-): { label: string; value: string } => {
+  {
+    start = new Date(),
+    verbs,
+  }: {
+    start?: Date;
+    verbs?: { future: string; past: string } | false;
+  } = {}
+): { label: string; value: string; time: string; dateFnsDuration: string } => {
   const date = typeof _date === "string" ? new Date(_date) : _date;
-  const start = new Date();
   const duration = intervalToDuration({ start, end: date });
   let unit: (keyof Duration)[] = [
     "years",
@@ -24,12 +41,13 @@ export const formatDate = (
     }
   }
   const value = format(date, "yyyy-MM-dd:HH:mm:ss");
+  const dateFnsDuration = dateFnsFormatDuration(duration, {
+    format: unit,
+  });
   /**
    * if close in time (< 1000ms), time is empty string
    */
-  let time = formatDuration(duration, {
-    format: unit,
-  });
+  let time = dateFnsDuration;
   if (unit[0] === "seconds") {
     time = "less than a minute";
   }
@@ -50,5 +68,5 @@ export const formatDate = (
       label = `will ${future} in ${time}`;
     }
   }
-  return { label, value };
+  return { label, value, time, dateFnsDuration };
 };

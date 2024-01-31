@@ -9,6 +9,7 @@ import {
   WorkerStatus,
   JobDefinitionSchema,
   typeAssert,
+  RunStatus,
 } from "@enschedule/types";
 import type {
   JobDefinition,
@@ -75,7 +76,7 @@ function createWorkerHash(
   );
 }
 
-const createPublicWorker = (dbWorker: Worker): PublicWorker => {
+const getWorkerStatus = (dbWorker: Worker): WorkerStatus => {
   const pollInterval = dbWorker.pollInterval;
   const currentTime = Date.now();
   const lastReached = currentTime - dbWorker.lastReached.getTime();
@@ -90,6 +91,11 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
   if (lastReached > downThreshold) {
     status = WorkerStatus.DOWN;
   }
+  return status;
+};
+
+const createPublicWorker = (dbWorker: Worker): PublicWorker => {
+  const status = getWorkerStatus(dbWorker);
 
   return {
     versionHash: createWorkerHash(
@@ -152,19 +158,24 @@ export const serializeRun = (run: Run): SerializedRun => {
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
     data: run.data,
+    status: getRunStatus(run),
   };
 };
 
-export const createPublicJobSchedule = (
-  schedule: Schedule,
-  jobDef: PublicJobDefinition | string
-): PublicJobSchedule => {
+const getScheduleStatus = (schedule: Schedule): ScheduleStatus => {
   let status = ScheduleStatus.UNSCHEDULED;
-  if (schedule.runAt) {
+  if (schedule.runAt || schedule.runNow === true) {
     status = ScheduleStatus.SCHEDULED;
   }
   if (schedule.lastRun) {
-    if (schedule.lastRun.exitSignal !== "0") {
+    const runStatus = getRunStatus(schedule.lastRun);
+
+    if (runStatus === RunStatus.RUNNING) {
+      status = ScheduleStatus.RUNNING;
+    } else if (runStatus === RunStatus.LOST) {
+      // if the worker is down, we consider the job lost and the schedule is failed
+      status = ScheduleStatus.FAILED;
+    } else if (runStatus === RunStatus.FAILED) {
       status = ScheduleStatus.FAILED;
       if (schedule.retryFailedJobs === true) {
         if (
@@ -174,10 +185,20 @@ export const createPublicJobSchedule = (
           status = ScheduleStatus.RETRYING;
         }
       }
+    } else if (schedule.runNow === true) {
+      status = ScheduleStatus.SCHEDULED;
     } else {
       status = ScheduleStatus.SUCCESS;
     }
   }
+  return status;
+};
+
+export const createPublicJobSchedule = (
+  schedule: Schedule,
+  jobDef: PublicJobDefinition | string
+): PublicJobSchedule => {
+  const status = getScheduleStatus(schedule);
   return {
     id: schedule.id,
     title: schedule.title,
@@ -198,11 +219,25 @@ export const createPublicJobSchedule = (
   };
 };
 
+const getRunStatus = (run: Run): RunStatus => {
+  let status = RunStatus.SUCCESS;
+  if (!run.finishedAt) {
+    status = RunStatus.RUNNING;
+    if (!run.worker || getWorkerStatus(run.worker) === WorkerStatus.DOWN) {
+      status = RunStatus.LOST;
+    }
+  } else if (run.exitSignal !== "0") {
+    status = RunStatus.FAILED;
+  }
+  return status;
+};
+
 export const createPublicJobRun = (
   run: Run,
   schedule: Schedule | string,
   jobDef: PublicJobDefinition | string
 ): PublicJobRun => {
+  const status = getRunStatus(run);
   return {
     id: Number(run.id),
     stdout: run.stdout,
@@ -219,6 +254,7 @@ export const createPublicJobRun = (
         : createPublicJobSchedule(schedule, jobDef),
     data: run.data,
     worker: run.worker ? createPublicWorker(run.worker) : undefined,
+    status,
   };
 };
 
@@ -783,10 +819,18 @@ export class PrivateBackend {
     const jobs = await Schedule.findAll({
       order: [["createdAt", "DESC"]],
       where: sequalizeSanitizedWhere,
-      include: {
-        model: Run,
-        as: "lastRun",
-      },
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
     });
     return jobs;
   }
@@ -817,6 +861,18 @@ export class PrivateBackend {
           {
             model: Schedule,
             as: "schedule",
+            include: [
+              {
+                model: Run,
+                as: "lastRun",
+                include: [
+                  {
+                    model: Worker,
+                    as: "worker",
+                  },
+                ],
+              },
+            ],
           },
           { model: Worker, as: "worker" },
         ],
@@ -834,7 +890,20 @@ export class PrivateBackend {
       );
     }
 
-    const jobSchedule = await Schedule.findByPk(scheduleId);
+    const jobSchedule = await Schedule.findByPk(scheduleId, {
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
+    });
     if (!jobSchedule) {
       throw new Error("invalid jobScheduleId");
     }
@@ -925,10 +994,18 @@ export class PrivateBackend {
   }
   public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
     const schedule = await Schedule.findByPk(id, {
-      include: {
-        model: Run,
-        as: "lastRun",
-      },
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
     });
     if (!schedule) {
       return;
@@ -1207,6 +1284,18 @@ export class PrivateBackend {
     const result = await Schedule.findOrCreate({
       where,
       defaults,
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
     });
     let status: "created" | "updated" | "unchanged" = "unchanged";
     const [schedule, created] = result;
@@ -1310,7 +1399,20 @@ export class PrivateBackend {
   }
 
   public async runScheduleNow(scheduleId: number) {
-    const schedule = await Schedule.findByPk(scheduleId);
+    const schedule = await Schedule.findByPk(scheduleId, {
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
+    });
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }
@@ -1562,7 +1664,20 @@ export class PrivateBackend {
    * Will run a scheduele directly
    */
   protected async runSchedule(scheduleId: number) {
-    const schedule = await Schedule.findByPk(scheduleId);
+    const schedule = await Schedule.findByPk(scheduleId, {
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
+    });
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }
@@ -1586,7 +1701,20 @@ export class PrivateBackend {
   public async updateSchedule(
     updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
   ) {
-    const schedule = await Schedule.findByPk(updatePayload.id);
+    const schedule = await Schedule.findByPk(updatePayload.id, {
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
+    });
     if (!schedule) {
       throw new Error("invalid id in ScheduleUpdatePayload");
     }
@@ -1926,6 +2054,11 @@ export class PrivateBackend {
         },
       }
     );
+
+    schedule.numRuns += 1;
+    await schedule.setLastRun(run);
+    await schedule.save();
+
     const { finishedAt } = await this.runDbSchedule(schedule, run);
     log(
       "Finished running",
@@ -1942,9 +2075,6 @@ export class PrivateBackend {
     log(
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
-    schedule.numRuns += 1;
-    await schedule.setLastRun(run);
-    await schedule.save();
 
     const worker = await this.registerWorker();
     await worker.setLastRun(run);
@@ -2035,7 +2165,20 @@ export class PrivateBackend {
     return scheduleIds;
   }
   public async deleteSchedule(scheduleId: number) {
-    const schedule = await Schedule.findByPk(scheduleId);
+    const schedule = await Schedule.findByPk(scheduleId, {
+      include: [
+        {
+          model: Run,
+          as: "lastRun",
+          include: [
+            {
+              model: Worker,
+              as: "worker",
+            },
+          ],
+        },
+      ],
+    });
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }

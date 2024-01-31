@@ -27,8 +27,9 @@ const columns: ColumnDef<RowData, any>[] = [
       const icons: { [key in ScheduleStatus]: string } = {
         [ScheduleStatus.FAILED]: "⚠️",
         [ScheduleStatus.SCHEDULED]: "📅",
-        [ScheduleStatus.UNSCHEDULED]: "🤷‍♂️",
+        [ScheduleStatus.UNSCHEDULED]: "❔",
         [ScheduleStatus.RETRYING]: "🔄",
+        [ScheduleStatus.RUNNING]: "🚀",
         [ScheduleStatus.SUCCESS]: "✅",
       };
       return (
@@ -71,7 +72,7 @@ const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor(
     (data) => {
       return data.runAt
-        ? formatDate(new Date(data.runAt), false).label
+        ? formatDate(new Date(data.runAt), { verbs: false }).label
         : "Not scheduled";
     },
     {
@@ -105,7 +106,7 @@ const columns: ColumnDef<RowData, any>[] = [
         if (lastRun === "-") {
           return "-";
         }
-        const value = formatDate(new Date(info.getValue()), false);
+        const value = formatDate(new Date(info.getValue()), { verbs: false });
         return (
           <Typography variant="inherit" suppressHydrationWarning>
             {value.label}

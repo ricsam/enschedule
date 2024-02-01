@@ -97,6 +97,10 @@ export const publicJobScheduleSchema = z.object({
   maxRetries: z.number(),
   runAt: OptionalDateSchema,
   cronExpression: z.string().optional(),
+  /**
+   * When clicking the run now button this is true to be claimed by a worker asap
+   */
+  runNow: z.boolean(),
   lastRun: serializedRunSchema.optional(),
   createdAt: DateSchema,
   /** job definition handlerId */
@@ -105,6 +109,9 @@ export const publicJobScheduleSchema = z.object({
   numRuns: z.number(),
   data: z.string(),
   status: z.nativeEnum(ScheduleStatus),
+  /**
+   * more like schedule id, but the unique ID that ensures that 2 schedules with the same eventId are not created
+   */
   eventId: z.string().optional(),
 });
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;

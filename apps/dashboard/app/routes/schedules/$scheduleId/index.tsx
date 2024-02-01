@@ -72,7 +72,7 @@ export const useNavbar = (action: string, runRedirect: string): NavBar => {
         to: `/schedules/${data.schedule.id}/runs`,
       },
     ],
-    actions: <Actions action={action} runRedirect={runRedirect} />,
+    actions: <Actions action={action} runRedirect={runRedirect} pendingRunNow={data.schedule.runNow} />,
   };
 };
 

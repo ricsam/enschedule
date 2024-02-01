@@ -1,4 +1,5 @@
 * Mark runs as "lost" if their corresponding worker is down and the run never finished
+* schedule status should technically not be determined by the "lastRun" but rather "by any of its runs"
 * add global poll interval information
 * write docs about eventId on schedules (and maybe rename eventId to scheduleName)
 * write docs about handlerVersion and migrations

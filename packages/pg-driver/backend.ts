@@ -207,6 +207,7 @@ export const createPublicJobSchedule = (
     retries: schedule.retries,
     maxRetries: schedule.maxRetries,
     runAt: schedule.runAt || undefined,
+    runNow: schedule.runNow,
     cronExpression: schedule.cronExpression || undefined,
     lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
     handlerId: schedule.handlerId,
@@ -1473,13 +1474,14 @@ export class PrivateBackend {
       },
       {
         limit: this.maxJobsPerTick,
-        returning: true,
         where: {
           [Op.and]: [
             {
+              // this worker must have the handler for this schedule
               handlerId: {
                 [Op.in]: jobKeys,
               },
+              // it must not already be claimed by another worker
               claimed: {
                 [Op.eq]: false,
               },
@@ -1487,11 +1489,13 @@ export class PrivateBackend {
             {
               [Op.or]: [
                 {
+                  // its runAt must be in the past
                   runAt: {
                     [Op.lte]: new Date(),
                   },
                 },
                 {
+                  // or it is maked as "run now", using any of the schedule run now buttons
                   runNow: {
                     [Op.eq]: true,
                   },
@@ -1500,13 +1504,16 @@ export class PrivateBackend {
             },
             {
               [Op.or]: [
+                // optional, a user can say a schedule must run on a worker with a specific workerId
                 {
+                  // only run scheules marked for any worker
                   workerId: {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     [Op.eq]: null!,
                   },
                 },
                 {
+                  // only run scheules marked for this worker
                   workerId: {
                     [Op.eq]: this.workerInstance.workerId,
                   },

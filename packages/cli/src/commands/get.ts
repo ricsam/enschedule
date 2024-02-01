@@ -1,4 +1,5 @@
-import { PublicJobSchedule, ScheduleStatus } from "@enschedule/types";
+import type { PublicJobSchedule} from "@enschedule/types";
+import { ScheduleStatus } from "@enschedule/types";
 import Table from "cli-table";
 import { Command } from "commander"; // add this line
 import { getWorker } from "../get-worker";

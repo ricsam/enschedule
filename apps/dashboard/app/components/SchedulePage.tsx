@@ -5,6 +5,7 @@ import type {
 import { DateSchema } from "@enschedule/types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
+  CircularProgress,
   DialogContent,
   FormControlLabel,
   IconButton,
@@ -609,11 +610,13 @@ export function Actions({
   action,
   runRedirect,
   pollInterval,
+  pendingRunNow,
 }: {
   action: string;
   runRedirect: string;
   // TODO use this!
   pollInterval?: number;
+  pendingRunNow: boolean;
 }) {
   const navigation = useNavigation();
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
@@ -660,7 +663,34 @@ export function Actions({
           <input type="hidden" name="action" value="delete" />
         </Form>
         <Form method="post" action={action}>
-          <Button type="submit" variant="contained" data-testid="run-now">
+          <Button
+            type="submit"
+            variant="contained"
+            data-testid="run-now"
+            endIcon={
+              <Box
+                sx={{
+                  width: 24,
+                  height: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {pendingRunNow ? (
+                  <CircularProgress
+                    style={{
+                      width: 24,
+                      height: 24,
+                    }}
+                  />
+                ) : (
+                  "🚀"
+                )}
+              </Box>
+            }
+            disabled={pendingRunNow}
+          >
             Run now
           </Button>
           <input type="hidden" name="action" value="run" />

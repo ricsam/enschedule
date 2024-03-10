@@ -37,7 +37,6 @@ export const DateStringSchema = z.string().refine((dateString) => {
   );
 });
 
-//#region Schemas
 export const DateSchema = z
   .union([DateStringSchema, z.date()])
   .transform((val) => {
@@ -59,6 +58,7 @@ export const OptionalDateSchema = z
     return undefined;
   });
 
+//#region Schemas
 export const serializedRunSchema = z.object({
   id: z.number(),
   stdout: z.string(),

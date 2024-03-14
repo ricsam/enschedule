@@ -1,5 +1,6 @@
 import type {
   PublicJobSchedule,
+  PublicWorker,
   ScheduleUpdatePayloadSchema,
 } from "@enschedule/types";
 import { DateSchema } from "@enschedule/types";
@@ -29,13 +30,13 @@ import { Form, Link, useNavigate, useNavigation } from "@remix-run/react";
 import format from "date-fns/format";
 import parseISO from "date-fns/parseISO";
 import React from "react";
+import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { Editor } from "~/components/Editor";
 import { getWorker } from "~/createWorker";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
-import { sentenceCase } from "sentence-case";
 
 export const editDetailsAction: ActionFunction = async ({
   request,
@@ -609,13 +610,12 @@ function DataCard({
 export function Actions({
   action,
   runRedirect,
-  pollInterval,
+  activeWorkers,
   pendingRunNow,
 }: {
   action: string;
   runRedirect: string;
-  // TODO use this!
-  pollInterval?: number;
+  activeWorkers: SerializeFrom<PublicWorker>[];
   pendingRunNow: boolean;
 }) {
   const navigation = useNavigation();
@@ -636,9 +636,27 @@ export function Actions({
           setSnackbarOpen(false);
         }}
         data-testid="run-now-snackbar"
-        message={`This job has been marked to be claimed by a worker. It will run on the next tick${
-          pollInterval ? ` ${pollInterval}ms` : ""
-        }.`}
+        message={
+          <>
+            <Box>
+              This job has been marked to be claimed by a worker. It will run on
+              the next tick on one of the following active workers:
+            </Box>
+            <Box>
+              {activeWorkers.map((worker) => {
+                return (
+                  <Box key={worker.id} display="flex">
+                    <span>{worker.title} - </span>
+                    <MuiLink to={`/workers/${worker.id}`} component={Link}>
+                      {worker.instanceId}
+                    </MuiLink>
+                    <span> - {worker.pollInterval}</span>
+                  </Box>
+                );
+              })}
+            </Box>
+          </>
+        }
         action={
           <IconButton
             size="small"
@@ -672,9 +690,9 @@ export function Actions({
                 sx={{
                   width: 24,
                   height: 24,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 {pendingRunNow ? (

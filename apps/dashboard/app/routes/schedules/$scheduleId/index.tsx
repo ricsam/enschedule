@@ -1,4 +1,4 @@
-import type { PublicJobSchedule } from "@enschedule/types";
+import { WorkerStatus, type PublicJobSchedule } from "@enschedule/types";
 import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
@@ -23,10 +23,15 @@ export const getLoaderData = async (
   if (!schedule) {
     throw new Error("invalid id");
   }
-  // it doesn't look like we need runs here
-  // const runs = await worker.getRuns({ scheduleId: schedule.id });
 
-  return { schedule };
+  const workers = await worker.getWorkers();
+  const activeWorkers = workers.filter(
+    (worker) =>
+      worker.status === WorkerStatus.UP &&
+      !!worker.definitions.find((handler) => handler.id === schedule.handlerId)
+  );
+
+  return { schedule, activeWorkers };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
@@ -72,7 +77,14 @@ export const useNavbar = (action: string, runRedirect: string): NavBar => {
         to: `/schedules/${data.schedule.id}/runs`,
       },
     ],
-    actions: <Actions action={action} runRedirect={runRedirect} pendingRunNow={data.schedule.runNow} />,
+    actions: (
+      <Actions
+        action={action}
+        runRedirect={runRedirect}
+        pendingRunNow={data.schedule.runNow}
+        activeWorkers={data.activeWorkers}
+      />
+    ),
   };
 };
 

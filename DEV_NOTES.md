@@ -2,24 +2,29 @@
 #### Setup
 ```
 pnpm install
-pnpm run playwright install
+npm run playwright install
 docker compose up -d
-cd packages/test-worker
-yarn run seed
+cd tests/test-worker
+echo 'POSTGRES=postgres://postgres:postgres@127.0.0.1:6543/dev\nAPI_KEY=secret_key\nPORT=3333' > .env
+npm run seed
+
+brew install pstree
 ```
 
 #### Develop UI
 ```
-pnpm run dev
+echo 'WORKER_URL=http://localhost:3333\nAPI_KEY=secret_key' > apps/dashboard/.env
+
+npm run dev
 SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
 ```
 
 #### Run all tests in parallel
 ```
 cd apps/dashboard
-yarn run build
+npm run build
 cd ../../
-pnpm run playwright test
+npm run playwright test
 ```
 
 ##### To kill any lingering processes, run:

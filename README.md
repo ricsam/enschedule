@@ -258,7 +258,7 @@ A schedule defines when a handler runs. The easiest way to create a new schedule
 
 ## Deploy schedules using schedule files
 
-You can create schedule definitions files:
+You can create schedule handler files:
 
 ```yml
 apiVersion: v1

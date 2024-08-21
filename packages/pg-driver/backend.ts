@@ -254,7 +254,7 @@ export const createPublicJobRun = (
         ? schedule
         : createPublicJobSchedule(schedule, jobDef),
     data: run.data,
-    worker: run.worker ? createPublicWorker(run.worker) : undefined,
+    worker: run.worker ? createPublicWorker(run.worker) : run.workerTitle,
     status,
   };
 };
@@ -348,7 +348,7 @@ export class Schedule extends Model<
 
   declare title: string;
   declare description: string;
-  /** job definition handlerId, i.e. the definition that the schedule executes */
+  /** job handlerId, i.e. the handler the schedule executes */
   declare handlerId: string;
   declare cronExpression?: CreationOptional<string> | null;
   declare eventId?: CreationOptional<string> | null;
@@ -425,6 +425,8 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare handlerVersion: number; // same as schedule.handlerVersion, but in case schedule is deleted the handlerVersion can still be found
   declare scheduleTitle: string; // same as `${schedule.title}, #${schedule.id}`, but in case schedule is deleted a scheduleTitle can still be found
   declare schedule?: NonAttribute<Schedule> | null;
+
+  declare workerTitle: string; // same as `${worker.title}, #${worker.id}`, but in case worker is deleted a workerTitle can still be found
   declare worker?: NonAttribute<Worker> | null;
 }
 
@@ -697,6 +699,10 @@ export class PrivateBackend {
           type: DataTypes.STRING(),
           allowNull: false,
         },
+        workerTitle: {
+          type: DataTypes.STRING(),
+          allowNull: false,
+        },
       },
       {
         modelName: "Run",
@@ -835,7 +841,7 @@ export class PrivateBackend {
     });
     return jobs;
   }
-  protected getJobDef(id: string, version: number): JobDefinition {
+  protected getLocalHandler(id: string, version: number): JobDefinition {
     const versions = this.definedJobs[id];
     if (!versions) {
       throw new Error("invalid id");
@@ -1757,7 +1763,7 @@ export class PrivateBackend {
 
   private async runDbSchedule(schedule: Schedule, run: Run) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
-    const definition = this.getJobDef(
+    const definition = this.getLocalHandler(
       schedule.handlerId,
       schedule.handlerVersion
     );
@@ -1905,7 +1911,7 @@ export class PrivateBackend {
     { stdout, stderr, toggleBuffering }: StreamHandle
   ) {
     if (this.inlineWorker) {
-      const definition = this.getJobDef(
+      const definition = this.getLocalHandler(
         runMessage.handlerId,
         runMessage.version
       );
@@ -1982,7 +1988,7 @@ export class PrivateBackend {
         process.once("message", (message) => {
           const { handlerId, data, version } =
             RunHandlerInCpSchema.parse(message);
-          const definition = this.getJobDef(handlerId, version);
+          const definition = this.getLocalHandler(handlerId, version);
           (async () => {
             try {
               await definition.job(data);
@@ -2027,7 +2033,7 @@ export class PrivateBackend {
   }
 
   private async scheduleSingleRun(schedule: Schedule) {
-    const definition = this.getJobDef(
+    const definition = this.getLocalHandler(
       schedule.handlerId,
       schedule.handlerVersion
     );
@@ -2044,6 +2050,8 @@ export class PrivateBackend {
      */
     const runAt = schedule.runAt ?? new Date();
 
+    const worker = await this.registerWorker();
+
     const run = await schedule.createRun(
       {
         scheduledToRunAt: runAt,
@@ -2053,6 +2061,7 @@ export class PrivateBackend {
         handlerId: definition.id,
         handlerVersion: definition.version,
         scheduleTitle: `${schedule.title}, #${schedule.id}`,
+        workerTitle: `${worker.title}, #${worker.id}`,
       },
       {
         include: {
@@ -2077,15 +2086,16 @@ export class PrivateBackend {
       `${String(finishedAt.getTime() - startedAt.getTime())}ms`
     );
 
-    await run.reload({ include: { model: Worker, as: "worker" } });
-
     log(
       `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
     );
 
-    const worker = await this.registerWorker();
     await worker.setLastRun(run);
     await worker.save();
+
+    await run.reload({
+      include: { model: Worker, as: "worker", required: false },
+    });
 
     return run;
   }
@@ -2105,8 +2115,10 @@ export class PrivateBackend {
           .map(
             (schedule) =>
               `${
-                this.getJobDef(schedule.handlerId, schedule.handlerVersion)
-                  .title
+                this.getLocalHandler(
+                  schedule.handlerId,
+                  schedule.handlerVersion
+                ).title
               }${schedule.title}`
           )
           .join(", ")
@@ -2132,7 +2144,10 @@ export class PrivateBackend {
               createPublicJobSchedule(
                 schedule,
                 createPublicJobDefinition(
-                  this.getJobDef(schedule.handlerId, schedule.handlerVersion)
+                  this.getLocalHandler(
+                    schedule.handlerId,
+                    schedule.handlerVersion
+                  )
                 )
               )
             );
@@ -2189,11 +2204,11 @@ export class PrivateBackend {
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }
-    const jobDef = this.getJobDef(schedule.handlerId, schedule.handlerVersion);
-    const publicSchedule = createPublicJobSchedule(
-      schedule,
-      createPublicJobDefinition(jobDef)
+    const jobDef = await this.getHandler(
+      schedule.handlerId,
+      schedule.handlerVersion
     );
+    const publicSchedule = createPublicJobSchedule(schedule, jobDef);
 
     await schedule.destroy();
 
@@ -2252,8 +2267,8 @@ export class TestBackend extends PrivateBackend {
   public async getDbRuns() {
     return super.getDbRuns();
   }
-  public getJobDef(id: string, version: number) {
-    return super.getJobDef(id, version);
+  public getLocalHandler(id: string, version: number) {
+    return super.getLocalHandler(id, version);
   }
   public createConsole(
     stdoutStream: stream.PassThrough,

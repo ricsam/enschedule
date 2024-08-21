@@ -6,7 +6,7 @@ import AddIcon from "@mui/icons-material/Add";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import MenuIcon from "@mui/icons-material/Menu";
-import { Tab, Tabs, Typography } from "@mui/material";
+import { ListSubheader, Tab, Tabs, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -30,6 +30,7 @@ import logo from "~/logo.svg";
 import type { Breadcrumb, NavBar } from "~/types";
 import { Theme, useTheme } from "~/utils/theme-provider";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
+import { useLiveData } from "./useLiveData";
 
 const drawerWidth = 240;
 
@@ -42,12 +43,30 @@ export function RootLayout({
   children: React.ReactNode;
   breadcrumbs?: Breadcrumb[];
 }) {
+  useLiveData();
+
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
   const pathname = useLocation().pathname;
+
+  const renderMenuItem = (text: string) => {
+    return (
+      <ListItem key={text} disablePadding>
+        <ListItemButton
+          to={`/${text}`}
+          component={Link}
+          selected={pathname.startsWith(`/${text}`)}
+        >
+          <ListItemText
+            primary={text === "definitions" ? "Functions" : pascalCase(text)}
+          />
+        </ListItemButton>
+      </ListItem>
+    );
+  };
 
   const drawer = (
     <div>
@@ -80,21 +99,11 @@ export function RootLayout({
           )}
         </NavLink>
       </Box>
-      <List>
-        {["definitions", "schedules", "runs", "workers"].map((text, index) => {
-          return (
-            <ListItem key={text} disablePadding>
-              <ListItemButton
-                to={`/${text}`}
-                component={Link}
-                selected={pathname.startsWith(`/${text}`)}
-              >
-                <ListItemText primary={pascalCase(text)} />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
+      <ListSubheader>In database</ListSubheader>
+      <List>{["schedules", "runs"].map(renderMenuItem)}</List>
+      <Divider />
+      <ListSubheader>On worker</ListSubheader>
+      <List>{["definitions", "workers"].map(renderMenuItem)}</List>
       <Divider />
       <List>
         <ListItem disablePadding>

@@ -4,7 +4,7 @@ import { Tooltip, Typography } from "@mui/material";
 import MuiLink from "@mui/material/Link";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Link as RemixLink } from "@remix-run/react";
+import { Link as RemixLink, useRevalidator } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
@@ -14,6 +14,7 @@ import { getWorker } from "~/createWorker";
 import { formatDate, formatDuration } from "~/utils/formatDate";
 import RunPage from "./RunPage";
 import { createMsButtons } from "./createMsButtons";
+import React from "react";
 
 type RowData = SerializeFrom<PublicJobRun>;
 
@@ -98,6 +99,29 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Completed",
   }),
+  {
+    cell: (info) => {
+      const val = info.row.original.worker;
+      if (typeof val === "string") {
+        return `Deleted worker (${val})`;
+      }
+      return (
+        <MuiLink
+          to={`/workers/${val.id}`}
+          data-testid="worker-link"
+          component={RemixLink}
+          onClick={(ev) => {
+            ev.stopPropagation();
+          }}
+        >
+          {val.title}
+        </MuiLink>
+      );
+    },
+    enableSorting: true,
+    header: "Worker",
+    id: "worker",
+  },
   columnHelper.accessor("scheduledToRunAt", {
     cell: (info) => {
       const value = info.getValue();

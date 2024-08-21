@@ -58,7 +58,7 @@ export default function DefinitionsTable({
       </Typography>
       <Box pb={3} />
       <ExpandableTable
-        title="Definitions"
+        title="Handlers"
         rows={definitions}
         columns={columns}
         renderRow={(row) => {

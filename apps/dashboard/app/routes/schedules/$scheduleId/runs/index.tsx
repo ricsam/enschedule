@@ -1,4 +1,4 @@
-import type { PublicJobSchedule } from "@enschedule/types";
+import { WorkerStatus, type PublicJobSchedule } from "@enschedule/types";
 import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
@@ -32,13 +32,23 @@ export const getLoaderData = async (
   }
   const runs = await worker.getRuns({ scheduleId: schedule.id });
 
-  return { schedule, runs };
+  const workers = await worker.getWorkers();
+  const activeWorkers = workers.filter(
+    (worker) =>
+      worker.status === WorkerStatus.UP &&
+      !!worker.definitions.find((handler) => handler.id === schedule.handlerId)
+  );
+
+  return { schedule, runs, activeWorkers };
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export const loader: LoaderFunction = async ({ params, context }) => {
-  const loaderData = await getLoaderData(params, await getWorker(context.worker));
+  const loaderData = await getLoaderData(
+    params,
+    await getWorker(context.worker)
+  );
   return json(loaderData);
 };
 

@@ -137,7 +137,7 @@ if (!process.env.SPECIAL_HANDLERS) {
   });
 }
 
-void (async () => {
+(async () => {
   const ranJob = await worker.listenForIncomingRuns();
   if (ranJob) {
     return;
@@ -169,4 +169,6 @@ void (async () => {
     }
   );
   console.log("Worker up and running");
-})();
+})().catch((err) => {
+  console.log("@err", err);
+});

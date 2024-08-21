@@ -21,7 +21,7 @@ export const useBreadcrumbs = (): Breadcrumb[] => {
   return [
     {
       href: "/definitions",
-      title: "Definitions",
+      title: "Handlers",
     },
   ];
 };
@@ -32,8 +32,8 @@ export default function Definitions() {
   return (
     <RootLayout
       navbar={{
-        title: "Definitions",
-        subTitle: "These are the job definitions defined on the server",
+        title: "Handlers",
+        subTitle: "These are the job handlers defined on the server",
       }}
       breadcrumbs={useBreadcrumbs()}
     >

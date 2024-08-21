@@ -690,11 +690,11 @@ registerTests((getBackend: () => TestBackend) => {
       const receivedSingleRun = await backend.getRun(run.id);
       // last reached and status might diff, but that is okay
       const now = new Date();
-      if (run.worker) {
+      if (typeof run.worker !== "string") {
         run.worker.lastReached = now;
         run.worker.status = WorkerStatus.UP;
       }
-      if (receivedSingleRun.worker) {
+      if (typeof receivedSingleRun.worker !== "string") {
         receivedSingleRun.worker.lastReached = now;
         receivedSingleRun.worker.status = WorkerStatus.UP;
       }
@@ -960,7 +960,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       const run = await awaitRunSchedule(backend, schedule.id);
-      expect(run.worker?.id).toBe(worker.id);
+      expect(typeof run.worker !== 'string' && run.worker.id).toBe(worker.id);
       expect((await backend.getWorkers())[0].id).toBe(worker.id);
       expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
     });

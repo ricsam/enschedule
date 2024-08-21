@@ -153,7 +153,7 @@ export const publicJobRunSchema = serializedRunSchema.and(
   z.object({
     jobSchedule: z.union([publicJobScheduleSchema, z.string()]),
     jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
-    worker: PublicWorkerSchema.optional(),
+    worker: z.union([PublicWorkerSchema, z.string()]),
   })
 );
 export type PublicJobRun = z.output<typeof publicJobRunSchema>;

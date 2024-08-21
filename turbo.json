@@ -1,11 +1,23 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
+  "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "build/**", "dist/**"],
-      "env": ["NODE_ENV", "MONO_REPO_BUILD"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "build/**",
+        "dist/**"
+      ],
+      "env": [
+        "NODE_ENV",
+        "MONO_REPO_BUILD"
+      ]
     },
     "lint": {},
     "typecheck": {},

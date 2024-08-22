@@ -10,7 +10,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { ExpandableTable } from "~/components/Table";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import { formatDate, formatDuration } from "~/utils/formatDate";
 import RunPage from "./RunPage";
 import { createMsButtons } from "./createMsButtons";

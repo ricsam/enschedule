@@ -6,7 +6,7 @@ import { useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import WorkersTable from "~/components/WorkersTable";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
 export const useBreadcrumbs = (): Breadcrumb[] => {

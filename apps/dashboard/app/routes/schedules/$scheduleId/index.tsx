@@ -8,7 +8,7 @@ import SchedulePage, {
   Actions,
   getScheduleId,
 } from "~/components/SchedulePage";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker, NavBar } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent

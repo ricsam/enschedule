@@ -6,7 +6,7 @@ import type { Params } from "@remix-run/react";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
 import DefinitionPage from "~/components/DefinitionPage";
 import { RootLayout } from "~/components/Layout";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from "..";

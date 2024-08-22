@@ -11,7 +11,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
 import { z } from "zod";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import { formatDate } from "~/utils/formatDate";
 import { createMsButtons } from "./createMsButtons";
 import { ExpandableTable } from "./Table";

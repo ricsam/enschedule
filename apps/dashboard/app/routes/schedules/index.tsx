@@ -6,7 +6,7 @@ import type { Params } from "@remix-run/react";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulesTable from "~/components/SchedulesTable";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

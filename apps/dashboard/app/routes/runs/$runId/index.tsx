@@ -4,7 +4,7 @@ import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
 import { useLoaderData } from "@remix-run/react";
 import { RunRoute } from "~/components/routes/RunRoute";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { useRunBreadcrumbs } from "~/utils/breadcrumbUtils";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";

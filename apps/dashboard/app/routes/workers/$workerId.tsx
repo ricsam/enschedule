@@ -10,7 +10,7 @@ import { useLoaderData } from "@remix-run/react";
 import assert from "assert";
 import { sentenceCase } from "sentence-case";
 import { RootLayout } from "~/components/Layout";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 

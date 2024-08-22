@@ -4,7 +4,7 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import RunsTable from "~/components/RunsTable";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb } from "~/types";
 
 export type LoaderData = {

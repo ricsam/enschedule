@@ -15,7 +15,7 @@ import { Form } from "@remix-run/react";
 import React from "react";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb } from "~/types";
 
 export const useBreadcrumbs = (): Breadcrumb[] => {

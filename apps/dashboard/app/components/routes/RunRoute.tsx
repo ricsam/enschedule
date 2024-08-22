@@ -8,7 +8,7 @@ import { differenceInMilliseconds } from "date-fns";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import RunPage from "~/components/RunPage";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "../../utils/getParentUrl";

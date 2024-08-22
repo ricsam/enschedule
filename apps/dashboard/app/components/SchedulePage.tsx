@@ -33,7 +33,7 @@ import React from "react";
 import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { Editor } from "~/components/Editor";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";

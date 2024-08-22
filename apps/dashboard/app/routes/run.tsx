@@ -46,7 +46,7 @@ import React from "react";
 import { z } from "zod";
 import { Editor, ReadOnlyEditor } from "~/components/Editor";
 import { RootLayout } from "~/components/Layout";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import icon from "~/icon.svg";
 import { getLoaderData } from "./runLoader.server";
 

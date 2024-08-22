@@ -6,7 +6,7 @@ import { useLoaderData } from "@remix-run/react";
 import assert from "assert";
 import { RootLayout } from "~/components/Layout";
 import SchedulesTable from "~/components/SchedulesTable";
-import { getWorker } from "~/createWorker";
+import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs, useLayout } from "..";

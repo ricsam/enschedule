@@ -63,13 +63,13 @@ importers:
         specifier: ~5.10.14
         version: 5.10.14(react@18.2.0)
       '@remix-run/node':
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0(typescript@5.2.2)
       '@remix-run/react':
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.2.2)
       '@remix-run/serve':
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0(typescript@5.2.2)
       '@remix-run/v1-route-convention':
         specifier: ^0.1.4
@@ -263,10 +263,10 @@ importers:
         specifier: workspace:*
         version: link:../worker-api
       '@remix-run/express':
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0(express@4.18.2)(typescript@5.2.2)
       '@remix-run/node':
-        specifier: ^2.2.0
+        specifier: 2.2.0
         version: 2.2.0(typescript@5.2.2)
       body-parser:
         specifier: ^1.20.2

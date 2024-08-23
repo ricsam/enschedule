@@ -16,5 +16,8 @@
     "turbo": "^2.0.14"
   },
   "packageManager": "pnpm@9.0.6",
-  "name": "enschedule-2"
+  "name": "enschedule-2",
+  "dependencies": {
+    "@changesets/cli": "^2.27.7"
+  }
 }

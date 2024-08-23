@@ -253,5 +253,8 @@ jobs:
         run: corepack enable
       - name: prepare packages for npm publish
         run: node release-package.js
-      - name: npm publish
-        run: cd packages/cli && npm publish
+      - name: changeset publish
+        run: npx changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

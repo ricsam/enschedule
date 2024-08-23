@@ -38,3 +38,12 @@ kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
 * types
 * worker-api
 * worker must have main field that points to "./dist/index.js"
+
+
+# Publishing
+```bash
+npx changeset # create the new changelog
+npx changeset version # update the package.json files
+```
+
+if a version is bumped it will be published in the pipeline

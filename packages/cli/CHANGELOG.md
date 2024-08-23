@@ -1,5 +1,11 @@
 # @enschedule/cli
 
+## 0.0.3
+
+### Patch Changes
+
+- Add ability to check the version of the CLI using the --version
+
 ## 0.0.2
 
 ### Patch Changes

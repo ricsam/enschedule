@@ -225,3 +225,33 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "helm-{{ .Version }}"
+
+  npm_publish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'add moreutils'
+        run: |
+          sudo apt-get install moreutils
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 8.7.0
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build all packages
+        run: NODE_ENV=production pnpm run build
+      - name: corepack enable
+        run: corepack enable
+      - name: prepare packages for npm publish
+        run: node release-package.js
+      - name: npm publish
+        run: cd packages/cli && npm publish

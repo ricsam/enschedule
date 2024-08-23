@@ -28,8 +28,18 @@ const getConfig = async () => {
 
   try {
     // Read the config file
-    const configData = await fs.promises.readFile(configPath, "utf8");
-    const config = configSchema.parse(JSON.parse(configData));
+    let config: z.output<typeof configSchema>;
+    try {
+      config = configSchema.parse({
+        apiKey: process.env.ENSCHEDULE_API_KEY,
+        apiEndpoint: process.env.ENSCHEDULE_API_ENDPOINT,
+        apiVersion: process.env.ENSCHEDULE_API_VERSION,
+      });
+    } catch (e) {
+      config = configSchema.parse(
+        await fs.promises.readFile(configPath, "utf8")
+      );
+    }
 
     // Retrieve the apiKey, apiEndpoint, and apiVersion
     const { apiKey, apiEndpoint, apiVersion } = config;

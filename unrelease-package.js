@@ -8,8 +8,8 @@ function modifyPackageJson(packagePath) {
   const packageJsonPath = path.join(packagePath, "package.json");
   let packageJson = require(packageJsonPath);
 
-  packageJson.main = "./dist/index.js";
-  packageJson.types = "./dist/index.d.ts";
+  packageJson.main = "./index.ts";
+  packageJson.types = "./index.ts";
 
   fs.writeFileSync(
     packageJsonPath,

@@ -1,0 +1,11 @@
+.env
+.npmignore
+.turbo
+jest.config.js
+.eslintrc.js
+tsconfig.json
+__snapshots__
+jest.env.js
+docker
+Dockerfile
+__fixtures__

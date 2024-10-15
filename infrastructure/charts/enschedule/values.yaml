@@ -2,6 +2,12 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+config:
+  ACCESS_TOKEN_SECRET: secret_key
+  REFRESH_TOKEN_SECRET: secret_key
+  SESSION_SECRET: secret_key
+  API_KEY: secret_key
+
 worker:
   replicaCount: 1
 

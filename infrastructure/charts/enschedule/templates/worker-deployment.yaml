@@ -66,7 +66,11 @@ spec:
             - name: DB_DATABASE
               value: "postgres"
             - name: API_KEY
-              value: "secret_key"
+              value: "{{ .Values.config.API_KEY }}"
+            - name: ACCESS_TOKEN_SECRET
+              value: "{{ .Values.config.ACCESS_TOKEN_SECRET }}"
+            - name: REFRESH_TOKEN_SECRET
+              value: "{{ .Values.config.REFRESH_TOKEN_SECRET }}"
             - name: ENSCHEDULE_API
               value: "true"
             - name: API_PORT

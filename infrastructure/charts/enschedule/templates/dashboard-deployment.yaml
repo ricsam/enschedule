@@ -49,9 +49,13 @@ spec:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           env:
             - name: SESSION_SECRET
-              value: abc
+              value: "{{ .Values.config.SESSION_SECRET }}"
             - name: API_KEY
-              value: secret_key
+              value: "{{ .Values.config.API_KEY }}"
+            - name: ACCESS_TOKEN_SECRET
+              value: "{{ .Values.config.ACCESS_TOKEN_SECRET }}"
+            - name: REFRESH_TOKEN_SECRET
+              value: "{{ .Values.config.REFRESH_TOKEN_SECRET }}"
             - name: WORKER_URL
               value: "http://worker-service:{{ .Values.worker.service.port }}"
             - name: DEBUG

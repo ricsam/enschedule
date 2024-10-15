@@ -9,4 +9,11 @@ worker.logJobs = true;
 
 export const migrate = async () => {
   await worker.migrateDatabase();
+  await worker.register({
+    username: "ricsam",
+    email: "oss@ricsam.dev",
+    name: "Ricsam",
+    password: "password",
+    admin: true,
+  });
 };

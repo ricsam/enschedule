@@ -10,6 +10,8 @@ Object.assign(process.env, {
   DB_PASSWORD: "postgres",
   DB_DATABASE: "postgres",
   DB_PORT: "6543",
+  ACCESS_TOKEN_SECRET: "secret",
+  REFRESH_TOKEN_SECRET: "secret",
 });
 
 module.exports = async () => {

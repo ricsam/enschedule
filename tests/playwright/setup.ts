@@ -65,6 +65,8 @@ export class Setup {
       DEBUG: "pg-driver,worker",
       DB_DATABASE: this.TEST_DB,
       API_KEY: "secret_key",
+      ACCESS_TOKEN_SECRET: "secret_key",
+      REFRESH_TOKEN_SECRET: "secret_key",
     };
   }
 
@@ -305,6 +307,8 @@ export class Setup {
         NODE_ENV: "production",
         DEBUG: "worker-api",
         WORKER_URL: `http://localhost:${workerApiPort}`,
+        ACCESS_TOKEN_SECRET: "secret_key",
+        REFRESH_TOKEN_SECRET: "secret_key",
       }),
       dashboardPwd,
       (stdout) => stdout.includes("[remix-serve] http"),

@@ -42,7 +42,7 @@ jobs:
       - name: Wait for postgres to be up
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
       - name: Run unit tests
-        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
+        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types --filter=@enschedule/cli test
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
       - name: modify package jsons main fields

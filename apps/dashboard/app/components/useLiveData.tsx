@@ -1,10 +1,14 @@
 import { useRevalidator } from "@remix-run/react";
 import React from "react";
 
-export const useLiveData = () => {
+export const useLiveData = (deactivate?: boolean) => {
   const revalidator = useRevalidator();
 
   React.useEffect(() => {
+    if (deactivate) {
+      return;
+    }
+
     if (typeof window === "undefined") {
       return;
     }
@@ -18,5 +22,5 @@ export const useLiveData = () => {
     return () => {
       window.clearInterval(i);
     };
-  }, [revalidator]);
+  }, [revalidator, deactivate]);
 };

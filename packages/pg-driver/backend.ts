@@ -2,15 +2,6 @@ import * as cp from "node:child_process";
 import * as crypto from "node:crypto";
 import os from "node:os";
 import stream from "node:stream";
-import { parseExpression } from "cron-parser";
-import {
-  RunHandlerInCpSchema,
-  ScheduleStatus,
-  WorkerStatus,
-  JobDefinitionSchema,
-  typeAssert,
-  RunStatus,
-} from "@enschedule/types";
 import type {
   JobDefinition,
   ListRunsOptions,
@@ -25,7 +16,18 @@ import type {
   ScheduleUpdatePayloadSchema,
   SchedulesFilterSchema,
   SerializedRun,
+  UserSchema,
 } from "@enschedule/types";
+import {
+  JobDefinitionSchema,
+  RunHandlerInCpSchema,
+  RunStatus,
+  ScheduleStatus,
+  WorkerStatus,
+  typeAssert,
+} from "@enschedule/types";
+import { parseExpression } from "cron-parser";
+import * as jwt from "jsonwebtoken";
 import { pascalCase } from "pascal-case";
 import type {
   CreationOptional,
@@ -49,12 +51,27 @@ import type {
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
-import type { ZodType, z } from "zod";
+import type { ZodType } from "zod";
+import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
 import type { SeqConstructorOptions } from "./env-sequalize-options";
 import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
+
+export const getTokenEnvs = () => {
+  const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+  const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+
+  if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
+    throw new Error(
+      "Missing required environment variables ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET. Please check your .env file."
+    );
+  }
+  return { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET };
+};
+
+const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = getTokenEnvs();
 
 function createWorkerHash(
   title: string,
@@ -161,6 +178,17 @@ export const serializeRun = (run: Run): SerializedRun => {
     status: getRunStatus(run),
   };
 };
+
+function createPublicUser(user: User): z.output<typeof UserSchema> {
+  return {
+    admin: Boolean(user.admin),
+    createdAt: user.createdAt,
+    email: user.email,
+    id: user.id,
+    name: user.name,
+    username: user.username,
+  };
+}
 
 const getScheduleStatus = (schedule: Schedule): ScheduleStatus => {
   let status = ScheduleStatus.UNSCHEDULED;
@@ -326,6 +354,78 @@ export class Worker extends Model<
   declare createLastRun: HasOneCreateAssociationMixin<Run>;
 }
 
+export class User extends Model<
+  InferAttributes<User>,
+  InferCreationAttributes<User>
+> {
+  declare id: CreationOptional<number>;
+  declare username: string; // unique
+
+  declare name: string;
+  declare email: string;
+  declare password: string;
+  declare createdAt: CreationOptional<Date>;
+  declare admin: boolean;
+  declare groups: NonAttribute<Group[]> | null;
+
+  declare getGroups: HasManyGetAssociationsMixin<Group>;
+  declare addGroup: HasManyAddAssociationMixin<Group, number>;
+  declare addGroups: HasManyAddAssociationsMixin<Group, number>;
+  declare setGroups: HasManySetAssociationsMixin<Group, number>;
+  declare removeGroup: HasManyRemoveAssociationMixin<Group, number>;
+  declare removeGroups: HasManyRemoveAssociationsMixin<Group, number>;
+  declare hasGroup: HasManyHasAssociationMixin<Group, number>;
+  declare hasGroups: HasManyHasAssociationsMixin<Group, number>;
+  declare countGroups: HasManyCountAssociationsMixin;
+  declare createGroup: HasManyCreateAssociationMixin<Group>;
+}
+
+export class Group extends Model<
+  InferAttributes<Group>,
+  InferCreationAttributes<Group>
+> {
+  declare id: CreationOptional<number>;
+  declare groupName: string; // unique
+
+  declare title: string;
+  declare description: string;
+  declare createdAt: CreationOptional<Date>;
+  declare users: NonAttribute<User[]> | null;
+
+  declare getUsers: HasManyGetAssociationsMixin<User>;
+  declare addUser: HasManyAddAssociationMixin<User, number>;
+  declare addUsers: HasManyAddAssociationsMixin<User, number>;
+  declare setUsers: HasManySetAssociationsMixin<User, number>;
+  declare removeUser: HasManyRemoveAssociationMixin<User, number>;
+  declare removeUsers: HasManyRemoveAssociationsMixin<User, number>;
+  declare hasUser: HasManyHasAssociationMixin<User, number>;
+  declare hasUsers: HasManyHasAssociationsMixin<User, number>;
+  declare countUsers: HasManyCountAssociationsMixin;
+  declare createUser: HasManyCreateAssociationMixin<User>;
+}
+
+export class Session extends Model<
+  InferAttributes<Session>,
+  InferCreationAttributes<Session>
+> {
+  declare id: CreationOptional<number>;
+  declare userId: ForeignKey<User["id"]>;
+  declare createdAt: CreationOptional<Date>;
+  declare expiresAt: Date;
+  declare refreshToken: string;
+}
+
+export class ApiKey extends Model<
+  InferAttributes<ApiKey>,
+  InferCreationAttributes<ApiKey>
+> {
+  declare id: CreationOptional<number>;
+  declare userId: ForeignKey<User["id"]>;
+  declare key: string;
+  declare createdAt: CreationOptional<Date>;
+  declare expiresAt: Date;
+}
+
 export class Schedule extends Model<
   ScheduleAttributes,
   InferCreationAttributes<Schedule, { omit: "runs" | "lastRun" }>
@@ -467,6 +567,10 @@ export class PrivateBackend {
   protected Run: typeof Run;
   protected Schedule: typeof Schedule;
   protected Worker: typeof Worker;
+  protected User: typeof User;
+  protected Group: typeof Group;
+  protected Session: typeof Session;
+  protected ApiKey: typeof ApiKey;
   private forkArgv: string[] | undefined;
   protected workerInstance: WorkerInstance;
   protected inlineWorker: boolean;
@@ -551,6 +655,141 @@ export class PrivateBackend {
       {
         sequelize,
         modelName: "Worker",
+      }
+    );
+
+    User.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        username: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        email: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        password: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        admin: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
+      },
+      {
+        sequelize,
+        modelName: "User",
+      }
+    );
+
+    Group.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        groupName: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        title: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        description: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      },
+      {
+        sequelize,
+        modelName: "Group",
+      }
+    );
+
+    Session.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        userId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        expiresAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        refreshToken: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+      },
+      {
+        sequelize,
+        modelName: "Session",
+      }
+    );
+
+    ApiKey.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        userId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        key: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        expiresAt: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+      },
+      {
+        sequelize,
+        modelName: "ApiKey",
       }
     );
 
@@ -790,9 +1029,71 @@ export class PrivateBackend {
       as: "failureTrigger",
     });
 
+    //#region user.groups / group.users
+    /**
+     * many-to-many
+     * one user can have many groups
+     * one group can have many users
+     */
+    User.belongsToMany(Group, {
+      through: "UserGroupAssociation",
+      as: "groups",
+    });
+    Group.belongsToMany(User, { through: "UserGroupAssociation", as: "users" });
+    //#endregion
+
+    //#region user.sessions / session.user
+    /**
+     * one-to-many
+     * one user can have many sessions
+     */
+    User.hasMany(Session, {
+      foreignKey: {
+        name: "userId",
+        allowNull: false,
+      },
+      as: "sessions",
+    });
+    Session.belongsTo(User, {
+      foreignKey: {
+        name: "userId",
+        allowNull: false,
+      },
+      as: "user",
+      onDelete: "CASCADE",
+    });
+    //#endregion
+
+    //#region user.apiKeys / apiKey.user
+    /**
+     * one-to-many
+     * one user can have many api keys
+     */
+    User.hasMany(ApiKey, {
+      foreignKey: {
+        name: "userId", // apiKey.userId
+        allowNull: false,
+      },
+      as: "apiKeys",
+    });
+    // foreign key on ApiKey, apiKey.userId
+    ApiKey.belongsTo(User, {
+      as: "user",
+      foreignKey: {
+        name: "userId",
+        allowNull: false,
+      },
+      onDelete: "CASCADE",
+    });
+    //#endregion
+
     this.Run = Run;
     this.Schedule = Schedule;
     this.Worker = Worker;
+    this.Group = Group;
+    this.User = User;
+    this.Session = Session;
+    this.ApiKey = ApiKey;
   }
 
   protected async getDbRuns() {
@@ -2213,6 +2514,148 @@ export class PrivateBackend {
     await schedule.destroy();
 
     return publicSchedule;
+  }
+  private scryptParams = {
+    keylen: 64,
+    N: 16384,
+    r: 8,
+    p: 1,
+  };
+  public async register({
+    username,
+    email,
+    password,
+    name,
+    admin = false,
+  }: {
+    username: string;
+    email: string;
+    password: string;
+    name: string;
+    admin?: boolean;
+  }) {
+    const hashPassword = () => {
+      return new Promise<string>((resolve, reject) => {
+        const salt = crypto.randomBytes(16).toString("hex");
+        crypto.scrypt(
+          password,
+          salt,
+          this.scryptParams.keylen,
+          this.scryptParams,
+          (err, derivedKey) => {
+            if (err) reject(err);
+            resolve(`${salt}:${derivedKey.toString("hex")}`);
+          }
+        );
+      });
+    };
+
+    const hashedPassword = await hashPassword();
+    await this.User.create({
+      username,
+      email,
+      password: hashedPassword,
+      admin,
+      name,
+    });
+    return this.login(username, password);
+  }
+
+  public async login(
+    username: string,
+    password: string
+  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
+    log("Logging in");
+
+    const verifyPassword = (hash: string) => {
+      return new Promise<boolean>((resolve, reject) => {
+        const [salt, key] = hash.split(":");
+        crypto.scrypt(
+          password,
+          salt,
+          this.scryptParams.keylen,
+          this.scryptParams,
+          (err, derivedKey) => {
+            if (err) reject(err);
+            resolve(key === derivedKey.toString("hex"));
+          }
+        );
+      });
+    };
+
+    const user = await this.User.findOne({ where: { username } });
+    if (!user) {
+      log("User not found");
+      return;
+    }
+
+    const passwordCorrect = await verifyPassword(user.password);
+    if (!passwordCorrect) {
+      log("Password incorrect");
+      return;
+    }
+
+    const refreshToken = this.createRefreshToken(user.id);
+
+    await this.Session.create({
+      userId: user.id,
+      refreshToken,
+      expiresAt: new Date(Date.now() + this.refreshTokenDuration),
+    });
+    return { accessToken: this.createAccessToken(user.id), refreshToken };
+  }
+
+  private createAccessToken(userId: number) {
+    return jwt.sign({ userId }, ACCESS_TOKEN_SECRET, {
+      expiresIn: "1m",
+    });
+  }
+  private refreshTokenDuration = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  private createRefreshToken(userId: number) {
+    return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, {
+      expiresIn: this.refreshTokenDuration,
+    });
+  }
+
+  public async refreshToken(
+    refreshToken: string
+  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
+    const decoded = await new Promise<{ userId: number }>((resolve, reject) => {
+      jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, rawDecoded) => {
+        if (err) reject(err);
+        resolve(z.object({ userId: z.number() }).parse(rawDecoded));
+      });
+    });
+    const session = await this.Session.findOne({
+      where: { refreshToken, userId: decoded.userId },
+    });
+    if (!session) {
+      log("Session not found");
+      return;
+    }
+
+    if (new Date() > session.expiresAt) {
+      await session.destroy();
+      log("Refresh token has expired");
+      return;
+    }
+
+    const newAccessToken = this.createAccessToken(decoded.userId);
+    const newRefreshToken = this.createRefreshToken(decoded.userId);
+    session.expiresAt = new Date(Date.now() + this.refreshTokenDuration);
+    session.refreshToken = newRefreshToken;
+    await session.save();
+
+    return {
+      refreshToken: newRefreshToken,
+      accessToken: newAccessToken,
+    };
+  }
+
+  public async getUser(userId: number) {
+    const user = await this.User.findByPk(userId);
+    return user ? createPublicUser(user) : undefined;
   }
 }
 

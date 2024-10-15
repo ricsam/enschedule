@@ -323,3 +323,12 @@ export const SchedulesFilterSchema = z.object({
   eventId: z.string().optional(),
 });
 //#endregion
+
+export const UserSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  email: z.string(),
+  name: z.string(),
+  admin: z.coerce.boolean(),
+  createdAt: z.coerce.date(),
+});

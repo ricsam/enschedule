@@ -18,6 +18,7 @@ import {
   ListRunsOptionsSerialize,
   PublicWorkerSchema,
   ScheduleJobResultSchema,
+  UserSchema,
   publicJobDefinitionSchema,
   publicJobRunSchema,
   publicJobScheduleSchema,
@@ -283,5 +284,66 @@ export class WorkerAPI {
 
   async runSchedulesNow(ids: number[]): Promise<void> {
     await this.request("POST", `/runs-schedules`, ids);
+  }
+
+  async login(
+    username: string,
+    password: string
+  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
+    try {
+      const tokens = await this.request("POST", "/login", {
+        username,
+        password,
+      });
+      const result = z
+        .object({
+          refreshToken: z.string(),
+          accessToken: z.string(),
+        })
+        .safeParse(tokens);
+
+      if (result.success) {
+        return result.data;
+      }
+    } catch (err) {
+      // some error that can be ignored
+    }
+  }
+
+  async refreshToken(
+    refreshToken: string
+  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
+    try {
+      const tokens = await this.request("POST", "/refresh-token", {
+        refreshToken,
+      });
+      const result = z
+        .object({
+          refreshToken: z.string(),
+          accessToken: z.string(),
+        })
+        .safeParse(tokens);
+
+      if (result.success) {
+        return result.data;
+      }
+    } catch (err) {
+      // some error that can be ignored
+    }
+  }
+
+  async getUser(
+    userId: number
+  ): Promise<undefined | z.output<typeof UserSchema>> {
+    try {
+      const user = await this.request("GET", `/users/${userId}`);
+      const result = UserSchema.safeParse(user);
+
+      if (result.success) {
+        return result.data;
+      }
+    } catch (err) {
+      // some error that can be ignored
+    }
   }
 }

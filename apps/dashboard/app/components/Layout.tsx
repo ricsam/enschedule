@@ -5,6 +5,7 @@ import "@fontsource/roboto/700.css";
 import AddIcon from "@mui/icons-material/Add";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import UserIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 import { ListSubheader, Tab, Tabs, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
@@ -31,6 +32,7 @@ import type { Breadcrumb, NavBar } from "~/types";
 import { Theme, useTheme } from "~/utils/theme-provider";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
 import { useLiveData } from "./useLiveData";
+import { useUser } from "~/utils/UserContext";
 
 const drawerWidth = 240;
 
@@ -38,12 +40,14 @@ export function RootLayout({
   navbar,
   children,
   breadcrumbs,
+  withoutLiveData
 }: {
   navbar?: NavBar;
   children: React.ReactNode;
   breadcrumbs?: Breadcrumb[];
+  withoutLiveData?: boolean;
 }) {
-  useLiveData();
+  useLiveData(withoutLiveData);
 
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -126,6 +130,9 @@ export function RootLayout({
   const location = useLocation();
   const currentTab =
     location.pathname !== "/" ? location.pathname.replace(/\/$/, "") : "/";
+
+  const user = useUser();
+
   return (
     <Box
       sx={{
@@ -167,6 +174,7 @@ export function RootLayout({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              gap: 2,
             }}
           >
             <IconButton
@@ -180,6 +188,28 @@ export function RootLayout({
             >
               {theme === Theme.DARK ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
+            <>
+              {!user ? (
+                <Button
+                  color="inherit"
+                  LinkComponent={RemixLink}
+                  component={RemixLink}
+                  to="/login"
+                >
+                  Login
+                </Button>
+              ) : (
+                <IconButton
+                  sx={{ ml: 1 }}
+                  color="inherit"
+                  LinkComponent={RemixLink}
+                  component={RemixLink}
+                  to="/profile"
+                >
+                  <UserIcon />
+                </IconButton>
+              )}
+            </>
           </Box>
         </Toolbar>
       </AppBar>

@@ -30,6 +30,8 @@
     "@remix-run/node": "2.2.0",
     "@remix-run/react": "2.2.0",
     "@remix-run/serve": "2.2.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "jsonwebtoken": "^9.0.2",
     "@remix-run/v1-route-convention": "^0.1.4",
     "@tanstack/react-table": "~8.5.30",
     "ajv": "~8.11.2",

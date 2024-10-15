@@ -1,29 +1,21 @@
 import { Typography } from "@mui/material";
-import type {
-  LinksFunction,
-  LoaderFunction,
-  MetaFunction,
-} from "@remix-run/node";
+import { type LinksFunction, type MetaFunction } from "@remix-run/node";
 import {
-  isRouteErrorResponse,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  isRouteErrorResponse,
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
 import styles from "~/style/global.css";
 import { MuiTheme } from "~/utils/MuiTheme";
-import type { Theme } from "~/utils/theme-provider";
 import { ThemeProvider } from "~/utils/theme-provider";
-import { getThemeSession } from "~/utils/theme.server";
-
-export type LoaderData = {
-  theme: Theme | null;
-};
+import type { LoaderData } from "./rootLoader.server";
+import { UserProvider } from "./utils/UserContext";
 
 export const links: LinksFunction = () => {
   return [
@@ -34,15 +26,7 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const themeSession = await getThemeSession(request);
-
-  const data: LoaderData = {
-    theme: themeSession.getTheme(),
-  };
-
-  return data;
-};
+export { loader } from "./rootLoader.server";
 
 export const meta: MetaFunction = () => [
   { charset: "utf-8" },
@@ -60,11 +44,13 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <ThemeProvider specifiedTheme={data.theme}>
-          <MuiTheme>
-            <Outlet />
-          </MuiTheme>
-        </ThemeProvider>
+        <UserProvider user={data.user}>
+          <ThemeProvider specifiedTheme={data.theme}>
+            <MuiTheme>
+              <Outlet />
+            </MuiTheme>
+          </ThemeProvider>
+        </UserProvider>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />

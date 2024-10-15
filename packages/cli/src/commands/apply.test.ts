@@ -1,3 +1,10 @@
+const scheduleJobMock = jest.fn(() => {
+  return { status: "created" };
+});
+jest.mock("../get-worker", () => ({
+  getWorker: () => ({ scheduleJob: scheduleJobMock }),
+}));
+
 import { z } from "zod";
 import { ScheduleYamlSchema, apply } from "./apply";
 
@@ -22,5 +29,23 @@ describe("apply", () => {
     };
 
     await apply(schedule);
+    expect(scheduleJobMock).toBeCalledTimes(1);
+    expect(scheduleJobMock.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "log-job",
+          1,
+          {
+            "message": "foo bar",
+          },
+          {
+            "cronExpression": "0 0 * * *",
+            "description": "This is a test schedule",
+            "eventId": "test-schedule",
+            "title": "Test Schedule",
+          },
+        ],
+      ]
+    `);
   });
 });

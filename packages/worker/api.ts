@@ -263,6 +263,55 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       })
       .catch(next);
   });
+
+  router.post("/login", (req, res, next) => {
+    const { username, password } = z
+      .object({
+        username: z.string(),
+        password: z.string(),
+      })
+      .parse(req.body);
+    worker
+      .login(username, password)
+      .then((tokens) => {
+        if (tokens) {
+          res.json(tokens);
+        } else {
+          res.status(401).json({ error: "Unauthorized" });
+        }
+      })
+      .catch(next);
+  });
+
+  router.post("/refresh-token", (req, res, next) => {
+    const { refreshToken } = z
+      .object({
+        refreshToken: z.string(),
+      })
+      .parse(req.body);
+    worker
+      .refreshToken(refreshToken)
+      .then((tokens) => {
+        if (tokens) {
+          res.json(tokens);
+        } else {
+          res.status(401).json({ error: "Unauthorized" });
+        }
+      })
+      .catch(next);
+  });
+
+  router.get("/users/:id", (req, res, next) => {
+    const idSchema = z.number().int().positive();
+    const validatedId = idSchema.parse(Number(req.params.id));
+    worker
+      .getUser(validatedId)
+      .then((user) => {
+        res.json(user);
+      })
+      .catch(next);
+  });
+
   return router;
 };
 

@@ -1,6 +1,7 @@
 import type { Worker } from "@enschedule/worker";
 import type { WorkerAPI } from "@enschedule/worker-api";
 import type React from "react";
+import { z } from "zod";
 
 export type NavBarTab = {
   to: string;
@@ -26,3 +27,10 @@ export type Handle<LoaderData> = {
 };
 
 export type DashboardWorker = WorkerAPI | Worker;
+
+export type User = {
+  userId: number;
+};
+export const UserSchema = z.object({
+  userId: z.number(),
+});

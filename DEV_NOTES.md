@@ -4,9 +4,8 @@
 pnpm install
 npm run playwright install
 docker compose up -d
-cd tests/test-worker
-echo 'POSTGRES=postgres://postgres:postgres@127.0.0.1:6543/dev\nAPI_KEY=secret_key\nPORT=3333' > .env
-npm run seed
+echo 'POSTGRES=postgres://postgres:postgres@127.0.0.1:6543/dev\nAPI_KEY=secret_key\nPORT=3333' > tests/test-worker/.env
+pnpm run --filter test-worker seed
 
 brew install pstree
 ```
@@ -21,15 +20,13 @@ SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --u
 
 #### Run all tests in parallel
 ```
-cd apps/dashboard
-npm run build
-cd ../../
+pnpm run --filter @enschedule/dashboard build
 npm run playwright test
 ```
 
 ##### To kill any lingering processes, run:
 ```bash
-# Get $PID by pstree | grep 'enschedule-2/node_modules/.pnpm/turbo'
+# Get $PID by pstree | grep 'enschedule/node_modules/.pnpm/turbo'
 kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
 ```
 
@@ -49,3 +46,19 @@ npx changeset version # update the package.json files
 ```
 
 if a version is bumped it will be published in the pipeline
+
+
+# Testing before pushing
+```
+pnpm lint
+pnpm typecheck
+pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types --filter=@enschedule/cli test
+```
+
+## Playwright tests
+```
+npm run playwright install
+pnpm run --filter test-worker seed
+pnpm run --filter @enschedule/dashboard build
+npm run playwright test
+```

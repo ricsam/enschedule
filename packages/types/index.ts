@@ -34,4 +34,5 @@ export {
   ScheduleSchema,
   ScheduleJobResultSchema,
   SchedulesFilterSchema,
+  UserSchema,
 } from "./types";

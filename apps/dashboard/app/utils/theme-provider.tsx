@@ -17,7 +17,7 @@ export function ThemeProvider({
   specifiedTheme,
 }: {
   children: ReactNode;
-  specifiedTheme: Theme | null;
+  specifiedTheme?: Theme;
 }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (specifiedTheme) {

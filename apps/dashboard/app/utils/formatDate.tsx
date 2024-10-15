@@ -21,7 +21,7 @@ export const formatDate = (
     start?: Date;
     verbs?: { future: string; past: string } | false;
   } = {}
-): { label: string; value: string; time: string; dateFnsDuration: string } => {
+): { label: string; value: string; time: string; dateFnsDuration: string, isoDate: string } => {
   const date = typeof _date === "string" ? new Date(_date) : _date;
   const duration = intervalToDuration({ start, end: date });
   let unit: (keyof Duration)[] = [
@@ -68,5 +68,11 @@ export const formatDate = (
       label = `will ${future} in ${time}`;
     }
   }
-  return { label, value, time, dateFnsDuration };
+  return {
+    label,
+    value,
+    time,
+    dateFnsDuration,
+    isoDate: format(date, "yyyy-MM-dd"),
+  };
 };

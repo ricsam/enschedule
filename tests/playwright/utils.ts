@@ -1,6 +1,8 @@
-import { expect, Locator, Page } from "@playwright/test";
+import { BrowserContext, expect, Locator, Page } from "@playwright/test";
+import * as cookieSignature from "cookie-signature";
 import addDays from "date-fns/addDays";
 import format from "date-fns/format";
+import * as jwt from "jsonwebtoken";
 
 export const navigate = async (baseUrl: string, page: Page, link: Locator) => {
   const url = await link.getAttribute("href");
@@ -51,7 +53,7 @@ const createRun = async (
     manual?: boolean;
     data?: {
       globalEditorRefName: string;
-      data: unknown
+      data: unknown;
     };
   } = {}
 ) => {
@@ -204,6 +206,8 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
 };
 
 const reset = async (baseUrl: () => string, page: Page) => {
+  await login(baseUrl, page);
+
   await page.goto(`${baseUrl()}/settings`);
 
   // reset enschedule
@@ -251,5 +255,80 @@ export const utils = (baseUrl: () => string) => {
     visitRunPages: (...args: ArgType<typeof visitRunPages>) =>
       visitRunPages(baseUrl, ...args),
     reset: (...args: ArgType<typeof reset>) => reset(baseUrl, ...args),
+    login: (...args: ArgType<typeof login>) => login(baseUrl, ...args),
+    addLoginCookie: (...args: ArgType<typeof addLoginCookie>) =>
+      addLoginCookie(baseUrl, ...args),
   };
 };
+
+async function login(baseUrl: () => string, page: Page) {
+  await page.goto(`${baseUrl()}/`);
+  await page.waitForSelector('[data-testid="enschedule-logo"]');
+  if (await page.isVisible('[data-testid="login-link"]')) {
+    await page.click('[data-testid="login-link"]');
+    await page.waitForURL(/\/login/);
+    await page.getByLabel("Username").fill("ricsam");
+    await page.getByLabel("Password").fill("password");
+    await page.click('#login-form [type="submit"]');
+    await page.waitForSelector('[data-testid="profile-link"]');
+  } else if (await page.isVisible('[data-testid="profile-link"]')) {
+    // Already logged in
+    console.log("Already loggged in");
+  } else {
+    throw new Error("Failed to login");
+  }
+}
+export async function addLoginCookie(
+  baseUrl: () => string,
+  context: BrowserContext,
+  expire: string
+) {
+  // Replicate the cookie process in remix. This may change in the future!
+  const token = jwt.sign({ userId: 1 }, "secret_key", {
+    expiresIn: expire,
+  });
+  await context.addCookies([
+    {
+      name: "access_token",
+      value: cookieSignature.sign(
+        btoa(myUnescape(encodeURIComponent(JSON.stringify({ token })))),
+        "s3cr3t"
+      ),
+      httpOnly: true,
+      sameSite: "Lax",
+      url: baseUrl(),
+      secure: false,
+    },
+  ]);
+}
+
+// https://github.com/remix-run/remix/blob/aabc7f84514c1c0e0ba8e33c48c7fba422cf8084/packages/remix-server-runtime/cookies.ts#L222C1-L250C2
+// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
+function myUnescape(value: string): string {
+  let str = value.toString();
+  let result = "";
+  let index = 0;
+  let chr, part;
+  while (index < str.length) {
+    chr = str.charAt(index++);
+    if (chr === "%") {
+      if (str.charAt(index) === "u") {
+        part = str.slice(index + 1, index + 5);
+        if (/^[\da-f]{4}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 5;
+          continue;
+        }
+      } else {
+        part = str.slice(index, index + 2);
+        if (/^[\da-f]{2}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 2;
+          continue;
+        }
+      }
+    }
+    result += chr;
+  }
+  return result;
+}

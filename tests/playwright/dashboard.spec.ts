@@ -1,10 +1,8 @@
-import { BrowserContext, expect, Page, test } from "@playwright/test";
 import { ScheduleStatus } from "@enschedule/types";
+import { expect, Page, test } from "@playwright/test";
 import format from "date-fns/format";
-import * as cookieSignature from "cookie-signature";
 import { Setup } from "./setup";
 import { navigate, numRows, sleep, utils, waitForNumRows } from "./utils";
-import * as jwt from "jsonwebtoken";
 
 const setup = new Setup();
 
@@ -16,7 +14,9 @@ test.afterEach(async () => {
   await setup.teardown();
 });
 
-const { reset, createRun, visitRunPages } = utils(() => setup.dashboardUrl);
+const { reset, createRun, visitRunPages, login, addLoginCookie } = utils(
+  () => setup.dashboardUrl
+);
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot, and then test the delete", async ({
@@ -668,63 +668,3 @@ test.describe("login", () => {
     await newContext.close();
   });
 });
-
-async function login(page: Page) {
-  await page.goto(`${setup.dashboardUrl}/`);
-  await page.click('[data-testid="login-link"]');
-  await page.waitForURL(/\/login/);
-  await page.getByLabel("Username").fill("ricsam");
-  await page.getByLabel("Password").fill("password");
-  await page.click('#login-form [type="submit"]');
-  await page.waitForSelector('[data-testid="profile-link"]');
-}
-async function addLoginCookie(context: BrowserContext, expire: string) {
-  // Replicate the cookie process in remix. This may change in the future!
-  const token = jwt.sign({ userId: 1 }, "secret_key", {
-    expiresIn: expire,
-  });
-  await context.addCookies([
-    {
-      name: "access_token",
-      value: cookieSignature.sign(
-        btoa(myUnescape(encodeURIComponent(JSON.stringify({ token })))),
-        "s3cr3t"
-      ),
-      httpOnly: true,
-      sameSite: "Lax",
-      url: setup.dashboardUrl,
-      secure: false,
-    },
-  ]);
-}
-
-// https://github.com/remix-run/remix/blob/aabc7f84514c1c0e0ba8e33c48c7fba422cf8084/packages/remix-server-runtime/cookies.ts#L222C1-L250C2
-// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
-function myUnescape(value: string): string {
-  let str = value.toString();
-  let result = "";
-  let index = 0;
-  let chr, part;
-  while (index < str.length) {
-    chr = str.charAt(index++);
-    if (chr === "%") {
-      if (str.charAt(index) === "u") {
-        part = str.slice(index + 1, index + 5);
-        if (/^[\da-f]{4}$/i.exec(part)) {
-          result += String.fromCharCode(parseInt(part, 16));
-          index += 5;
-          continue;
-        }
-      } else {
-        part = str.slice(index, index + 2);
-        if (/^[\da-f]{2}$/i.exec(part)) {
-          result += String.fromCharCode(parseInt(part, 16));
-          index += 2;
-          continue;
-        }
-      }
-    }
-    result += chr;
-  }
-  return result;
-}

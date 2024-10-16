@@ -10,11 +10,14 @@ if (!baseURL) {
 
 test.describe.configure({ mode: "serial" });
 
-const { reset, createRun, visitRunPages } = utils(() => baseURL);
+const { reset, createRun, visitRunPages, login, addLoginCookie } = utils(
+  () => baseURL
+);
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot", async ({ page }) => {
     await reset(page);
+    await login(page);
 
     // create 2 runs + 2 schedules
     const defs = [

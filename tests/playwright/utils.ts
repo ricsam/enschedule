@@ -270,6 +270,7 @@ async function login(baseUrl: () => string, page: Page) {
     await page.getByLabel("Username").fill("ricsam");
     await page.getByLabel("Password").fill("password");
     await page.click('#login-form [type="submit"]');
+    await page.waitForURL(baseUrl());
     await page.waitForSelector('[data-testid="profile-link"]');
   } else if (await page.isVisible('[data-testid="profile-link"]')) {
     // Already logged in

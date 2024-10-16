@@ -10,26 +10,29 @@ import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs, useLayout } from "..";
+import { getAuthHeader } from "~/sessions";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export async function getLoaderData(
   params: Params<string>,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ): Promise<{
   schedules: PublicJobSchedule[];
   jobDefinition: PublicJobDefinition;
 }> {
   const handlerId = params.handlerId;
   assert(handlerId, "You must have a handlerId");
-  const jobDefinition = await worker.getLatestHandler(handlerId);
-  const schedules = await worker.getSchedules({handlerId});
+  const authHeader = await getAuthHeader(request);
+  const jobDefinition = await worker.getLatestHandler(handlerId, authHeader);
+  const schedules = await worker.getSchedules({ handlerId });
   return { schedules, jobDefinition };
 }
 
-export const loader: LoaderFunction = async ({ params, context }) => {
+export const loader: LoaderFunction = async ({ params, context, request }) => {
   return json<LoaderData>(
-    await getLoaderData(params, await getWorker(context.worker))
+    await getLoaderData(params, await getWorker(context.worker), request)
   );
 };
 

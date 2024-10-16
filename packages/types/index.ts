@@ -10,6 +10,9 @@ export type {
   PublicWorker,
   JobDefinition,
   ScheduleJobResult,
+  FunctionAccess,
+  ScheduleAccess,
+  RunAccess,
 } from "./types";
 
 export {

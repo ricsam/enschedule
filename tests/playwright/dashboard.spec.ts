@@ -1,8 +1,10 @@
-import { expect, Page, test } from "@playwright/test";
+import { BrowserContext, expect, Page, test } from "@playwright/test";
 import { ScheduleStatus } from "@enschedule/types";
 import format from "date-fns/format";
+import * as cookieSignature from "cookie-signature";
 import { Setup } from "./setup";
 import { navigate, numRows, sleep, utils, waitForNumRows } from "./utils";
+import * as jwt from "jsonwebtoken";
 
 const setup = new Setup();
 
@@ -21,6 +23,7 @@ test.describe("Single-Run", () => {
     page,
   }) => {
     await reset(page);
+    await login(page);
 
     // create 4 runs + 4 schedules
     for (let i = 1; i < 5; i += 1) {
@@ -69,6 +72,7 @@ test.describe("Multi runs", () => {
   test("Test pagination", async ({ page }) => {
     test.slow();
     await reset(page);
+    await login(page);
     for (let j = 0; j < 11; j += 1) {
       await createRun(page, (j % 4) + 1);
     }
@@ -116,6 +120,7 @@ test.describe("Multi runs", () => {
   });
   test("Test multi delete on schedules", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1);
 
     await page.goto(`${setup.dashboardUrl}/schedules`);
@@ -138,6 +143,7 @@ test.describe("Multi runs", () => {
   });
   test("Test multi delete on definitions", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1);
 
     await page.goto(`${setup.dashboardUrl}/definitions`);
@@ -176,6 +182,7 @@ test.describe("Single schedule", () => {
   }) => {
     test.slow();
     await reset(page);
+    await login(page);
     const createRuns = async (scheduleNum: number) => {
       await createRun(page, 1);
       await page.goto(`${setup.dashboardUrl}/schedules`);
@@ -248,6 +255,7 @@ test.describe("Single schedule", () => {
   });
   test("Delete schedule button", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1);
     await createRun(page, 1);
     await page.goto(`${setup.dashboardUrl}/schedules`);
@@ -386,8 +394,10 @@ test.describe("Can update a single schedule", () => {
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
       ).toBe("http://loc123alhost:3000");
-      await page.getByTestId("submit-edit-data").click();
-      await page.waitForResponse(/edit-details/);
+      await Promise.all([
+        page.getByTestId("submit-edit-data").click(),
+        page.waitForResponse(/edit-details/),
+      ]);
       await page.reload();
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
@@ -396,6 +406,7 @@ test.describe("Can update a single schedule", () => {
   };
   test.beforeEach(async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1);
     await page.goto(`${setup.dashboardUrl}/schedules`);
     await waitForNumRows(page, 1);
@@ -432,6 +443,7 @@ test.describe("Can update a single schedule", () => {
 test.describe("Can do schedule multi actions", () => {
   test.beforeEach(async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1, { runTomorrow: true });
     await createRun(page, 1, { runTomorrow: true });
     await createRun(page, 1, { runTomorrow: true });
@@ -544,6 +556,7 @@ test.describe("Can retry", () => {
   };
   test("maxRetries", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 3, {
       retry: true,
     });
@@ -572,6 +585,7 @@ test.describe("Can retry", () => {
   };
   test("unlimited retries", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 3, {
       retry: true,
       maxRetry: -1,
@@ -584,6 +598,7 @@ test.describe("Can retry", () => {
   });
   test("trigger job", async ({ page }) => {
     await reset(page);
+    await login(page);
     await createRun(page, 1, {
       manual: true,
     });
@@ -600,14 +615,6 @@ test.describe("Can retry", () => {
 });
 
 test.describe("login", () => {
-  const login = async (page: Page) => {
-    await page.goto(`${setup.dashboardUrl}/`);
-    await page.click('[data-testid="login-link"]');
-    await page.waitForURL(/\/login/);
-    await page.getByLabel("Username").fill("ricsam");
-    await page.getByLabel("Password").fill("password");
-    await page.click('#login-form [type="submit"]');
-  };
   test("login", async ({ page }) => {
     await login(page);
     await page.click('[data-testid="profile-link"]');
@@ -617,6 +624,11 @@ test.describe("login", () => {
     await page.click('[data-testid="profile-link"]');
     await page.click('[data-testid="logout"]');
     await page.waitForSelector('[data-testid="login-link"]');
+  });
+  test("login with cookie", async ({ page, context }) => {
+    await page.goto(`${setup.dashboardUrl}/`);
+    await addLoginCookie(context, "1m");
+    await page.waitForSelector('[data-testid="profile-link"]');
   });
   test("logout all devices", async ({ page, browser }) => {
     const newContext = await browser.newContext();
@@ -648,9 +660,71 @@ test.describe("login", () => {
     await page.waitForSelector('[data-testid="login-link"]');
 
     // browser 2 should NOT be logged in (after 1 minute when the token expires)
+    // Update the cookie to expire in 2 seconds
+    await addLoginCookie(newContext, "2s");
     await newPage.goto(`${setup.dashboardUrl}/`);
     await newPage.waitForSelector('[data-testid="login-link"]');
 
     await newContext.close();
   });
 });
+
+async function login(page: Page) {
+  await page.goto(`${setup.dashboardUrl}/`);
+  await page.click('[data-testid="login-link"]');
+  await page.waitForURL(/\/login/);
+  await page.getByLabel("Username").fill("ricsam");
+  await page.getByLabel("Password").fill("password");
+  await page.click('#login-form [type="submit"]');
+  await page.waitForSelector('[data-testid="profile-link"]');
+}
+async function addLoginCookie(context: BrowserContext, expire: string) {
+  // Replicate the cookie process in remix. This may change in the future!
+  const token = jwt.sign({ userId: 1 }, "secret_key", {
+    expiresIn: expire,
+  });
+  await context.addCookies([
+    {
+      name: "access_token",
+      value: cookieSignature.sign(
+        btoa(myUnescape(encodeURIComponent(JSON.stringify({ token })))),
+        "s3cr3t"
+      ),
+      httpOnly: true,
+      sameSite: "Lax",
+      url: setup.dashboardUrl,
+      secure: false,
+    },
+  ]);
+}
+
+// https://github.com/remix-run/remix/blob/aabc7f84514c1c0e0ba8e33c48c7fba422cf8084/packages/remix-server-runtime/cookies.ts#L222C1-L250C2
+// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
+function myUnescape(value: string): string {
+  let str = value.toString();
+  let result = "";
+  let index = 0;
+  let chr, part;
+  while (index < str.length) {
+    chr = str.charAt(index++);
+    if (chr === "%") {
+      if (str.charAt(index) === "u") {
+        part = str.slice(index + 1, index + 5);
+        if (/^[\da-f]{4}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 5;
+          continue;
+        }
+      } else {
+        part = str.slice(index, index + 2);
+        if (/^[\da-f]{2}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 2;
+          continue;
+        }
+      }
+    }
+    result += chr;
+  }
+  return result;
+}

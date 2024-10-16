@@ -290,6 +290,14 @@ Fields
 - `instance ID` - a unique ID that is generated for each instance that runs.
 - `version hash` - if the hash changes the version is bumped
 
+# Definitions / Functions / Handlers
+Have a version constructed of 
+
+* id
+* version
+
+If anything else on a function updates, such as title, job, example, access then you must bumb the version key for it to be updated. This is your responsibility as a developer to make sure versions is bumped as Enschedule CAN NOT serialize the code in e.g. the job and thus detect newer versions.
+
 # User Access
 
 # Access System Documentation

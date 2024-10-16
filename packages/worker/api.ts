@@ -65,8 +65,11 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   router.use(parseJsonBody());
 
   router.get("/job-definitions", (req, res, next) => {
+    if (!req.headers.authorization) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     worker
-      .getLatestHandlers()
+      .getLatestHandlers(req.headers.authorization)
       .then((jobDefinitions) => {
         res.json(jobDefinitions);
       })
@@ -74,8 +77,11 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/job-definitions/:id", (req, res, next) => {
+    if (!req.headers.authorization) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     worker
-      .getLatestHandler(req.params.id)
+      .getLatestHandler(req.params.id, req.headers.authorization)
       .then((jobDefinition) => {
         res.json(jobDefinition);
       })

@@ -74,6 +74,70 @@ export const serializedRunSchema = z.object({
 export type SerializedRun = z.output<typeof serializedRunSchema>;
 //#endregion
 
+//#region FunctionAccess
+export const FunctionAccessSchema = z.object({
+  view: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  createSchedule: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+export type FunctionAccess = z.output<typeof FunctionAccessSchema>;
+//#endregion
+
+//#region ScheduleAccess
+export const ScheduleAccessSchema = z.object({
+  view: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  edit: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  delete: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+export type ScheduleAccess = z.output<typeof ScheduleAccessSchema>;
+//#endregion
+
+//#region RunAccess
+export const RunAccessSchema = z.object({
+  view: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  viewLogs: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  delete: z.object({
+    users: z.array(z.string()).optional(),
+    groups: z.array(z.string()).optional(),
+  }),
+});
+export type RunAccess = z.output<typeof RunAccessSchema>;
+//#endregion
+
 //#region PublicJobDefinition
 export const publicJobDefinitionSchema = z.object({
   id: z.string(),
@@ -83,6 +147,7 @@ export const publicJobDefinitionSchema = z.object({
   example: z.unknown(),
   codeBlock: z.string(),
   jsonSchema: z.record(z.unknown()),
+  access: FunctionAccessSchema.optional(),
 });
 export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>;
 //#endregion
@@ -127,6 +192,13 @@ export const ScheduleJobResultSchema = z.object({
 });
 export type ScheduleJobResult = z.output<typeof ScheduleJobResultSchema>;
 
+function nullishToUndefined<T extends ZodType>(value: T) {
+  return value.nullish().transform((v): z.output<T> | undefined => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return v ?? undefined;
+  });
+}
+
 //#region PublicWorker
 export const PublicWorkerSchema = z.object({
   id: z.number(),
@@ -144,6 +216,9 @@ export const PublicWorkerSchema = z.object({
   lastRun: serializedRunSchema.optional(),
   status: z.nativeEnum(WorkerStatus),
   versionHash: z.string(),
+  defaultFunctionAccess: nullishToUndefined(FunctionAccessSchema),
+  defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
+  defaultRunAccess: nullishToUndefined(RunAccessSchema),
 });
 export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
 //#endregion
@@ -298,6 +373,7 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   job: (data: z.infer<T>) => Promise<void> | void;
   example: z.infer<T>;
   version: number;
+  access?: FunctionAccess;
 }
 export const JobDefinitionSchema = z.object({
   dataSchema: z.any(),
@@ -307,6 +383,7 @@ export const JobDefinitionSchema = z.object({
   job: z.any(),
   example: z.any(),
   version: z.number().int().positive(),
+  access: FunctionAccessSchema.optional(),
 });
 typeAssert<keyof JobDefinition, keyof z.output<typeof JobDefinitionSchema>>();
 typeAssert<keyof z.output<typeof JobDefinitionSchema>, keyof JobDefinition>();

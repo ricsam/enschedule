@@ -3,6 +3,7 @@ import * as crypto from "node:crypto";
 import os from "node:os";
 import stream from "node:stream";
 import type {
+  FunctionAccess,
   JobDefinition,
   ListRunsOptions,
   PublicJobDefinition,
@@ -10,7 +11,9 @@ import type {
   PublicJobSchedule,
   PublicWorker,
   PublicWorkerSchema,
+  RunAccess,
   RunHandlerInCp,
+  ScheduleAccess,
   ScheduleJobOptions,
   ScheduleJobResult,
   ScheduleUpdatePayloadSchema,
@@ -73,12 +76,29 @@ export const getTokenEnvs = () => {
 
 const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = getTokenEnvs();
 
-function createWorkerHash(
-  title: string,
-  description: undefined | null | string,
-  pollInterval: number,
-  definitions: PublicJobDefinition[]
-) {
+function createWorkerHash({
+  title,
+  description,
+  pollInterval,
+  definitions,
+  defaultFunctionAccess,
+  defaultScheduleAccess,
+  defaultRunAccess,
+}: {
+  title: string;
+  description?: null | string;
+  pollInterval: number;
+  definitions: PublicJobDefinition[];
+  defaultFunctionAccess?: FunctionAccess;
+  defaultScheduleAccess?: ScheduleAccess;
+  defaultRunAccess?: RunAccess;
+}) {
+  [defaultFunctionAccess, defaultScheduleAccess, defaultRunAccess]
+    .map((access) => {
+      if (!access) return "EMPTY";
+      return JSON.stringify(access);
+    })
+    .join("|");
   return createShortShaHash(
     title +
       (description || "") +
@@ -115,12 +135,7 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
   const status = getWorkerStatus(dbWorker);
 
   return {
-    versionHash: createWorkerHash(
-      dbWorker.title,
-      dbWorker.description,
-      dbWorker.pollInterval,
-      dbWorker.definitions
-    ),
+    versionHash: createWorkerHash(dbWorker),
     createdAt: dbWorker.createdAt,
     definitions: dbWorker.definitions,
     description: dbWorker.description ?? undefined,
@@ -138,6 +153,9 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
       }) ?? [],
     lastRun: dbWorker.lastRun ? serializeRun(dbWorker.lastRun) : undefined,
     status,
+    defaultFunctionAccess: dbWorker.defaultFunctionAccess,
+    defaultScheduleAccess: dbWorker.defaultScheduleAccess,
+    defaultRunAccess: dbWorker.defaultRunAccess,
   };
 };
 
@@ -161,6 +179,7 @@ export const createPublicJobDefinition = (
     example: jobDef.example,
     codeBlock,
     jsonSchema,
+    access: jobDef.access,
   };
 };
 
@@ -340,6 +359,10 @@ export class Worker extends Model<
   declare description?: string | null;
   declare definitions: PublicJobDefinition[];
 
+  declare defaultFunctionAccess?: FunctionAccess;
+  declare defaultScheduleAccess?: ScheduleAccess;
+  declare defaultRunAccess?: RunAccess;
+
   declare instanceId: string;
   declare createdAt: CreationOptional<Date>;
   declare hostname: string;
@@ -423,6 +446,8 @@ export class ApiKey extends Model<
   declare key: string;
   declare createdAt: CreationOptional<Date>;
   declare expiresAt: Date;
+
+  declare user: NonAttribute<User>;
 }
 
 export class Schedule extends Model<
@@ -533,6 +558,12 @@ export const createJobDefinition = <T extends ZodType = ZodType>(
   job: JobDefinition<T>
 ) => job;
 
+interface UserAccess {
+  admin: boolean;
+  groups: string[];
+  username?: string;
+}
+
 export interface BackendOptions {
   database?: SeqConstructorOptions;
   forkArgv?: string[];
@@ -540,6 +571,9 @@ export interface BackendOptions {
   name: string;
   description?: string;
   inlineWorker?: boolean;
+  defaultFunctionAccess?: FunctionAccess;
+  defaultScheduleAccess?: ScheduleAccess;
+  defaultRunAccess?: RunAccess;
 }
 
 interface WorkerInstance {
@@ -573,6 +607,9 @@ export class PrivateBackend {
   private forkArgv: string[] | undefined;
   protected workerInstance: WorkerInstance;
   protected inlineWorker: boolean;
+  private defaultFunctionAccess?: FunctionAccess;
+  private defaultScheduleAccess?: ScheduleAccess;
+  private defaultRunAccess?: RunAccess;
 
   constructor(backendOptions: BackendOptions) {
     const {
@@ -582,7 +619,14 @@ export class PrivateBackend {
       name,
       description,
       inlineWorker,
+      defaultFunctionAccess,
+      defaultScheduleAccess,
+      defaultRunAccess,
     } = backendOptions;
+
+    this.defaultFunctionAccess = defaultFunctionAccess;
+    this.defaultScheduleAccess = defaultScheduleAccess;
+    this.defaultRunAccess = defaultRunAccess;
 
     this.inlineWorker = Boolean(inlineWorker);
 
@@ -628,6 +672,18 @@ export class PrivateBackend {
         definitions: {
           type: DataTypes.JSON,
           allowNull: false,
+        },
+        defaultFunctionAccess: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
+        defaultScheduleAccess: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
+        defaultRunAccess: {
+          type: DataTypes.JSON,
+          allowNull: true,
         },
         workerId: {
           type: DataTypes.STRING,
@@ -1346,9 +1402,10 @@ export class PrivateBackend {
   }
 
   public async getLatestHandler(
-    handlerId: string
+    handlerId: string,
+    authHeader: string
   ): Promise<PublicJobDefinition> {
-    const handlers = await this.getLatestHandlers();
+    const handlers = await this.getLatestHandlers(authHeader);
     const handler = handlers.find((h) => h.id === handlerId);
     if (!handler) {
       throw new Error("invalid handlerId or the worker is not online");
@@ -1356,26 +1413,154 @@ export class PrivateBackend {
     return handler;
   }
 
-  public async getLatestHandlers(): Promise<PublicJobDefinition[]> {
+  public canViewFunction(
+    user: UserAccess,
+    def: PublicJobDefinition,
+    worker: PublicWorker
+  ): boolean {
+    if (user.admin) {
+      return true;
+    }
+    const hasAccess = (access: FunctionAccess | undefined) => {
+      if (!access) {
+        return false;
+      }
+      if (user.username) {
+        if (access.view?.users?.includes(user.username)) {
+          return true;
+        }
+      }
+      if (user.groups.length > 0) {
+        const groups = access.view?.groups;
+        if (groups?.some((group) => user.groups.includes(group))) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (hasAccess(worker.defaultFunctionAccess)) {
+      return true;
+    }
+    if (hasAccess(def.access)) {
+      return true;
+    }
+    return false;
+  }
+
+  public async getUserFromAuthHeader(
+    authHeader: string
+  ): Promise<UserAccess | undefined> {
+    const [type, token] = z
+      .tuple([
+        z.union([
+          z.literal("Jwt"),
+          z.literal("Api-Key"),
+          z.literal("User-Api-Key"),
+        ]),
+        z.string(),
+      ])
+      .parse(authHeader.split(" "));
+
+    if (type === "Jwt") {
+      try {
+        const decoded = await new Promise<{ userId: number }>(
+          (resolve, reject) => {
+            jwt.verify(token, ACCESS_TOKEN_SECRET, (err, d) => {
+              if (err) {
+                reject(err);
+              }
+              resolve(z.object({ userId: z.number() }).parse(d));
+            });
+          }
+        );
+        const userId = decoded.userId;
+        const user = await this.User.findByPk(userId, {
+          include: [
+            {
+              model: Group,
+              as: "groups",
+            },
+          ],
+        });
+        if (user) {
+          return {
+            admin: user.admin,
+            groups: (user.groups ?? []).map((group) => group.groupName),
+            username: user.username,
+          };
+        }
+      } catch (error) {
+        return undefined;
+      }
+    }
+    if (type === "Api-Key") {
+      if (token === process.env.API_KEY) {
+        return {
+          admin: true,
+          groups: [],
+        };
+      }
+    }
+    if (type === "User-Api-Key") {
+      const apiKey = await this.ApiKey.findOne({
+        where: {
+          key: token,
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            include: [
+              {
+                model: Group,
+                as: "groups",
+              },
+            ],
+          },
+        ],
+      });
+      if (apiKey) {
+        return {
+          admin: apiKey.user.admin,
+          groups: (apiKey.user.groups ?? []).map((group) => group.groupName),
+          username: apiKey.user.username,
+        };
+      }
+    }
+    throw new Error("invalid auth header");
+  }
+
+  public async getLatestHandlers(
+    authHeader: string
+  ): Promise<PublicJobDefinition[]> {
     const handlerMap: Record<
       string,
       { def: PublicJobDefinition; version: number } | undefined
     > = {};
-    (await this.getWorkers())
-      .filter((worker) => {
-        return worker.status === WorkerStatus.UP;
-      })
-      .forEach((worker) => {
-        return worker.definitions.forEach((def: PublicJobDefinition) => {
-          const latest = { def, version: def.version };
-          const current = handlerMap[def.id] || latest;
-          if (def.id === current.def.id && def.version > current.version) {
-            current.version = def.version;
-            current.def = def;
-          }
-          handlerMap[def.id] = current;
-        });
+    const upWorkers = (await this.getWorkers()).filter((worker) => {
+      return worker.status === WorkerStatus.UP;
+    });
+
+    const userAccess = await this.getUserFromAuthHeader(authHeader);
+
+    if (!userAccess) {
+      return [];
+    }
+
+    upWorkers.forEach((worker) => {
+      worker.definitions.forEach((def: PublicJobDefinition) => {
+        if (!this.canViewFunction(userAccess, def, worker)) {
+          return;
+        }
+        const latest = { def, version: def.version };
+        const current = handlerMap[def.id] || latest;
+        if (def.id === current.def.id && def.version > current.version) {
+          current.version = def.version;
+          current.def = def;
+        }
+        handlerMap[def.id] = current;
       });
+    });
     return Object.values(handlerMap).flatMap((val) => (val ? [val.def] : []));
   }
   private getPublicHandlers(): PublicJobDefinition[] {
@@ -1439,27 +1624,23 @@ export class PrivateBackend {
         });
 
         let version = 1;
-        const hashes: string[] = [];
+        const hashes = new Set<string>();
         workers.forEach((worker) => {
           version = Math.max(worker.version, version);
-          hashes.push(
-            createWorkerHash(
-              worker.title,
-              worker.description,
-              worker.pollInterval,
-              worker.definitions
-            )
-          );
+          hashes.add(createWorkerHash(worker));
         });
 
-        const thisWorkerHash = createWorkerHash(
-          this.workerInstance.title,
-          this.workerInstance.description,
-          this.tickDuration,
-          this.getPublicHandlers()
-        );
+        const thisWorkerHash = createWorkerHash({
+          title: this.workerInstance.title,
+          description: this.workerInstance.description,
+          pollInterval: this.tickDuration,
+          definitions: this.getPublicHandlers(),
+          defaultFunctionAccess: this.defaultFunctionAccess,
+          defaultScheduleAccess: this.defaultScheduleAccess,
+          defaultRunAccess: this.defaultRunAccess,
+        });
 
-        if (hashes.length > 0 && !hashes.includes(thisWorkerHash)) {
+        if (hashes.size > 0 && !hashes.has(thisWorkerHash)) {
           version += 1;
         }
 
@@ -1478,6 +1659,9 @@ export class PrivateBackend {
             title: this.workerInstance.title,
             hostname: os.hostname(),
             pollInterval: this.tickDuration,
+            defaultFunctionAccess: this.defaultFunctionAccess,
+            defaultScheduleAccess: this.defaultScheduleAccess,
+            defaultRunAccess: this.defaultRunAccess,
           },
           transaction,
         });
@@ -2427,53 +2611,59 @@ export class PrivateBackend {
     // await Promise.all(overdueJobs.map(async (schedule) => {}));
     /* eslint-disable no-await-in-loop */
     for (const schedule of overdueJobs) {
-      const run = await this.scheduleSingleRun(schedule);
-      const noMaxRetries = schedule.maxRetries === -1;
+      try {
+        const run = await this.scheduleSingleRun(schedule);
+        const noMaxRetries = schedule.maxRetries === -1;
 
-      const shouldRetry =
-        noMaxRetries || schedule.retries < schedule.maxRetries - 1;
+        const shouldRetry =
+          noMaxRetries || schedule.retries < schedule.maxRetries - 1;
 
-      if (schedule.retryFailedJobs === true) {
-        if (run.exitSignal !== "0") {
-          if (shouldRetry) {
-            const nextRun = this.retryStrategy(
-              createPublicJobSchedule(
-                schedule,
-                createPublicJobDefinition(
-                  this.getLocalHandler(
-                    schedule.handlerId,
-                    schedule.handlerVersion
+        if (schedule.retryFailedJobs === true) {
+          if (run.exitSignal !== "0") {
+            if (shouldRetry) {
+              const nextRun = this.retryStrategy(
+                createPublicJobSchedule(
+                  schedule,
+                  createPublicJobDefinition(
+                    this.getLocalHandler(
+                      schedule.handlerId,
+                      schedule.handlerVersion
+                    )
                   )
                 )
-              )
-            );
-            schedule.runAt = new Date(Date.now() + nextRun);
-            schedule.claimed = false;
-            schedule.retries += 1;
-            await schedule.save();
-            return;
-          }
-          const trigger = await schedule.getFailureTrigger();
-          if (trigger) {
-            await this.runScheduleNow(trigger.id);
+              );
+              schedule.runAt = new Date(Date.now() + nextRun);
+              schedule.claimed = false;
+              schedule.retries += 1;
+              await schedule.save();
+              return;
+            }
+            const trigger = await schedule.getFailureTrigger();
+            if (trigger) {
+              await this.runScheduleNow(trigger.id);
+            }
           }
         }
-      }
-      if (schedule.cronExpression) {
-        const runAt = parseExpression(schedule.cronExpression).next().toDate();
-        schedule.runAt = runAt;
-        schedule.claimed = false;
-      }
-      if (schedule.retryFailedJobs === true) {
-        if (run.exitSignal === "0") {
-          // success reset the retries:
-          schedule.retries = -1;
-        } else if (schedule.retries >= schedule.maxRetries - 1) {
-          // we will not retry anymore
-          schedule.retries = schedule.maxRetries;
+        if (schedule.cronExpression) {
+          const runAt = parseExpression(schedule.cronExpression)
+            .next()
+            .toDate();
+          schedule.runAt = runAt;
+          schedule.claimed = false;
         }
+        if (schedule.retryFailedJobs === true) {
+          if (run.exitSignal === "0") {
+            // success reset the retries:
+            schedule.retries = -1;
+          } else if (schedule.retries >= schedule.maxRetries - 1) {
+            // we will not retry anymore
+            schedule.retries = schedule.maxRetries;
+          }
+        }
+        await schedule.save();
+      } catch (err) {
+        console.error("Could not fully run the function", err);
       }
-      await schedule.save();
     }
     /* eslint-enable no-await-in-loop */
     return claimed;
@@ -2605,17 +2795,10 @@ export class PrivateBackend {
     if (allDevices) {
       const decoded = await new Promise<{ userId: number }>(
         (resolve, reject) => {
-          jwt.verify(
-            refreshToken,
-            REFRESH_TOKEN_SECRET,
-            {
-              ignoreExpiration: true,
-            },
-            (err, rawDecoded) => {
-              if (err) reject(err);
-              resolve(z.object({ userId: z.number() }).parse(rawDecoded));
-            }
-          );
+          jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, rawDecoded) => {
+            if (err) reject(err);
+            resolve(z.object({ userId: z.number() }).parse(rawDecoded));
+          });
         }
       );
       where = { userId: decoded.userId };
@@ -2720,6 +2903,13 @@ export class TestBackend extends PrivateBackend {
     undefined | Record<string, JobDefinition | undefined>
   > = this.definedJobs;
 
+  private authHeader: string;
+
+  constructor(backendOptions: BackendOptions, authHeader: string) {
+    super(backendOptions);
+    this.authHeader = authHeader;
+  }
+
   public async createJobSchedule(
     handlerId: string,
     title: string,
@@ -2775,5 +2965,9 @@ export class TestBackend extends PrivateBackend {
 
   public async tick() {
     return super.tick();
+  }
+
+  public getLatestHandlers() {
+    return super.getLatestHandlers(this.authHeader);
   }
 }

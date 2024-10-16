@@ -35,6 +35,11 @@ if (!process.env.SPECIAL_HANDLERS) {
     example: {
       url: "http://localhost:3000",
     },
+    access: {
+      view: {
+        users: ["ricsam"],
+      },
+    },
   });
   worker.registerJob({
     id: "log-job",

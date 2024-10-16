@@ -89,6 +89,7 @@ const createRun = async (
     const tomorrow = addDays(new Date(), 1);
 
     const now = format(tomorrow, "yyyy-MM-dd'T'HH:mm:ss");
+    await runAtField.focus();
     await runAtField.fill(now);
 
     await page.getByTestId("submit-runAt").click();

@@ -10,6 +10,7 @@ import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from "..";
+import { getAuthHeader } from "~/sessions";
 
 export const useBreadcrumbs = (
   jobDefinition: SerializeFrom<PublicJobDefinition> | string
@@ -29,10 +30,12 @@ export const useBreadcrumbs = (
 
 export async function getLoaderData(
   params: Params<string>,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ) {
   const id = getDefinitionId(params);
-  const def = await worker.getLatestHandler(id);
+  const authHeader = await getAuthHeader(request);
+  const def = await worker.getLatestHandler(id, authHeader);
   return { def };
 }
 
@@ -46,8 +49,12 @@ export const getDefinitionId = (params: Params<string>): string => {
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params, context }) => {
-  const loaderData = await getLoaderData(params, await getWorker(context.worker));
+export const loader: LoaderFunction = async ({ params, context, request }) => {
+  const loaderData = await getLoaderData(
+    params,
+    await getWorker(context.worker),
+    request
+  );
   return json(loaderData);
 };
 

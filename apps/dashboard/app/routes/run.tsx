@@ -167,8 +167,10 @@ const MyMessage = ({
   );
 };
 
-export const loader: LoaderFunction = async ({ context }) => {
-  return json<LoaderData>(await getLoaderData(await getWorker(context.worker)));
+export const loader: LoaderFunction = async ({ context, request }) => {
+  return json<LoaderData>(
+    await getLoaderData(await getWorker(context.worker), request)
+  );
 };
 
 const SendButton = (props: IconButtonProps) => (

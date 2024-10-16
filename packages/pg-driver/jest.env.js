@@ -12,6 +12,7 @@ Object.assign(process.env, {
   DB_PORT: "6543",
   ACCESS_TOKEN_SECRET: "secret",
   REFRESH_TOKEN_SECRET: "secret",
+  API_KEY: "secret",
 });
 
 module.exports = async () => {

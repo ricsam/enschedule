@@ -536,7 +536,6 @@ function DataCard({
   const [isValid, setIsValid] = React.useState(true);
   const [editorRef, size] = useElementSize();
   const dataRef = React.useRef<HTMLInputElement | null>(null);
-  console.log("size", size);
   return (
     <Card
       sx={{

@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 
 type SessionFlashData = {
   error: string;
@@ -36,3 +36,14 @@ export const refreshTokenSession = createCookieSessionStorage<
     maxAge: 60 * 60 * 24 * 7, // 1 week
   },
 });
+
+export const getAuthHeader = async (request: Request): Promise<string> => {
+  const session = await accessTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+
+  if (session.has("token")) {
+    return `Jwt ${session.get("token")}`;
+  }
+  throw redirect("/login");
+};

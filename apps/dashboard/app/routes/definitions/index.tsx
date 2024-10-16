@@ -1,20 +1,28 @@
 import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import DefinitionsTable from "~/components/DefinitionsTable";
 import { RootLayout } from "~/components/Layout";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
-async function getLoaderData(worker: DashboardWorker) {
-  const definitions = worker.getLatestHandlers();
+async function getLoaderData(worker: DashboardWorker, authHeader: string) {
+  const definitions = worker.getLatestHandlers(authHeader);
   return definitions;
 }
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ context }) => {
-  return json<LoaderData>(await getLoaderData(await getWorker(context.worker)));
+export const loader: LoaderFunction = async ({ context, request }) => {
+  const authHeader = await getAuthHeader(request);
+  if (!authHeader) {
+    return redirect("/login");
+  }
+
+  return json<LoaderData>(
+    await getLoaderData(await getWorker(context.worker), authHeader)
+  );
 };
 
 export const useBreadcrumbs = (): Breadcrumb[] => {

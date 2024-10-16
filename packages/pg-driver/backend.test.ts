@@ -10,22 +10,28 @@ import { envSequalizeOptions } from "./env-sequalize-options";
 let sequalizeInstances: TestBackend[] = [];
 
 const pgBackend = () => {
-  const backend = new TestBackend({
-    name: "test worker",
-    workerId: "test-worker",
-    database: { ...envSequalizeOptions(), logging: false },
-    inlineWorker: true,
-  });
+  const backend = new TestBackend(
+    {
+      name: "test worker",
+      workerId: "test-worker",
+      database: { ...envSequalizeOptions(), logging: false },
+      inlineWorker: true,
+    },
+    "Api-Key secret"
+  );
   sequalizeInstances.push(backend);
   return backend;
 };
 const sqliteBackend = () => {
-  const backend = new TestBackend({
-    name: "test worker",
-    workerId: "test-worker",
-    database: { dialect: "sqlite", storage: ":memory:", logging: false },
-    inlineWorker: true,
-  });
+  const backend = new TestBackend(
+    {
+      name: "test worker",
+      workerId: "test-worker",
+      database: { dialect: "sqlite", storage: ":memory:", logging: false },
+      inlineWorker: true,
+    },
+    "Api-Key secret"
+  );
   sequalizeInstances.push(backend);
   return backend;
 };
@@ -44,6 +50,11 @@ const httpJobDeclaration = (
     title: "HTTP request",
     example: {
       url: "wef",
+    },
+    access: {
+      view: {
+        users: ["ricsam"],
+      },
     },
   });
 
@@ -857,39 +868,46 @@ registerTests((getBackend: () => TestBackend) => {
       expect(worker.id).toBe(1);
       expect(worker.workerId).toBe("test-worker");
       expect(worker.definitions).toMatchInlineSnapshot(`
-    [
-      {
-        "codeBlock": "type HttpRequest = {
-      url: string;
-    };",
-        "description": "send a http request",
-        "example": {
-          "url": "wef",
-        },
-        "id": "http_request",
-        "jsonSchema": {
-          "$ref": "#/definitions/HttpRequest",
-          "$schema": "http://json-schema.org/draft-07/schema#",
-          "definitions": {
-            "HttpRequest": {
-              "additionalProperties": false,
-              "properties": {
-                "url": {
-                  "type": "string",
+        [
+          {
+            "access": {
+              "view": {
+                "users": [
+                  "ricsam",
+                ],
+              },
+            },
+            "codeBlock": "type HttpRequest = {
+          url: string;
+        };",
+            "description": "send a http request",
+            "example": {
+              "url": "wef",
+            },
+            "id": "http_request",
+            "jsonSchema": {
+              "$ref": "#/definitions/HttpRequest",
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "definitions": {
+                "HttpRequest": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "url",
+                  ],
+                  "type": "object",
                 },
               },
-              "required": [
-                "url",
-              ],
-              "type": "object",
             },
+            "title": "HTTP request",
+            "version": 1,
           },
-        },
-        "title": "HTTP request",
-        "version": 1,
-      },
-    ]
-  `);
+        ]
+      `);
       expect(worker.lastReached.getTime()).toBe(0);
     });
     it("should register workers", async () => {
@@ -960,7 +978,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       const run = await awaitRunSchedule(backend, schedule.id);
-      expect(typeof run.worker !== 'string' && run.worker.id).toBe(worker.id);
+      expect(typeof run.worker !== "string" && run.worker.id).toBe(worker.id);
       expect((await backend.getWorkers())[0].id).toBe(worker.id);
       expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
     });

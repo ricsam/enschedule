@@ -58,17 +58,20 @@ export class WorkerAPI {
   private async request(
     method: "POST" | "PUT",
     path: string,
-    data?: unknown
+    data?: unknown,
+    authHeader?: string
   ): Promise<unknown>;
   private async request(
     method: "GET" | "DELETE",
     path: string,
-    data?: Record<string, string | number | boolean | undefined>
+    data?: Record<string, string | number | boolean | undefined>,
+    authHeader?: string
   ): Promise<unknown>;
   private async request(
     method: "POST" | "DELETE" | "GET" | "PUT",
     path: string,
-    data?: Record<string, string | number | boolean | undefined>
+    data?: Record<string, string | number | boolean | undefined>,
+    authHeader?: string
   ) {
     let dataString = "";
     if (data && method === "GET") {
@@ -80,6 +83,10 @@ export class WorkerAPI {
         .join("&");
     }
     const bodyString = JSON.stringify(data);
+    const headers: http.OutgoingHttpHeaders = {
+      "Content-Type": "application/json",
+      "X-API-KEY": this.apiKey,
+    };
     const options = {
       hostname: this.hostname,
       port: this.port,
@@ -87,11 +94,11 @@ export class WorkerAPI {
         method === "GET" && dataString ? `${path}?${dataString}` : path
       }`,
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-KEY": this.apiKey,
-      },
+      headers,
     };
+    if (authHeader) {
+      headers.Authorization = authHeader;
+    }
     const retries = 5;
     const delay = 1000;
     const requestLog = (...args: unknown[]) => {
@@ -169,8 +176,13 @@ export class WorkerAPI {
     }
   }
 
-  async getLatestHandlers(): Promise<PublicJobDefinition[]> {
-    const jobDefinitions = await this.request("GET", "/job-definitions");
+  async getLatestHandlers(authHeader: string): Promise<PublicJobDefinition[]> {
+    const jobDefinitions = await this.request(
+      "GET",
+      "/job-definitions",
+      undefined,
+      authHeader
+    );
     return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
   }
 
@@ -178,8 +190,16 @@ export class WorkerAPI {
     await this.request("POST", "/unschedule", ids);
   }
 
-  async getLatestHandler(id: string): Promise<PublicJobDefinition> {
-    const definition = await this.request("GET", `/job-definitions/${id}`);
+  async getLatestHandler(
+    id: string,
+    authHeader: string
+  ): Promise<PublicJobDefinition> {
+    const definition = await this.request(
+      "GET",
+      `/job-definitions/${id}`,
+      undefined,
+      authHeader
+    );
     return publicJobDefinitionSchema.parse(definition);
   }
 

@@ -100,7 +100,7 @@ export default function Login() {
           <Typography variant="h4" gutterBottom>
             Login
           </Typography>
-          <Form method="post">
+          <Form method="post" id="login-form">
             <TextField
               label="Username"
               fullWidth

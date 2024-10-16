@@ -536,6 +536,7 @@ function DataCard({
   const [isValid, setIsValid] = React.useState(true);
   const [editorRef, size] = useElementSize();
   const dataRef = React.useRef<HTMLInputElement | null>(null);
+  console.log("size", size);
   return (
     <Card
       sx={{
@@ -572,7 +573,12 @@ function DataCard({
         {typeof schedule.jobDefinition !== "string" && (
           <>
             <Box pb={1} />
-            <Box maxWidth="600px" flex={1} ref={editorRef}>
+            <Box
+              maxWidth="600px"
+              flex={1}
+              ref={editorRef}
+              sx={{ minHeight: "200px" }}
+            >
               {size && (
                 <Editor
                   jsonSchema={schedule.jobDefinition.jsonSchema}

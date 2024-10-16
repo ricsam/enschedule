@@ -20,7 +20,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   try {
     const user = await authenticate(request);
-
     const data: LoaderData = {
       theme: themeSession.getTheme(),
       user,

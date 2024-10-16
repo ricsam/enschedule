@@ -312,6 +312,21 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .catch(next);
   });
 
+  router.post("/logout", (req, res, next) => {
+    const { refreshToken, allDevices } = z
+      .object({
+        refreshToken: z.string(),
+        allDevices: z.boolean(),
+      })
+      .parse(req.body);
+    worker
+      .logout(refreshToken, allDevices)
+      .then(() => {
+        res.json({ success: true });
+      })
+      .catch(next);
+  });
+
   return router;
 };
 

@@ -75,7 +75,7 @@ export function RootLayout({
   const drawer = (
     <div>
       <Toolbar>
-        <Link to="/" style={{ display: "flex", alignItems: "center" }}>
+        <Link to="/" style={{ display: "flex", alignItems: "center" }} data-testid="enschedule-logo">
           <img src={logo} alt="Enschedule" style={{ width: "100%" }} />
           {/* Schedule */}
         </Link>
@@ -194,6 +194,7 @@ export function RootLayout({
                   color="inherit"
                   LinkComponent={RemixLink}
                   component={RemixLink}
+                  data-testid="login-link"
                   to="/login"
                 >
                   Login
@@ -204,6 +205,7 @@ export function RootLayout({
                   color="inherit"
                   LinkComponent={RemixLink}
                   component={RemixLink}
+                  data-testid="profile-link"
                   to="/profile"
                 >
                   <UserIcon />

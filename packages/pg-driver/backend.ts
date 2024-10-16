@@ -411,7 +411,6 @@ export class Session extends Model<
   declare id: CreationOptional<number>;
   declare userId: ForeignKey<User["id"]>;
   declare createdAt: CreationOptional<Date>;
-  declare expiresAt: Date;
   declare refreshToken: string;
 }
 
@@ -744,10 +743,6 @@ export class PrivateBackend {
           allowNull: false,
         },
         createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        expiresAt: {
           type: DataTypes.DATE,
           allowNull: false,
         },
@@ -2600,14 +2595,38 @@ export class PrivateBackend {
     await this.Session.create({
       userId: user.id,
       refreshToken,
-      expiresAt: new Date(Date.now() + this.refreshTokenDuration),
     });
     return { accessToken: this.createAccessToken(user.id), refreshToken };
   }
 
+  public async logout(refreshToken: string, allDevices: boolean) {
+    let where: WhereOptions<InferAttributes<Session>> = { refreshToken };
+
+    if (allDevices) {
+      const decoded = await new Promise<{ userId: number }>(
+        (resolve, reject) => {
+          jwt.verify(
+            refreshToken,
+            REFRESH_TOKEN_SECRET,
+            {
+              ignoreExpiration: true,
+            },
+            (err, rawDecoded) => {
+              if (err) reject(err);
+              resolve(z.object({ userId: z.number() }).parse(rawDecoded));
+            }
+          );
+        }
+      );
+      where = { userId: decoded.userId };
+    }
+
+    await this.Session.destroy({ where });
+  }
+
   private createAccessToken(userId: number) {
     return jwt.sign({ userId }, ACCESS_TOKEN_SECRET, {
-      expiresIn: "1m",
+      expiresIn: "30s",
     });
   }
   private refreshTokenDuration = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -2621,21 +2640,36 @@ export class PrivateBackend {
   public async refreshToken(
     refreshToken: string
   ): Promise<undefined | { refreshToken: string; accessToken: string }> {
-    const decoded = await new Promise<{ userId: number }>((resolve, reject) => {
-      jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, rawDecoded) => {
-        if (err) reject(err);
-        resolve(z.object({ userId: z.number() }).parse(rawDecoded));
-      });
+    const decoded = await new Promise<{
+      userId: number;
+      iat: number;
+      exp: number;
+    }>((resolve, reject) => {
+      jwt.verify(
+        refreshToken,
+        REFRESH_TOKEN_SECRET,
+        { ignoreExpiration: true },
+        (err, rawDecoded) => {
+          if (err) reject(err);
+          resolve(
+            z
+              .object({ userId: z.number(), iat: z.number(), exp: z.number() })
+              .parse(rawDecoded)
+          );
+        }
+      );
     });
+
     const session = await this.Session.findOne({
       where: { refreshToken, userId: decoded.userId },
     });
+
     if (!session) {
       log("Session not found");
       return;
     }
 
-    if (new Date() > session.expiresAt) {
+    if (Date.now() > decoded.exp * 1000) {
       await session.destroy();
       log("Refresh token has expired");
       return;
@@ -2643,7 +2677,6 @@ export class PrivateBackend {
 
     const newAccessToken = this.createAccessToken(decoded.userId);
     const newRefreshToken = this.createRefreshToken(decoded.userId);
-    session.expiresAt = new Date(Date.now() + this.refreshTokenDuration);
     session.refreshToken = newRefreshToken;
     await session.save();
 

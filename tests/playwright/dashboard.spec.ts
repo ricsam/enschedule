@@ -598,3 +598,59 @@ test.describe("Can retry", () => {
     await expectStatus(page, 2).toBe(ScheduleStatus.SUCCESS);
   });
 });
+
+test.describe("login", () => {
+  const login = async (page: Page) => {
+    await page.goto(`${setup.dashboardUrl}/`);
+    await page.click('[data-testid="login-link"]');
+    await page.waitForURL(/\/login/);
+    await page.getByLabel("Username").fill("ricsam");
+    await page.getByLabel("Password").fill("password");
+    await page.click('#login-form [type="submit"]');
+  };
+  test("login", async ({ page }) => {
+    await login(page);
+    await page.click('[data-testid="profile-link"]');
+  });
+  test("logout", async ({ page }) => {
+    await login(page);
+    await page.click('[data-testid="profile-link"]');
+    await page.click('[data-testid="logout"]');
+    await page.waitForSelector('[data-testid="login-link"]');
+  });
+  test("logout all devices", async ({ page, browser }) => {
+    const newContext = await browser.newContext();
+    const newPage = await newContext.newPage();
+    await login(page);
+    await login(newPage);
+
+    // open profile page on both browsers
+    await page.click('[data-testid="profile-link"]');
+    await newPage.click('[data-testid="profile-link"]');
+
+    // logout in browser 1
+    await page.click('[data-testid="logout"]');
+    await page.waitForSelector('[data-testid="login-link"]');
+
+    // browser 2 should still be logged in
+    await newPage.goto(`${setup.dashboardUrl}/`);
+    await newPage.click('[data-testid="profile-link"]');
+
+    // login page 1 again
+    await login(page);
+
+    // go to profile page on both browsers
+    await page.click('[data-testid="profile-link"]');
+    await newPage.click('[data-testid="profile-link"]');
+
+    // logout all devices from first browser
+    await page.click('[data-testid="logout-all-devices"]');
+    await page.waitForSelector('[data-testid="login-link"]');
+
+    // browser 2 should NOT be logged in (after 1 minute when the token expires)
+    await newPage.goto(`${setup.dashboardUrl}/`);
+    await newPage.waitForSelector('[data-testid="login-link"]');
+
+    await newContext.close();
+  });
+});

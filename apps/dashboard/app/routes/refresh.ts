@@ -1,4 +1,4 @@
-import type { LoaderFunction } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunction } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { getWorker } from "~/createWorker.server";
 import { accessTokenSession, refreshTokenSession } from "~/sessions";
@@ -20,13 +20,20 @@ export const loader: LoaderFunction = async ({ request, context }) => {
   const refreshToken = refreshTokenRemixSession.get("token");
 
   const errorRedirect = async () => {
-    accessTokenRemixSession.flash("error", "Invalid refresh token");
+    refreshTokenRemixSession.unset("token");
+    accessTokenRemixSession.unset("token");
+
     return redirect(targetRedirect, {
-      headers: {
-        "Set-Cookie": await accessTokenSession.commitSession(
-          accessTokenRemixSession
-        ),
-      },
+      headers: [
+        [
+          "Set-Cookie",
+          await accessTokenSession.commitSession(accessTokenRemixSession),
+        ],
+        [
+          "Set-Cookie",
+          await refreshTokenSession.commitSession(refreshTokenRemixSession),
+        ],
+      ],
     });
   };
 
@@ -57,3 +64,45 @@ export const loader: LoaderFunction = async ({ request, context }) => {
     ],
   });
 };
+
+export async function action({ request, context }: ActionFunctionArgs) {
+  const fd = await request.formData();
+  let submitType: "logout" | "logout-all-devices" | undefined;
+  if (fd.has("logout")) {
+    submitType = "logout";
+  } else if (fd.has("logout-all-devices")) {
+    submitType = "logout-all-devices";
+  } else {
+    return redirect("/profile");
+  }
+  const accessTokenRemixSession = await accessTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+  const refreshTokenRemixSession = await refreshTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+
+  const token = refreshTokenRemixSession.get("token");
+  if (token) {
+    await (
+      await getWorker(context.worker)
+    ).logout(token, submitType === "logout-all-devices");
+  }
+
+  accessTokenRemixSession.unset("token");
+  refreshTokenRemixSession.unset("token");
+
+  // Login succeeded, send them to the home page.
+  return redirect("/", {
+    headers: [
+      [
+        "Set-Cookie",
+        await accessTokenSession.commitSession(accessTokenRemixSession),
+      ],
+      [
+        "Set-Cookie",
+        await refreshTokenSession.commitSession(refreshTokenRemixSession),
+      ],
+    ],
+  });
+}

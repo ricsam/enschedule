@@ -346,4 +346,8 @@ export class WorkerAPI {
       // some error that can be ignored
     }
   }
+
+  async logout(refreshToken: string, allDevices: boolean): Promise<void> {
+    await this.request("POST", "/logout", { refreshToken, allDevices });
+  }
 }

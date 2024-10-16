@@ -7,28 +7,31 @@ import { Link as RemixLink, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulesTable from "~/components/SchedulesTable";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
 export async function getLoaderData(
   params: Params<string>,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ): Promise<{
   schedules: PublicJobSchedule[];
   definition?: PublicJobDefinition;
 }> {
   const handlerId = params.handlerId;
+  const authHeader = await getAuthHeader(request);
   const definition = handlerId
-    ? await worker.getLatestHandler(handlerId)
+    ? await worker.getLatestHandler(handlerId, authHeader)
     : undefined;
-  const schedules = await worker.getSchedules({handlerId});
+  const schedules = await worker.getSchedules({ handlerId });
   return { schedules, definition };
 }
 
-export const loader: LoaderFunction = async ({ params, context }) => {
+export const loader: LoaderFunction = async ({ params, context, request }) => {
   return json<LoaderData>(
-    await getLoaderData(params, await getWorker(context.worker))
+    await getLoaderData(params, await getWorker(context.worker), request)
   );
 };
 

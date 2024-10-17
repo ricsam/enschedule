@@ -1,44 +1,32 @@
+import { Box, Button, Container, TextField, Typography } from "@mui/material";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
-import { RootLayout } from "~/components/Layout";
-import { TextField, Button, Box, Typography, Container } from "@mui/material";
-import { accessTokenSession, refreshTokenSession } from "~/sessions";
-import type {
-  ActionFunctionArgs,
-  LoaderFunctionArgs} from "@remix-run/node";
-import {
-  json,
-  redirect,
-} from "@remix-run/node";
-import { getWorker } from "~/createWorker.server";
-import { z } from "zod";
 import React from "react";
+import { z } from "zod";
+import { RootLayout } from "~/components/Layout";
+import { getWorker } from "~/createWorker.server";
+import { getCookies } from "~/sessions";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const session = await accessTokenSession.getSession(
-    request.headers.get("Cookie")
-  );
+  const cookies = await getCookies(request);
 
-  if (session.has("token")) {
+  if (cookies.access.session.has("token")) {
     // Redirect to the home page if they are already signed in.
     return redirect("/");
   }
 
-  const data = { error: session.get("error") };
+  const data = { error: cookies.access.session.get("error") };
 
   return json(data, {
     headers: {
-      "Set-Cookie": await accessTokenSession.commitSession(session),
+      "Set-Cookie": await cookies.access.commit(),
     },
   });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const accessTokenRemixSession = await accessTokenSession.getSession(
-    request.headers.get("Cookie")
-  );
-  const refreshTokenRemixSession = await refreshTokenSession.getSession(
-    request.headers.get("Cookie")
-  );
+  const cookies = await getCookies(request);
 
   const form = await request.formData();
   const username = z.string().parse(form.get("username"));
@@ -49,33 +37,24 @@ export async function action({ request, context }: ActionFunctionArgs) {
   ).login(username, password);
 
   if (!tokens) {
-    accessTokenRemixSession.flash("error", "Invalid username/password");
+    cookies.access.session.flash("error", "Invalid username/password");
 
     // Redirect back to the login page with errors.
     return redirect("/login", {
-      headers: [
-        [
-          "Set-Cookie",
-          await accessTokenSession.commitSession(accessTokenRemixSession),
-        ],
-      ],
+      headers: [["Set-Cookie", await cookies.access.commit()]],
     });
   }
 
-  accessTokenRemixSession.set("token", tokens.accessToken);
-  refreshTokenRemixSession.set("token", tokens.refreshToken);
+  cookies.access.session.set("token", tokens.accessToken);
+  cookies.refresh.session.set("token", tokens.refreshToken);
+  cookies.hasRefresh.session.set("hasRefreshToken", true);
 
   // Login succeeded, send them to the home page.
   return redirect("/", {
     headers: [
-      [
-        "Set-Cookie",
-        await accessTokenSession.commitSession(accessTokenRemixSession),
-      ],
-      [
-        "Set-Cookie",
-        await refreshTokenSession.commitSession(refreshTokenRemixSession),
-      ],
+      ["Set-Cookie", await cookies.access.commit()],
+      ["Set-Cookie", await cookies.refresh.commit()],
+      ["Set-Cookie", await cookies.hasRefresh.commit()],
     ],
   });
 }
@@ -83,7 +62,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
 export default function Login() {
   const ld = useLoaderData<typeof loader>();
 
-  const [errMessage, setErrMessage] = React.useState<string | undefined>(ld.error);
+  const [errMessage, setErrMessage] = React.useState<string | undefined>(
+    ld.error
+  );
   React.useEffect(() => {
     setErrMessage(ld.error);
   }, [ld]);

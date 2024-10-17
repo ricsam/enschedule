@@ -1,7 +1,7 @@
 import type { AppLoadContext } from "@remix-run/node";
 import jwt from "jsonwebtoken";
 import { getWorker } from "~/createWorker.server";
-import { accessTokenSession } from "~/sessions";
+import { getCookies } from "~/sessions";
 import type { User } from "~/types";
 import { UserSchema } from "~/types";
 
@@ -21,14 +21,13 @@ const { ACCESS_TOKEN_SECRET } = getTokenEnvs();
 export async function authenticate(
   request: Request
 ): Promise<User | undefined> {
-  const session = await accessTokenSession.getSession(
-    request.headers.get("Cookie")
-  );
-  if (!session.has("token")) {
+  const cookies = await getCookies(request);
+
+  if (!cookies.access.session.has("token")) {
     return;
   }
 
-  const token = session.get("token");
+  const token = cookies.access.session.get("token");
 
   if (!token) {
     return;

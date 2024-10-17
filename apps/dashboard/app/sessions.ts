@@ -17,7 +17,7 @@ if (process.env.HTTPS_ONLY_COOKIES && process.env.HTTPS_ONLY_COOKIES.trim()) {
   }
 }
 
-export let sessionSecret: string[];
+let sessionSecret: string[];
 const parsed = z
   .array(z.string())
   .safeParse(process.env.COOKIE_SESSION_SECRET?.split(","));
@@ -29,7 +29,18 @@ if (parsed.success) {
   );
 }
 
-export const accessTokenSession = createCookieSessionStorage<
+const themeSession = createCookieSessionStorage({
+  cookie: {
+    name: "enschedule_theme",
+    secure: true,
+    secrets: sessionSecret,
+    sameSite: "lax",
+    path: "/",
+    httpOnly: true,
+  },
+});
+
+const accessTokenSession = createCookieSessionStorage<
   SessionData,
   SessionFlashData
 >({
@@ -40,10 +51,11 @@ export const accessTokenSession = createCookieSessionStorage<
     httpOnly: true, // for security reasons, make this cookie http only
     secrets: sessionSecret,
     secure: httpsOnlyCookies,
+    maxAge: 30, // 30 seconds
   },
 });
 
-export const refreshTokenSession = createCookieSessionStorage<
+const refreshTokenSession = createCookieSessionStorage<
   SessionData,
   SessionFlashData
 >({
@@ -51,6 +63,21 @@ export const refreshTokenSession = createCookieSessionStorage<
     name: "refresh_token", // use any name you want here
     sameSite: "lax", // this helps with CSRF
     path: "/refresh", // Only work on the /refresh route
+    httpOnly: true, // for security reasons, make this cookie http only
+    secrets: sessionSecret,
+    secure: httpsOnlyCookies,
+    maxAge: 60 * 60 * 24 * 7, // 1 week
+  },
+});
+
+const hasRefreshTokenSession = createCookieSessionStorage<
+  { hasRefreshToken: boolean },
+  SessionFlashData
+>({
+  cookie: {
+    name: "has_refresh_token", // use any name you want here
+    sameSite: "lax", // this helps with CSRF
+    path: "/",
     httpOnly: true, // for security reasons, make this cookie http only
     secrets: sessionSecret,
     secure: httpsOnlyCookies,
@@ -67,4 +94,42 @@ export const getAuthHeader = async (request: Request): Promise<string> => {
     return `Jwt ${session.get("token")}`;
   }
   throw redirect("/login");
+};
+
+export const hasRefreshToken = async (request: Request) => {
+  const session = await hasRefreshTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+  return Boolean(session.get("hasRefreshToken"));
+};
+
+export const getCookies = async (request: Request) => {
+  const access = await accessTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+  const refresh = await refreshTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+  const hasRefresh = await hasRefreshTokenSession.getSession(
+    request.headers.get("Cookie")
+  );
+  const theme = await themeSession.getSession(request.headers.get("Cookie"));
+  return {
+    access: {
+      session: access,
+      commit: () => accessTokenSession.commitSession(access),
+    },
+    refresh: {
+      session: refresh,
+      commit: () => refreshTokenSession.commitSession(refresh),
+    },
+    hasRefresh: {
+      session: hasRefresh,
+      commit: () => hasRefreshTokenSession.commitSession(hasRefresh),
+    },
+    theme: {
+      session: theme,
+      commit: () => themeSession.commitSession(theme),
+    }
+  };
 };

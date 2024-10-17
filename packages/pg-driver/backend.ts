@@ -1679,7 +1679,7 @@ export class PrivateBackend {
         throw error;
       }
       await new Promise((resolve) => {
-        setTimeout(resolve, 1000);
+        setTimeout(resolve, attempt * 1000);
       });
       return this.registerWorker(attempt + 1);
       // If the execution reaches this line, an error occurred.

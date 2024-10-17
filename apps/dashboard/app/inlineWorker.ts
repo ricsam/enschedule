@@ -1,5 +1,4 @@
 import { Worker } from "@enschedule/worker";
-import { z } from "zod";
 
 export const inlineWorker = async () => {
   const worker = new Worker({

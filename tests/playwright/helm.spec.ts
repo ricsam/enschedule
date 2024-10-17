@@ -54,6 +54,7 @@ test.describe("Single-Run", () => {
   test("Visit all pages that render a run, and then delete all runs", async ({
     page,
   }) => {
+    await login(page);
     // test delete on each of these urls
     // /runs/$runId
     // /schedules/$scheduleId/runs/$runId

@@ -1329,6 +1329,7 @@ export class PrivateBackend {
     await Worker.truncate({
       cascade: true,
     });
+    this.registeredWorker = undefined;
     await this.registerWorker();
   }
 
@@ -1610,15 +1611,15 @@ export class PrivateBackend {
   protected registeredWorker: Worker | undefined;
 
   public async registerWorker(attempt = 0): Promise<Worker> {
-    if (this.registeredWorker) {
-      const worker = this.registeredWorker;
-      worker.lastReached = new Date();
-      await worker.save();
-
-      return this.registeredWorker;
-    }
     log(`Registering this worker (attempt: ${attempt})`);
     try {
+      if (this.registeredWorker) {
+        const worker = this.registeredWorker;
+        worker.lastReached = new Date();
+        await worker.save();
+
+        return this.registeredWorker;
+      }
       return this.sequelize.transaction(async (transaction) => {
         // As a user I have 3 server running.
         // Each server runs a worker with the same workerId.

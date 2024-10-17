@@ -1607,7 +1607,16 @@ export class PrivateBackend {
     return workerIds;
   }
 
+  private registeredWorker: Worker | undefined;
+
   public async registerWorker(attempt = 0): Promise<Worker> {
+    if (this.registeredWorker) {
+      const worker = this.registeredWorker;
+      worker.lastReached = new Date();
+      await worker.save();
+
+      return this.registeredWorker;
+    }
     log(`Registering this worker (attempt: ${attempt})`);
     try {
       return this.sequelize.transaction(async (transaction) => {
@@ -1667,6 +1676,7 @@ export class PrivateBackend {
         });
         worker.version = version;
         worker.lastReached = new Date();
+        this.registeredWorker = worker;
         await worker.save({ transaction });
         return worker;
       });
@@ -1674,12 +1684,14 @@ export class PrivateBackend {
       // If the execution reaches this line, the transaction has been committed successfully
       // `result` is whatever was returned from the transaction callback (the `user`, in this case)
     } catch (error) {
-      if (attempt >= 3) {
-        console.log("Failed to register worker after 3 attempts");
+      // there are sometimes deadlocks, so we retry
+      const MAX_ATTEMPTS = 10;
+      if (attempt >= MAX_ATTEMPTS) {
+        console.log(`Failed to register worker after ${MAX_ATTEMPTS} attempts`);
         throw error;
       }
       await new Promise((resolve) => {
-        setTimeout(resolve, attempt * 1000);
+        setTimeout(resolve, Math.min(attempt * 1000, 5000));
       });
       return this.registerWorker(attempt + 1);
       // If the execution reaches this line, an error occurred.
@@ -2123,21 +2135,15 @@ export class PrivateBackend {
   }
 
   public async startPolling(
-    {
-      dontRegisterWorker = false,
-      dontMigrate = false,
-    }: { dontMigrate?: boolean; dontRegisterWorker?: boolean } = {
+    { dontMigrate = false }: { dontMigrate?: boolean } = {
       dontMigrate: false,
-      dontRegisterWorker: false,
     }
   ) {
     if (!dontMigrate) {
       log("Migrating the database");
       await this.sequelize.sync();
     }
-    if (!dontRegisterWorker) {
-      await this.registerWorker();
-    }
+    await this.registerWorker();
     log("Polling the database for jobs");
     const now = Date.now();
     setTimeout(() => {
@@ -2537,7 +2543,7 @@ export class PrivateBackend {
         scheduledToRunAt: runAt,
         startedAt,
         data: schedule.data,
-        workerId: (await this.registerWorker()).id,
+        workerId: worker.id,
         handlerId: definition.id,
         handlerVersion: definition.version,
         scheduleTitle: `${schedule.title}, #${schedule.id}`,

@@ -79,6 +79,7 @@ jobs:
             -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \
             -e ACCESS_TOKEN_SECRET=secret_key \
             -e REFRESH_TOKEN_SECRET=secret_key \
+            -e COOKIE_SESSION_SECRET=s3cr3t \
             -p 3333:3000 \
             ghcr.io/ricsam/enschedule-dashboard:alpha
 

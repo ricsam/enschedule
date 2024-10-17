@@ -1,4 +1,5 @@
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
+import { z } from "zod";
 
 type SessionFlashData = {
   error: string;
@@ -16,6 +17,18 @@ if (process.env.HTTPS_ONLY_COOKIES && process.env.HTTPS_ONLY_COOKIES.trim()) {
   }
 }
 
+export let sessionSecret: string[];
+const parsed = z
+  .array(z.string())
+  .safeParse(process.env.COOKIE_SESSION_SECRET?.split(","));
+if (parsed.success) {
+  sessionSecret = parsed.data;
+} else {
+  throw new Error(
+    `Invalid value for environment variable "COOKIE_SESSION_SECRET". It must be assigned a comma-separated list of strings e.g. COOKIE_SESSION_SECRET=s3cr3t,0ldS3cr3t. See remix cookie session documentation for more information.`
+  );
+}
+
 export const accessTokenSession = createCookieSessionStorage<
   SessionData,
   SessionFlashData
@@ -25,7 +38,7 @@ export const accessTokenSession = createCookieSessionStorage<
     sameSite: "lax", // this helps with CSRF
     path: "/", // remember to add this so the cookie will work in all routes
     httpOnly: true, // for security reasons, make this cookie http only
-    secrets: ["s3cr3t"], // replace this with an actual secret
+    secrets: sessionSecret,
     secure: httpsOnlyCookies,
   },
 });
@@ -39,7 +52,7 @@ export const refreshTokenSession = createCookieSessionStorage<
     sameSite: "lax", // this helps with CSRF
     path: "/refresh", // Only work on the /refresh route
     httpOnly: true, // for security reasons, make this cookie http only
-    secrets: ["s3cr3t"], // replace this with an actual secret
+    secrets: sessionSecret,
     secure: httpsOnlyCookies,
     maxAge: 60 * 60 * 24 * 7, // 1 week
   },

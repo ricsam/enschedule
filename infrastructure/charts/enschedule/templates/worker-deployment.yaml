@@ -66,17 +66,17 @@ spec:
             - name: DB_DATABASE
               value: "postgres"
             - name: API_KEY
-              value: "{{ .Values.config.API_KEY }}"
+              value: {{ .Values.config.API_KEY | quote }}
             - name: ACCESS_TOKEN_SECRET
-              value: "{{ .Values.config.ACCESS_TOKEN_SECRET }}"
+              value: {{ .Values.config.ACCESS_TOKEN_SECRET | quote }}
             - name: REFRESH_TOKEN_SECRET
-              value: "{{ .Values.config.REFRESH_TOKEN_SECRET }}"
+              value: {{ .Values.config.REFRESH_TOKEN_SECRET | quote }}
             - name: ENSCHEDULE_API
               value: "true"
             - name: API_PORT
               value: "8000"
             - name: DB_PORT
-              value: "{{ .Values.database.service.port }}"
+              value: {{ .Values.database.service.port | quote }}
             - name: DEBUG
               value: "pg-driver,worker"
             - name: WORKER_ID

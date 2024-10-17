@@ -48,14 +48,16 @@ spec:
           resources:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           env:
-            - name: SESSION_SECRET
-              value: "{{ .Values.config.SESSION_SECRET }}"
+            - name: COOKIE_SESSION_SECRET
+              value: {{ .Values.config.COOKIE_SESSION_SECRET | quote }}
             - name: API_KEY
-              value: "{{ .Values.config.API_KEY }}"
+              value: {{ .Values.config.API_KEY | quote }}
             - name: ACCESS_TOKEN_SECRET
-              value: "{{ .Values.config.ACCESS_TOKEN_SECRET }}"
+              value: {{ .Values.config.ACCESS_TOKEN_SECRET | quote }}
             - name: REFRESH_TOKEN_SECRET
-              value: "{{ .Values.config.REFRESH_TOKEN_SECRET }}"
+              value: {{ .Values.config.REFRESH_TOKEN_SECRET | quote }}
+            - name: HTTPS_ONLY_COOKIES
+              value: {{ .Values.config.HTTPS_ONLY_COOKIES | quote }}
             - name: WORKER_URL
               value: "http://worker-service:{{ .Values.worker.service.port }}"
             - name: DEBUG

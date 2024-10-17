@@ -1,16 +1,14 @@
 import { createCookieSessionStorage } from "@remix-run/node";
 
-import { isTheme } from "./theme-provider";
+import { sessionSecret } from "~/sessions";
 import type { Theme } from "./theme-provider";
-
-// Make use to set the environment variable SESSION_SECRET before running the code
-const sessionSecret = process.env.SESSION_SECRET ?? "DEFAULT_SECRET";
+import { isTheme } from "./theme-provider";
 
 const themeStorage = createCookieSessionStorage({
   cookie: {
     name: "enschedule_theme",
     secure: true,
-    secrets: [sessionSecret],
+    secrets: sessionSecret,
     sameSite: "lax",
     path: "/",
     httpOnly: true,

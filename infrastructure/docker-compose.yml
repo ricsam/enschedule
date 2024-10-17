@@ -27,6 +27,8 @@ services:
       - API_HOSTNAME=worker
       - DB_PORT=5432
       - DEBUG=pg-driver
+      - ACCESS_TOKEN_SECRET=secret_key
+      - REFRESH_TOKEN_SECRET=secret_key
     volumes:
       - "${PWD}/charts/enschedule/files:/app/packages/worker/definitions"
   dashboard:
@@ -39,8 +41,10 @@ services:
     ports:
       - "8008:3000"
     environment:
-      - SESSION_SECRET=abc
+      - COOKIE_SESSION_SECRET=s3cr3t
       - API_KEY=secret_key
       - WORKER_URL=http://worker:3000
       - DEBUG=worker-api
       - NODE_ENV=production
+      - ACCESS_TOKEN_SECRET=secret_key
+      - REFRESH_TOKEN_SECRET=secret_key

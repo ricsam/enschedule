@@ -3,10 +3,21 @@
 # Declare variables to be passed into your templates.
 
 config:
+  # The secret for the short lived access JWT token
   ACCESS_TOKEN_SECRET: secret_key
+  # The secret for the long lived refresh JWT token
   REFRESH_TOKEN_SECRET: secret_key
-  SESSION_SECRET: secret_key
+
+  # Cookie secrets should be a comma separated list https://remix.run/docs/en/main/utils/cookies#signing-cookies
+  # Can be changed to refresh the session cookies
+  COOKIE_SESSION_SECRET: s3cr3t
+
+  # A secure key allowing the dashboard to communicate with the workers
   API_KEY: secret_key
+
+  # Set the "Secure" attribute is set on the cookie
+  # When true the browser needs an HTTPS connection for the dashboard login to work
+  HTTPS_ONLY_COOKIES: false
 
 worker:
   replicaCount: 1

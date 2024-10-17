@@ -41,10 +41,10 @@ export CONTAINER_PORT=$(kubectl get pod --namespace default $POD_NAME -o jsonpat
 echo "Visit http://127.0.0.1:8888 to use your application"
 kubectl --namespace default port-forward $POD_NAME 8888:$CONTAINER_PORT
 
-SESSION_SECRET=abc API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
+COOKIE_SESSION_SECRET=s3cr3t ACCESS_TOKEN_SECRET=secret_key REFRESH_TOKEN_SECRET=secret_key API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
 
 # docker container run --rm -e PORT=3000 -e POSTGRES=true -e DB_USER=postgres -e DB_HOST=postgres -e DB_PASSWORD=postgres -e DB_DATABASE=postgres -e DB_PORT=5432 -p 3030:3000 --network enschedule-2_default ghcr.io/ricsam/enschedule-worker:latest
-docker container run --rm -e SESSION_SECRET=abc -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:latest
+docker container run --rm -e COOKIE_SESSION_SECRET=s3cr3t -e ACCESS_TOKEN_SECRET=secret_key -e REFRESH_TOKEN_SECRET=secret_key -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:latest
 
 
 # run dashboard

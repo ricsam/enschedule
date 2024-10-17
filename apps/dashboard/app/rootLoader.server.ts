@@ -1,7 +1,7 @@
-import { redirect, type LoaderFunction } from "@remix-run/node";
+import { type LoaderFunction } from "@remix-run/node";
 import type { Theme } from "~/utils/theme-provider";
 import { getThemeSession } from "~/utils/theme.server";
-import { hasRefreshToken } from "./sessions";
+import { hasRefreshToken, refreshToken } from "./sessions";
 import type { User } from "./types";
 import { authenticate } from "./utils/user.server";
 export type LoaderData = {
@@ -18,13 +18,6 @@ export const loader: LoaderFunction = async ({ request }) => {
     };
   }
 
-  const refreshToken = () => {
-    const refreshUrl = new URL(request.url);
-    refreshUrl.pathname = "/refresh";
-    refreshUrl.searchParams.set("referrer", requestUrl.pathname);
-    return redirect(refreshUrl.toString());
-  };
-
   try {
     const user = await authenticate(request);
     const data: LoaderData = {
@@ -35,7 +28,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     try {
       if (!user) {
         if (await hasRefreshToken(request)) {
-          return refreshToken();
+          return refreshToken(request);
         }
       }
     } catch (err) {
@@ -45,7 +38,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     return data;
   } catch (err) {
     if (await hasRefreshToken(request)) {
-      return refreshToken();
+      return refreshToken(request);
     }
   }
   return {

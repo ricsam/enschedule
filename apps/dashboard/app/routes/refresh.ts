@@ -3,6 +3,8 @@ import { redirect } from "@remix-run/node";
 import { getWorker } from "~/createWorker.server";
 import { getCookies } from "~/sessions";
 
+let existingTokenPromise: Promise<{ accessToken: string; refreshToken: string } | undefined> | undefined;
+
 export const loader: LoaderFunction = async ({ request, context }) => {
   const url = new URL(request.url);
 
@@ -34,7 +36,10 @@ export const loader: LoaderFunction = async ({ request, context }) => {
   }
 
   const worker = await getWorker(context.worker);
-  const tokens = await worker.refreshToken(refreshToken);
+  const tokenPromise = existingTokenPromise ?? worker.refreshToken(refreshToken);
+  existingTokenPromise = tokenPromise;
+  const tokens = await tokenPromise;
+  existingTokenPromise = undefined;
 
   if (!tokens) {
     return errorRedirect();
@@ -54,6 +59,7 @@ export const loader: LoaderFunction = async ({ request, context }) => {
 };
 
 export async function action({ request, context }: ActionFunctionArgs) {
+  // logout
   const fd = await request.formData();
   let submitType: "logout" | "logout-all-devices" | undefined;
   if (fd.has("logout")) {

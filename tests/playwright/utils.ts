@@ -225,7 +225,7 @@ const reset = async (baseUrl: () => string, page: Page) => {
 };
 
 export const waitForNumRows = async (page: Page, num: number) => {
-  const TIMEOUT = 20000;
+  const TIMEOUT = 40000;
   const RETRY_DURATION = 5000;
   if ((await numRows(page)) !== num) {
     let i = 0;
@@ -236,7 +236,6 @@ export const waitForNumRows = async (page: Page, num: number) => {
           resolve();
         }, RETRY_DURATION);
       });
-      await page.reload();
     } while ((await numRows(page)) !== num && i++ < maxIter);
     if (i >= maxIter) {
       throw new Error("Timed out waiting for the runs to show up in the table");

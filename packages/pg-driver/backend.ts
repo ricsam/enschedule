@@ -1326,10 +1326,10 @@ export class PrivateBackend {
     await Schedule.truncate({
       cascade: true,
     });
+    this.registeredWorker = undefined;
     await Worker.truncate({
       cascade: true,
     });
-    this.registeredWorker = undefined;
     await this.registerWorker();
   }
 
@@ -1605,6 +1605,11 @@ export class PrivateBackend {
         id: workerIds,
       },
     });
+    if (this.registeredWorker) {
+      if (workerIds.includes(this.registeredWorker.id)) {
+        this.registeredWorker = undefined;
+      }
+    }
     return workerIds;
   }
 
@@ -1615,6 +1620,7 @@ export class PrivateBackend {
     try {
       if (this.registeredWorker) {
         const worker = this.registeredWorker;
+        await worker.reload();
         worker.lastReached = new Date();
         await worker.save();
 

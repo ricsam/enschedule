@@ -85,25 +85,35 @@ const hasRefreshTokenSession = createCookieSessionStorage<
   },
 });
 
-export const getAuthHeader = async (request: Request): Promise<string> => {
-  const session = await accessTokenSession.getSession(
-    request.headers.get("Cookie")
-  );
+export async function refreshToken(request: Request) {
+  const requestUrl = new URL(request.url);
+  const refreshUrl = new URL(request.url);
+  refreshUrl.pathname = "/refresh";
+  refreshUrl.searchParams.set("referrer", requestUrl.pathname);
+  return redirect(refreshUrl.toString());
+}
 
-  if (session.has("token")) {
-    return `Jwt ${session.get("token")}`;
+export async function getAuthHeader(request: Request): Promise<string> {
+  const cookies = await getCookies(request);
+
+  if (cookies.access.session.has("token")) {
+    return `Jwt ${cookies.access.session.get("token")}`;
+  }
+  if (await hasRefreshToken(request)) {
+    const refreshRedirect = await refreshToken(request);
+    throw refreshRedirect;
   }
   throw redirect("/login");
-};
+}
 
-export const hasRefreshToken = async (request: Request) => {
+export async function hasRefreshToken(request: Request) {
   const session = await hasRefreshTokenSession.getSession(
     request.headers.get("Cookie")
   );
   return Boolean(session.get("hasRefreshToken"));
-};
+}
 
-export const getCookies = async (request: Request) => {
+export async function getCookies(request: Request) {
   const access = await accessTokenSession.getSession(
     request.headers.get("Cookie")
   );
@@ -130,6 +140,6 @@ export const getCookies = async (request: Request) => {
     theme: {
       session: theme,
       commit: () => themeSession.commitSession(theme),
-    }
+    },
   };
-};
+}

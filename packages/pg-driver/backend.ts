@@ -20,6 +20,7 @@ import type {
   SchedulesFilterSchema,
   SerializedRun,
   UserSchema,
+  WorkerAccess,
 } from "@enschedule/types";
 import {
   JobDefinitionSchema,
@@ -51,6 +52,7 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   NonAttribute,
+  Optional,
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
@@ -156,6 +158,7 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
     defaultFunctionAccess: dbWorker.defaultFunctionAccess,
     defaultScheduleAccess: dbWorker.defaultScheduleAccess,
     defaultRunAccess: dbWorker.defaultRunAccess,
+    access: dbWorker.access,
   };
 };
 
@@ -264,6 +267,7 @@ export const createPublicJobSchedule = (
     data: schedule.data,
     status,
     eventId: schedule.eventId ?? undefined,
+    defaultRunAccess: schedule.defaultRunAccess,
   };
 };
 
@@ -320,6 +324,8 @@ interface CreateJobScheduleOptions {
   maxRetries?: number;
   failureTrigger?: number;
   workerId?: string;
+  defaultRunAccess?: RunAccess;
+  access?: ScheduleAccess;
 }
 
 typeAssert<
@@ -359,9 +365,10 @@ export class Worker extends Model<
   declare description?: string | null;
   declare definitions: PublicJobDefinition[];
 
-  declare defaultFunctionAccess?: FunctionAccess;
-  declare defaultScheduleAccess?: ScheduleAccess;
-  declare defaultRunAccess?: RunAccess;
+  declare access?: CreationOptional<WorkerAccess>;
+  declare defaultFunctionAccess?: CreationOptional<FunctionAccess>;
+  declare defaultScheduleAccess?: CreationOptional<ScheduleAccess>;
+  declare defaultRunAccess?: CreationOptional<RunAccess>;
 
   declare instanceId: string;
   declare createdAt: CreationOptional<Date>;
@@ -520,10 +527,8 @@ export class Schedule extends Model<
 
   declare failureTrigger?: NonAttribute<Schedule>;
 
-  // declare static associations: {
-  //   runs: Association<Schedule, Run>;
-  //   lastRun: Association<Schedule, Run>;
-  // };
+  declare defaultRunAccess?: CreationOptional<RunAccess>;
+  declare access?: CreationOptional<ScheduleAccess>;
 }
 
 class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
@@ -552,6 +557,8 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
 
   declare workerTitle: string; // same as `${worker.title}, #${worker.id}`, but in case worker is deleted a workerTitle can still be found
   declare worker?: NonAttribute<Worker> | null;
+
+  declare access?: CreationOptional<RunAccess>;
 }
 
 export const createJobDefinition = <T extends ZodType = ZodType>(
@@ -590,6 +597,11 @@ function createShortShaHash(input: string) {
   // Return the first 6 characters
   return hash.substring(0, 6);
 }
+
+type Access = {
+  users?: string[];
+  groups?: string[];
+};
 
 export class PrivateBackend {
   protected maxJobsPerTick = 4;
@@ -672,6 +684,10 @@ export class PrivateBackend {
         definitions: {
           type: DataTypes.JSON,
           allowNull: false,
+        },
+        access: {
+          type: DataTypes.JSON,
+          allowNull: true,
         },
         defaultFunctionAccess: {
           type: DataTypes.JSON,
@@ -928,6 +944,14 @@ export class PrivateBackend {
           allowNull: false,
           defaultValue: 0,
         },
+        defaultRunAccess: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
+        access: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
       },
       {
         sequelize,
@@ -992,6 +1016,10 @@ export class PrivateBackend {
         workerTitle: {
           type: DataTypes.STRING(),
           allowNull: false,
+        },
+        access: {
+          type: DataTypes.JSON,
+          allowNull: true,
         },
       },
       {
@@ -1210,7 +1238,14 @@ export class PrivateBackend {
     order,
     limit,
     offset,
+    authHeader,
   }: ListRunsOptions): Promise<PublicJobRun[]> {
+    const userAuth = await this.getUserAuth(authHeader);
+
+    if (!userAuth) {
+      return [];
+    }
+
     if (scheduleId === undefined) {
       const runs = await Run.findAll({
         limit,
@@ -1238,14 +1273,18 @@ export class PrivateBackend {
       });
       const workers = await this.getWorkers();
       return Promise.all(
-        runs.map(async (run) => {
-          const jobSchedule = run.schedule;
-          return createPublicJobRun(
-            run,
-            jobSchedule ?? run.scheduleTitle,
-            await this.getHandler(run.handlerId, run.handlerVersion, workers)
-          );
-        })
+        runs
+          .filter((run) => {
+            return this.canViewRun(userAuth, run);
+          })
+          .map(async (run) => {
+            const jobSchedule = run.schedule;
+            return createPublicJobRun(
+              run,
+              jobSchedule ?? run.scheduleTitle,
+              await this.getHandler(run.handlerId, run.handlerVersion, workers)
+            );
+          })
       );
     }
 
@@ -1414,41 +1453,61 @@ export class PrivateBackend {
     return handler;
   }
 
-  public canViewFunction(
+  private canView(
     user: UserAccess,
-    def: PublicJobDefinition,
-    worker: PublicWorker
-  ): boolean {
+    access?: { users?: string[]; groups?: string[] }
+  ) {
+    if (!access) {
+      return false;
+    }
     if (user.admin) {
       return true;
     }
-    const hasAccess = (access: FunctionAccess | undefined) => {
-      if (!access) {
-        return false;
+    if (user.username) {
+      if (access.users?.includes(user.username)) {
+        return true;
       }
-      if (user.username) {
-        if (access.view?.users?.includes(user.username)) {
-          return true;
-        }
+    }
+    if (user.groups.length > 0) {
+      if (access.groups?.some((group) => user.groups.includes(group))) {
+        return true;
       }
-      if (user.groups.length > 0) {
-        const groups = access.view?.groups;
-        if (groups?.some((group) => user.groups.includes(group))) {
-          return true;
-        }
-      }
-      return false;
-    };
-    if (hasAccess(worker.defaultFunctionAccess)) {
+    }
+    return false;
+  }
+
+  public canViewWorker(user: UserAccess, worker: Worker): boolean {
+    if (user.admin) {
       return true;
     }
-    if (hasAccess(def.access)) {
+    return this.canView(user, worker.access?.view);
+  }
+
+  public canViewFunction(user: UserAccess, fn: PublicJobDefinition): boolean {
+    if (user.admin) {
+      return true;
+    }
+    if (this.canView(user, fn.access?.view)) {
       return true;
     }
     return false;
   }
 
-  public async getUserFromAuthHeader(
+  public canViewSchedule(user: UserAccess, schedule: Schedule): boolean {
+    if (user.admin) {
+      return true;
+    }
+    return this.canView(user, schedule.access?.view);
+  }
+
+  public canViewRun(user: UserAccess, run: Run): boolean {
+    if (user.admin) {
+      return true;
+    }
+    return this.canView(user, run.access?.view);
+  }
+
+  public async getUserAuth(
     authHeader: string
   ): Promise<UserAccess | undefined> {
     const [type, token] = z
@@ -1542,7 +1601,7 @@ export class PrivateBackend {
       return worker.status === WorkerStatus.UP;
     });
 
-    const userAccess = await this.getUserFromAuthHeader(authHeader);
+    const userAccess = await this.getUserAuth(authHeader);
 
     if (!userAccess) {
       return [];
@@ -1550,7 +1609,7 @@ export class PrivateBackend {
 
     upWorkers.forEach((worker) => {
       worker.definitions.forEach((def: PublicJobDefinition) => {
-        if (!this.canViewFunction(userAccess, def, worker)) {
+        if (!this.canViewFunction(userAccess, def)) {
           return;
         }
         const latest = { def, version: def.version };
@@ -1751,6 +1810,8 @@ export class PrivateBackend {
       maxRetries = -1,
       failureTrigger,
       workerId,
+      defaultRunAccess,
+      access,
     } = options;
     const signature = this.createSignature(
       defId,
@@ -1773,7 +1834,16 @@ export class PrivateBackend {
       : undefined;
 
     const serializedData = JSON.stringify(migratedData);
-    const defaults = {
+    const defaults: Optional<
+      InferCreationAttributes<Schedule>,
+      | "id"
+      | "runNow"
+      | "createdAt"
+      | "claimId"
+      | "retries"
+      | "claimed"
+      | "numRuns"
+    > = {
       handlerVersion: migratedVersion,
       retryFailedJobs,
       workerId,
@@ -1786,6 +1856,8 @@ export class PrivateBackend {
       title,
       description,
       failureTriggerId: failureTrigger,
+      defaultRunAccess,
+      access,
     };
     const result = await Schedule.findOrCreate({
       where,
@@ -1893,6 +1965,8 @@ export class PrivateBackend {
         retryFailedJobs,
         maxRetries,
         failureTrigger,
+        defaultRunAccess: options.defaultRunAccess,
+        access: options.access,
       }
     );
     return {
@@ -2046,7 +2120,79 @@ export class PrivateBackend {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion
     this.definedJobs[id]![job.version] = job as JobDefinition<any>;
+
+    job.access = this.mergeFunctionAccess(
+      this.defaultFunctionAccess,
+      job.access
+    );
+    job.defaultScheduleAccess = this.mergeScheduleAccess(
+      // merge worker defaultScheduleAccess with function defaultScheduleAccess
+      this.defaultScheduleAccess,
+      job.defaultScheduleAccess
+    );
+    job.defaultRunAccess = this.mergeRunAccess(
+      // merge worker defaultRunAccess with function defaultRunAccess
+      this.defaultRunAccess,
+      job.defaultRunAccess
+    );
     return job;
+  }
+
+  private mergeFunctionAccess(
+    parent: FunctionAccess | undefined,
+    child: FunctionAccess | undefined
+  ) {
+    return this.mergeAccess(parent, child, ["view", "createSchedule"]);
+  }
+
+  private mergeScheduleAccess(
+    parent: ScheduleAccess | undefined,
+    child: ScheduleAccess | undefined
+  ) {
+    return this.mergeAccess(parent, child, ["view", "edit", "delete"]);
+  }
+
+  private mergeRunAccess(
+    parent: RunAccess | undefined,
+    child: RunAccess | undefined
+  ) {
+    return this.mergeAccess(parent, child, ["view", "viewLogs", "delete"]);
+  }
+
+  private mergeAccess<T extends Record<string, Access | undefined>>(
+    parent: T | undefined,
+    child: T | undefined,
+    keys: (keyof T)[]
+  ): Partial<Record<keyof T, Access | undefined>> | undefined {
+    const mergeOne = (a?: Access, b?: Access): Access | undefined => {
+      const newAccess: Access = {
+        users: [...(a?.users ?? []), ...(b?.users ?? [])],
+        groups: [...(a?.groups ?? []), ...(b?.groups ?? [])],
+      };
+      if (newAccess.users?.length === 0) {
+        delete newAccess.users;
+      }
+      if (newAccess.groups?.length === 0) {
+        delete newAccess.groups;
+      }
+      if (!newAccess.users && !newAccess.groups) {
+        return undefined;
+      }
+      return newAccess;
+    };
+    const newRunAccess: Partial<Record<keyof T, Access | undefined>> = {};
+    let hasKey = false;
+    for (const key of keys) {
+      const newVal = mergeOne(parent?.[key], child?.[key]);
+      if (newVal) {
+        newRunAccess[key] = newVal;
+        hasKey = true;
+      }
+    }
+    if (!hasKey) {
+      return undefined;
+    }
+    return newRunAccess;
   }
 
   /**
@@ -2573,6 +2719,8 @@ export class PrivateBackend {
         handlerVersion: definition.version,
         scheduleTitle: `${schedule.title}, #${schedule.id}`,
         workerTitle: `${worker.title}, #${worker.id}`,
+        // inherit the access from the schedule
+        access: schedule.defaultRunAccess,
       },
       {
         include: {

@@ -9,6 +9,7 @@ import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs, useNavbar } from "..";
+import { getAuthHeader } from "~/sessions";
 
 export { action } from "~/components/RunsTable";
 
@@ -23,14 +24,16 @@ const getScheduleId = (params: Params<string>): number => {
 
 export const getLoaderData = async (
   params: Params,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ) => {
   const id = getScheduleId(params);
   const schedule = await worker.getSchedule(id);
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const runs = await worker.getRuns({ scheduleId: schedule.id });
+  const authHeader = await getAuthHeader(request);
+  const runs = await worker.getRuns({ scheduleId: schedule.id, authHeader });
 
   const workers = await worker.getWorkers();
   const activeWorkers = workers.filter(
@@ -44,10 +47,11 @@ export const getLoaderData = async (
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params, context }) => {
+export const loader: LoaderFunction = async ({ params, context, request }) => {
   const loaderData = await getLoaderData(
     params,
-    await getWorker(context.worker)
+    await getWorker(context.worker),
+    request
   );
   return json(loaderData);
 };

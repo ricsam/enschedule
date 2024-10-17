@@ -74,6 +74,24 @@ export const serializedRunSchema = z.object({
 export type SerializedRun = z.output<typeof serializedRunSchema>;
 //#endregion
 
+//#region WorkerAccess
+export const WorkerAccessSchema = z.object({
+  view: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+  delete: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+export type WorkerAccess = z.output<typeof WorkerAccessSchema>;
+//#endregion
+
 //#region FunctionAccess
 export const FunctionAccessSchema = z.object({
   view: z
@@ -130,10 +148,12 @@ export const RunAccessSchema = z.object({
       groups: z.array(z.string()).optional(),
     })
     .optional(),
-  delete: z.object({
-    users: z.array(z.string()).optional(),
-    groups: z.array(z.string()).optional(),
-  }),
+  delete: z
+    .object({
+      users: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 export type RunAccess = z.output<typeof RunAccessSchema>;
 //#endregion
@@ -147,7 +167,9 @@ export const publicJobDefinitionSchema = z.object({
   example: z.unknown(),
   codeBlock: z.string(),
   jsonSchema: z.record(z.unknown()),
-  access: FunctionAccessSchema.optional(),
+  access: nullishToUndefined(FunctionAccessSchema),
+  defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
+  defaultRunAccess: nullishToUndefined(RunAccessSchema),
 });
 export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>;
 //#endregion
@@ -178,6 +200,7 @@ export const publicJobScheduleSchema = z.object({
    * more like schedule id, but the unique ID that ensures that 2 schedules with the same eventId are not created
    */
   eventId: z.string().optional(),
+  defaultRunAccess: nullishToUndefined(RunAccessSchema),
 });
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion
@@ -219,6 +242,7 @@ export const PublicWorkerSchema = z.object({
   defaultFunctionAccess: nullishToUndefined(FunctionAccessSchema),
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
+  access: nullishToUndefined(WorkerAccessSchema),
 });
 export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
 //#endregion
@@ -245,6 +269,8 @@ export const ScheduleJobOptionsSchema = z.object({
   maxRetries: z.number().optional(),
   failureTrigger: z.number().optional(),
   workerId: z.string().optional(),
+  defaultRunAccess: nullishToUndefined(RunAccessSchema),
+  access: nullishToUndefined(ScheduleAccessSchema),
 });
 export type ScheduleJobOptions = z.output<typeof ScheduleJobOptionsSchema>;
 //#endregion
@@ -343,6 +369,7 @@ export const ListRunsOptionsSerializedSchema = z.object({
     }),
   limit: StringToOptionalPositiveIntSchema,
   offset: StringToOptionalPositiveIntSchema,
+  authHeader: z.string(),
 });
 
 export const ListRunsOptionsSerialize = (
@@ -359,6 +386,7 @@ export const ListRunsOptionsSerialize = (
       : undefined,
     limit: ob.limit ? String(ob.limit) : undefined,
     offset: ob.offset ? String(ob.offset) : undefined,
+    authHeader: ob.authHeader,
   };
 };
 
@@ -374,6 +402,8 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   example: z.infer<T>;
   version: number;
   access?: FunctionAccess;
+  defaultScheduleAccess?: RunAccess;
+  defaultRunAccess?: RunAccess;
 }
 export const JobDefinitionSchema = z.object({
   dataSchema: z.any(),
@@ -383,7 +413,9 @@ export const JobDefinitionSchema = z.object({
   job: z.any(),
   example: z.any(),
   version: z.number().int().positive(),
-  access: FunctionAccessSchema.optional(),
+  access: nullishToUndefined(FunctionAccessSchema),
+  defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
+  defaultRunAccess: nullishToUndefined(RunAccessSchema),
 });
 typeAssert<keyof JobDefinition, keyof z.output<typeof JobDefinitionSchema>>();
 typeAssert<keyof z.output<typeof JobDefinitionSchema>, keyof JobDefinition>();

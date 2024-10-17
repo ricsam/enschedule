@@ -321,6 +321,7 @@ The top-level component in the hierarchy.
 #### Permissions:
 
 - View: Determines who can see the worker.
+- Delete: Determines who can delete the worker.
 
 #### Default Settings:
 
@@ -374,6 +375,9 @@ const worker = new Worker({
       users: ["user1", "user2"],
       groups: ["group1"],
     },
+    delete: {
+      users: ["admin"]
+    }
   },
   defaultFunctionAccess: {
     /*...*/

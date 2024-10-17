@@ -5,6 +5,7 @@ import { useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import RunsTable from "~/components/RunsTable";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb } from "~/types";
 
 export type LoaderData = {
@@ -14,12 +15,11 @@ export type LoaderData = {
 export { action } from "~/components/RunsTable";
 
 export const loader: LoaderFunction = async ({ request, context }) => {
-  // const url = new URL(request.url);
-  // const params = url.searchParams;
+  const authHeader = await getAuthHeader(request);
 
   const runs: PublicJobRun[] = await (
     await getWorker(context.worker)
-  ).getRuns({});
+  ).getRuns({ authHeader });
   return json({ runs });
 };
 

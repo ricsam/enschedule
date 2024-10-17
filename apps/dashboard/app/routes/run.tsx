@@ -308,6 +308,11 @@ export default function Run() {
                   failureTrigger: selectedSchedule
                     ? selectedSchedule.id
                     : undefined,
+                  // TODO, the UI could allow for selecting schedule access + default run access and if that is the case 
+                  // we should merge the selectedDef.defaultScheduleAccess and selectedDef.defaultRunAccess with the selections made in the UI
+                  // but for now we just inherit them from the function / handler / definition
+                  access: selectedDef.defaultScheduleAccess,
+                  defaultRunAccess: selectedDef.defaultRunAccess,
                 };
 
                 if (whenToSend === "now") {

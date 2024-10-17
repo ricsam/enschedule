@@ -13,6 +13,7 @@ export type {
   FunctionAccess,
   ScheduleAccess,
   RunAccess,
+  WorkerAccess,
 } from "./types";
 
 export {

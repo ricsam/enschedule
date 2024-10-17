@@ -385,7 +385,7 @@ export class User extends Model<
   declare username: string; // unique
 
   declare name: string;
-  declare email: string;
+  declare email?: CreationOptional<string>;
   declare password: string;
   declare createdAt: CreationOptional<Date>;
   declare admin: boolean;
@@ -732,7 +732,7 @@ export class PrivateBackend {
         },
         email: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         password: {
           type: DataTypes.STRING,
@@ -2727,7 +2727,7 @@ export class PrivateBackend {
     admin = false,
   }: {
     username: string;
-    email: string;
+    email?: string;
     password: string;
     name: string;
     admin?: boolean;

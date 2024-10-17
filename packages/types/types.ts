@@ -404,7 +404,7 @@ export const SchedulesFilterSchema = z.object({
 export const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
-  email: z.string(),
+  email: nullishToUndefined(z.string()),
   name: z.string(),
   admin: z.coerce.boolean(),
   createdAt: z.coerce.date(),

@@ -6,11 +6,12 @@ Enschedule is an open-source project that combines a UI dashboard with a databas
 
 ## Quick start
 
-```bash
+```sh
 docker container run -it --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \ # Use in-memory sqlite
   -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \ # Load included handlers
+  -e ADMIN_ACCOUNT=adm1n:s3cret_pw \
   -p 3000:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
 ```

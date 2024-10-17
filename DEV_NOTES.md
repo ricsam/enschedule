@@ -62,3 +62,18 @@ pnpm run --filter test-worker seed
 pnpm run --filter @enschedule/dashboard build
 npm run playwright test
 ```
+
+## Build images to test container locally
+```
+./infrastructure/build-images.sh
+docker container run -itd --rm \
+  --name enschedule-dashboard \
+  -e SQLITE=":memory:" \
+  -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \
+  -e ACCESS_TOKEN_SECRET=secret_key \
+  -e REFRESH_TOKEN_SECRET=secret_key \
+  -e COOKIE_SESSION_SECRET=s3cr3t \
+  -e ADMIN_ACCOUNT=ricsam:password \
+  -p 3333:3000 \
+  ghcr.io/ricsam/enschedule-dashboard:alpha
+```

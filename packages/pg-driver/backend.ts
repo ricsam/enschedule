@@ -2139,6 +2139,24 @@ export class PrivateBackend {
   public async migrateDatabase() {
     log("Migrating the database");
     await this.sequelize.sync();
+    if (process.env.ADMIN_ACCOUNT) {
+      const result = z
+        .tuple([z.string(), z.string()])
+        .safeParse(process.env.ADMIN_ACCOUNT.split(":"));
+      if (result.success) {
+        const [username, password] = result.data;
+        await this.register({
+          admin: true,
+          name: "Admin",
+          username,
+          password,
+        });
+      } else {
+        throw new Error(
+          `Invalid value for environment variable "ADMIN_ACCOUNT". It must be assigned a string in the format "username:password".`
+        );
+      }
+    }
   }
 
   public async startPolling(
@@ -2148,7 +2166,7 @@ export class PrivateBackend {
   ) {
     if (!dontMigrate) {
       log("Migrating the database");
-      await this.sequelize.sync();
+      await this.migrateDatabase();
     }
     await this.registerWorker();
     log("Polling the database for jobs");
@@ -2749,12 +2767,17 @@ export class PrivateBackend {
     };
 
     const hashedPassword = await hashPassword();
-    await this.User.create({
-      username,
-      email,
-      password: hashedPassword,
-      admin,
-      name,
+    await this.User.findOrCreate({
+      where: {
+        username,
+      },
+      defaults: {
+        username,
+        email,
+        password: hashedPassword,
+        admin,
+        name,
+      },
     });
     return this.login(username, password);
   }

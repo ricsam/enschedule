@@ -116,7 +116,8 @@ jobs:
             --set worker.image.tag=alpha \
             --set dashboard.image.tag=alpha \
             --set dashboard.service.type=NodePort \
-            --set dashboard.service.port=3000
+            --set dashboard.service.port=3000 \
+            --set config.ADMIN_ACCOUNT=ricsam:password
       - name: Test service URLs
         run: |
           minikube service list

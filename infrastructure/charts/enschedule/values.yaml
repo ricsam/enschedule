@@ -19,6 +19,9 @@ config:
   # When true the browser needs an HTTPS connection for the dashboard login to work
   HTTPS_ONLY_COOKIES: false
 
+  # Automatically create an admin account if this is present
+  ADMIN_ACCOUNT: "adm1n:s3cr3t"
+
 worker:
   replicaCount: 1
 

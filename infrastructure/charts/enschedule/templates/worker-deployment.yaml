@@ -71,6 +71,8 @@ spec:
               value: {{ .Values.config.ACCESS_TOKEN_SECRET | quote }}
             - name: REFRESH_TOKEN_SECRET
               value: {{ .Values.config.REFRESH_TOKEN_SECRET | quote }}
+            - name: ADMIN_ACCOUNT
+              value: {{ .Values.config.ADMIN_ACCOUNT | quote }}
             - name: ENSCHEDULE_API
               value: "true"
             - name: API_PORT

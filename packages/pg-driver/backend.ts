@@ -1607,7 +1607,7 @@ export class PrivateBackend {
     return workerIds;
   }
 
-  private registeredWorker: Worker | undefined;
+  protected registeredWorker: Worker | undefined;
 
   public async registerWorker(attempt = 0): Promise<Worker> {
     if (this.registeredWorker) {
@@ -2908,6 +2908,8 @@ export class TestBackend extends PrivateBackend {
     string,
     undefined | Record<string, JobDefinition | undefined>
   > = this.definedJobs;
+
+  public registeredWorker: Worker | undefined = this.registeredWorker;
 
   private authHeader: string;
 

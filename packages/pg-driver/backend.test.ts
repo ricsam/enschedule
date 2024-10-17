@@ -942,6 +942,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       // pretend we are updating the handler code and restarting the server
       handler.version = 2;
+      backend.registeredWorker = undefined;
       backend.workerInstance.instanceId = "new-instance-id";
       backend.definedJobs[handler.id] = { "2": handler } as any;
 
@@ -1018,6 +1019,7 @@ registerTests((getBackend: () => TestBackend) => {
         example: "http://localhost:1234",
       });
 
+      await backend.registerWorker();
       const handlers = await backend.getLatestHandlers();
       expect(handlers).toHaveLength(1);
 

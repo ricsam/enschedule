@@ -8,6 +8,14 @@ type SessionData = {
   token: string;
 };
 
+let httpsOnlyCookies = false;
+if (process.env.HTTPS_ONLY_COOKIES && process.env.HTTPS_ONLY_COOKIES.trim()) {
+  httpsOnlyCookies = true;
+  if (process.env.HTTPS_ONLY_COOKIES.toLowerCase().trim() === "false") {
+    httpsOnlyCookies = false;
+  }
+}
+
 export const accessTokenSession = createCookieSessionStorage<
   SessionData,
   SessionFlashData
@@ -18,7 +26,7 @@ export const accessTokenSession = createCookieSessionStorage<
     path: "/", // remember to add this so the cookie will work in all routes
     httpOnly: true, // for security reasons, make this cookie http only
     secrets: ["s3cr3t"], // replace this with an actual secret
-    secure: process.env.NODE_ENV === "production", // enable this in prod only
+    secure: httpsOnlyCookies,
   },
 });
 
@@ -32,7 +40,7 @@ export const refreshTokenSession = createCookieSessionStorage<
     path: "/refresh", // Only work on the /refresh route
     httpOnly: true, // for security reasons, make this cookie http only
     secrets: ["s3cr3t"], // replace this with an actual secret
-    secure: process.env.NODE_ENV === "production", // enable this in prod only
+    secure: httpsOnlyCookies,
     maxAge: 60 * 60 * 24 * 7, // 1 week
   },
 });

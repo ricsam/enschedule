@@ -1,7 +1,18 @@
 import * as cp from "node:child_process";
 import * as crypto from "node:crypto";
 import os from "node:os";
+import * as path from "node:path";
 import stream from "node:stream";
+import * as jwt from "jsonwebtoken";
+import { parseExpression } from "cron-parser";
+import {
+  JobDefinitionSchema,
+  RunHandlerInCpSchema,
+  RunStatus,
+  ScheduleStatus,
+  WorkerStatus,
+  typeAssert,
+} from "@enschedule/types";
 import type {
   FunctionAccess,
   JobDefinition,
@@ -22,16 +33,6 @@ import type {
   UserSchema,
   WorkerAccess,
 } from "@enschedule/types";
-import {
-  JobDefinitionSchema,
-  RunHandlerInCpSchema,
-  RunStatus,
-  ScheduleStatus,
-  WorkerStatus,
-  typeAssert,
-} from "@enschedule/types";
-import { parseExpression } from "cron-parser";
-import * as jwt from "jsonwebtoken";
 import { pascalCase } from "pascal-case";
 import type {
   CreationOptional,
@@ -56,6 +57,7 @@ import type {
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
+import { SequelizeStorage, Umzug } from "umzug";
 import type { ZodType } from "zod";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -598,10 +600,10 @@ function createShortShaHash(input: string) {
   return hash.substring(0, 6);
 }
 
-type Access = {
+interface Access {
   users?: string[];
   groups?: string[];
-};
+}
 
 export class PrivateBackend {
   protected maxJobsPerTick = 4;
@@ -2284,7 +2286,25 @@ export class PrivateBackend {
 
   public async migrateDatabase() {
     log("Migrating the database");
-    await this.sequelize.sync();
+
+    // maybe for future
+    // 1 load migration files
+    // 2 check with database which migrations have been run
+    // 3 run the migrations that have not been run
+
+    const umzug = new Umzug({
+      migrations: { glob: path.join(__dirname, "migrations/*.js") },
+      context: this.sequelize.getQueryInterface(),
+      storage: new SequelizeStorage({
+        sequelize: this.sequelize,
+      }),
+      logger: console,
+    });
+
+    await umzug.up();
+
+    // await this.sequelize.sync();
+
     if (process.env.ADMIN_ACCOUNT) {
       const result = z
         .tuple([z.string(), z.string()])

@@ -5,7 +5,8 @@
     "backend.ts",
     "backend.test.ts",
     "log.ts",
-    "env-sequalize-options.ts"
+    "env-sequalize-options.ts",
+    "migration.ts",
   ],
   "exclude": [
     "dist",

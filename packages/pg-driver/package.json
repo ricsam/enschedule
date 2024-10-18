@@ -16,7 +16,8 @@
     "backend.ts",
     "log.ts",
     "env-sequalize-options.ts",
-    "dist"
+    "dist",
+    "migrations.ts"
   ],
   "dependencies": {
     "@enschedule/types": "workspace:*",

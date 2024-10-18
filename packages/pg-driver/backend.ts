@@ -3,6 +3,7 @@ import * as crypto from "node:crypto";
 import os from "node:os";
 import * as path from "node:path";
 import stream from "node:stream";
+import { migrations } from "./migrations";
 import * as jwt from "jsonwebtoken";
 import { parseExpression } from "cron-parser";
 import {
@@ -2293,7 +2294,7 @@ export class PrivateBackend {
     // 3 run the migrations that have not been run
 
     const umzug = new Umzug({
-      migrations: { glob: path.join(__dirname, "migrations/*.js") },
+      migrations,
       context: this.sequelize.getQueryInterface(),
       storage: new SequelizeStorage({
         sequelize: this.sequelize,

@@ -1,19 +1,7 @@
 import * as cp from "node:child_process";
 import * as crypto from "node:crypto";
 import os from "node:os";
-import * as path from "node:path";
 import stream from "node:stream";
-import { migrations } from "./migrations";
-import * as jwt from "jsonwebtoken";
-import { parseExpression } from "cron-parser";
-import {
-  JobDefinitionSchema,
-  RunHandlerInCpSchema,
-  RunStatus,
-  ScheduleStatus,
-  WorkerStatus,
-  typeAssert,
-} from "@enschedule/types";
 import type {
   FunctionAccess,
   JobDefinition,
@@ -34,6 +22,16 @@ import type {
   UserSchema,
   WorkerAccess,
 } from "@enschedule/types";
+import {
+  JobDefinitionSchema,
+  RunHandlerInCpSchema,
+  RunStatus,
+  ScheduleStatus,
+  WorkerStatus,
+  typeAssert,
+} from "@enschedule/types";
+import { parseExpression } from "cron-parser";
+import * as jwt from "jsonwebtoken";
 import { pascalCase } from "pascal-case";
 import type {
   CreationOptional,
@@ -66,6 +64,7 @@ import { createTypeAlias, printNode, zodToTs } from "zod-to-ts";
 import type { SeqConstructorOptions } from "./env-sequalize-options";
 import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
+import { migrations as databaseMigrations } from "./migrations";
 
 export const getTokenEnvs = () => {
   const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -2294,7 +2293,7 @@ export class PrivateBackend {
     // 3 run the migrations that have not been run
 
     const umzug = new Umzug({
-      migrations,
+      migrations: databaseMigrations,
       context: this.sequelize.getQueryInterface(),
       storage: new SequelizeStorage({
         sequelize: this.sequelize,

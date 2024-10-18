@@ -1,7 +1,8 @@
-import { DataTypes, QueryInterface } from "sequelize";
-import { RunnableMigration } from "umzug";
+import type { QueryInterface } from "sequelize";
+import { DataTypes } from "sequelize";
+import type { RunnableMigration } from "umzug";
 
-export const migrations: Array<RunnableMigration<QueryInterface>> = [
+export const migrations: RunnableMigration<QueryInterface>[] = [
   {
     name: "00000-initial",
     up: async ({ context: queryInterface }) => {

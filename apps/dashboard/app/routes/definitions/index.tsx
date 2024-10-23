@@ -1,13 +1,18 @@
+import type { AuthHeader } from "@enschedule/types";
 import type { LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import type { z } from "zod";
 import DefinitionsTable from "~/components/DefinitionsTable";
 import { RootLayout } from "~/components/Layout";
 import { getWorker } from "~/createWorker.server";
 import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
-async function getLoaderData(worker: DashboardWorker, authHeader: string) {
+async function getLoaderData(
+  worker: DashboardWorker,
+  authHeader: z.output<typeof AuthHeader>
+) {
   const definitions = worker.getLatestHandlers(authHeader);
   return definitions;
 }

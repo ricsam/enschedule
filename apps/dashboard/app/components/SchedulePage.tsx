@@ -37,6 +37,7 @@ import { getWorker } from "~/createWorker.server";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
+import { getAuthHeader } from "~/sessions";
 
 export const editDetailsAction: ActionFunction = async ({
   request,
@@ -44,9 +45,10 @@ export const editDetailsAction: ActionFunction = async ({
   context,
 }) => {
   const scheduleId = getScheduleId(params);
+  const authHeader = await getAuthHeader(request);
   const schedule = await (
     await getWorker(context.worker)
-  ).getSchedule(scheduleId);
+  ).getSchedule(authHeader, scheduleId);
   if (!schedule) {
     throw new Error("Invalid scheduleId");
   }
@@ -108,7 +110,7 @@ export const editDetailsAction: ActionFunction = async ({
   if (updated) {
     await (
       await getWorker(context.worker)
-    ).updateSchedule(scheduleUpdatePayload);
+    ).updateSchedule(authHeader, scheduleUpdatePayload);
   }
   return redirect(getParentUrl(request.url));
 };
@@ -740,13 +742,15 @@ export const action: ActionFunction = async (arg) => {
     .union([z.literal("delete"), z.literal("run")])
     .parse(fd.get("action"));
 
+  const authHeader = await getAuthHeader(request);
+
   const id = getScheduleId(params);
   if (action === "run") {
     const redirectTo = z.string().parse(fd.get("redirect"));
     await (await getWorker(context.worker)).runScheduleNow(id);
     return redirect(redirectTo);
   } else {
-    await (await getWorker(context.worker)).deleteSchedule(id);
+    await (await getWorker(context.worker)).deleteSchedule(authHeader, id);
     return redirect(getParentUrl(request.url));
   }
 };

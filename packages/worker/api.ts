@@ -2,6 +2,7 @@ import http from "node:http";
 import { PrivateBackend } from "@enschedule/pg-driver";
 import type { ScheduleUpdatePayload } from "@enschedule/types";
 import {
+  AuthHeader,
   ListRunsOptionsSerializedSchema,
   ScheduleSchema,
   ScheduleUpdatePayloadSchema,
@@ -65,11 +66,12 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   router.use(parseJsonBody());
 
   router.get("/job-definitions", (req, res, next) => {
-    if (!req.headers.authorization) {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     worker
-      .getLatestHandlers(req.headers.authorization)
+      .getLatestHandlers(authHeader.data)
       .then((jobDefinitions) => {
         res.json(jobDefinitions);
       })
@@ -77,11 +79,12 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/job-definitions/:id", (req, res, next) => {
-    if (!req.headers.authorization) {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     worker
-      .getLatestHandler(req.params.id, req.headers.authorization)
+      .getLatestHandler(req.params.id, authHeader.data)
       .then((jobDefinition) => {
         res.json(jobDefinition);
       })
@@ -89,9 +92,13 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/schedules", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const filters = SchedulesFilterSchema.parse(req.query);
     worker
-      .getSchedules(filters)
+      .getSchedules(authHeader.data, filters)
       .then((schedules) => {
         res.json(schedules);
       })
@@ -109,8 +116,12 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/workers", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     worker
-      .getWorkers()
+      .getWorkers(authHeader.data)
       .then((workers) => {
         res.json(workers);
       })
@@ -118,13 +129,16 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.post("/schedules", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const { handlerId, data, options, handlerVersion } = ScheduleSchema.parse(
       req.body
     );
-
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     worker
-      .scheduleJob(handlerId, handlerVersion, data as any, options)
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      .scheduleJob(authHeader.data, handlerId, handlerVersion, data as any, options)
       .then((newSchedule) => {
         res.json(newSchedule);
       })
@@ -133,10 +147,14 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/schedules/:id", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const idSchema = z.number().int().positive();
     const validatedId = idSchema.parse(Number(req.params.id));
     worker
-      .getSchedule(validatedId)
+      .getSchedule(authHeader.data, validatedId)
       .then((schedule) => {
         res.json(schedule);
       })
@@ -144,10 +162,14 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.delete("/schedules/:id", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const idSchema = z.number().int().positive();
     const validatedId = idSchema.parse(Number(req.params.id));
     worker
-      .deleteSchedule(validatedId)
+      .deleteSchedule(authHeader.data, validatedId)
       .then((schedule) => {
         res.json(schedule);
       })
@@ -179,13 +201,17 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.put("/schedules/:id", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const updatePayload: ScheduleUpdatePayload =
       ScheduleUpdatePayloadSchema.parse({
         ...req.body,
         id: Number(req.params.id),
       });
     worker
-      .updateSchedule(updatePayload)
+      .updateSchedule(authHeader.data, updatePayload)
       .then((updatedSchedule) => {
         res.json(updatedSchedule);
       })
@@ -193,10 +219,14 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.get("/runs/:id", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const idSchema = z.number().int().positive();
     const validatedId = idSchema.parse(Number(req.params.id));
     worker
-      .getRun(validatedId)
+      .getRun(authHeader.data, validatedId)
       .then((run) => {
         res.json(run);
       })
@@ -204,10 +234,14 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.delete("/runs/:id", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const idSchema = z.number().int().positive();
     const validatedId = idSchema.parse(Number(req.params.id));
     worker
-      .deleteRun(validatedId)
+      .deleteRun(authHeader.data, validatedId)
       .then((run) => {
         res.json(run);
       })

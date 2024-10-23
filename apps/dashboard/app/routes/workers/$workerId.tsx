@@ -11,6 +11,7 @@ import assert from "assert";
 import { sentenceCase } from "sentence-case";
 import { RootLayout } from "~/components/Layout";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 
@@ -31,7 +32,8 @@ export const useBreadcrumbs = (
 
 export async function getLoaderData(
   params: Params<string>,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ): Promise<{
   worker: PublicWorker;
 }> {
@@ -41,7 +43,8 @@ export async function getLoaderData(
   if (Number.isNaN(id)) {
     throw new Error("Invalid id");
   }
-  const workerDetails = (await worker.getWorkers()).find(
+  const authHeader = await getAuthHeader(request);
+  const workerDetails = (await worker.getWorkers(authHeader)).find(
     (worker) => worker.id === id
   );
   if (!workerDetails) {
@@ -52,8 +55,10 @@ export async function getLoaderData(
 }
 
 export const loader: LoaderFunction = async (args) => {
-  const { params, context } = args;
-  return json(await getLoaderData(params, await getWorker(context.worker)));
+  const { params, context, request } = args;
+  return json(
+    await getLoaderData(params, await getWorker(context.worker), request)
+  );
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

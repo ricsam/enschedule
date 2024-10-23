@@ -6,6 +6,7 @@ import { PublicJobRun, WorkerStatus } from "@enschedule/types";
 import { z } from "zod";
 import { Schedule, TestBackend, createJobDefinition } from "./backend";
 import { envSequalizeOptions } from "./env-sequalize-options";
+import { Transaction } from "sequelize";
 
 let sequalizeInstances: TestBackend[] = [];
 
@@ -14,7 +15,10 @@ const pgBackend = () => {
     {
       name: "test worker",
       workerId: "test-worker",
-      database: { ...envSequalizeOptions(), logging: false },
+      database: {
+        ...envSequalizeOptions(),
+        logging: false,
+      },
       inlineWorker: true,
     },
     "Api-Key secret"
@@ -53,7 +57,7 @@ const httpJobDeclaration = (
     },
     access: {
       view: {
-        users: ["ricsam"],
+        users: [1],
       },
     },
   });
@@ -92,6 +96,9 @@ const registerTests = (cb: (getBackend: () => TestBackend) => void) => {
       ["sqlite", sqliteBackend] as const,
       ["pg", pgBackend] as const,
     ]) {
+      if (process.env.TEST_DIALECT !== dialectLabel) {
+        continue;
+      }
       describe(dialectLabel, () => {
         let backend: TestBackend;
         beforeEach(async () => {
@@ -122,7 +129,11 @@ const awaitOverdueJobs = async (
     new Promise(() => {
       const u = async () => {
         while (!done) {
-          await jest.runOnlyPendingTimersAsync();
+          if (!jest.isEnvironmentTornDown()) {
+            await jest.runOnlyPendingTimersAsync();
+          } else {
+            done = true;
+          }
         }
       };
       u();
@@ -144,14 +155,18 @@ const awaitRunSchedule = async (
   backend: TestBackend,
   scheduleId: number
 ): Promise<PublicJobRun> => {
-  const p1 = backend.runSchedule(scheduleId);
+  const p1 = backend.runSchedule(backend.authHeader, scheduleId);
   let done = false;
   const result = await Promise.race([
     p1,
     new Promise(() => {
       const u = async () => {
         while (!done) {
-          await jest.runOnlyPendingTimersAsync();
+          if (!jest.isEnvironmentTornDown()) {
+            await jest.runOnlyPendingTimersAsync();
+          } else {
+            done = true;
+          }
         }
       };
       u();
@@ -391,7 +406,11 @@ registerTests((getBackend: () => TestBackend) => {
           .split("\n")
           .slice(0, 3)
           .join("\n")
-      ).toMatchSnapshot();
+      ).toMatchInlineSnapshot(`
+        "Error: Error
+            at Object.<anonymous> (backend.test.ts)
+        "
+      `);
     });
     it("should create a signature", () => {
       const sig = backend.createSignature(
@@ -472,6 +491,7 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(job);
       await backend.registerWorker();
       const result = await backend.scheduleJob(
+        backend.authHeader,
         job,
         1,
         {
@@ -647,7 +667,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       expect(schedule.title).toBe("title");
-      await backend.updateSchedule({
+      await backend.updateSchedule(backend.authHeader, {
         id: schedule.id,
         title: "hello",
       });
@@ -668,13 +688,13 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       expect(schedule.runAt?.getTime()).toBe(0);
-      await backend.updateSchedule({
+      await backend.updateSchedule(backend.authHeader, {
         id: schedule.id,
         runAt: new Date(1000),
       });
       await schedule.reload();
       expect(schedule.runAt?.getTime()).toBe(1000);
-      await backend.updateSchedule({
+      await backend.updateSchedule(backend.authHeader, {
         id: schedule.id,
         runAt: null,
       });
@@ -698,7 +718,7 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       const run = await awaitRunSchedule(backend, schedule.id);
-      const receivedSingleRun = await backend.getRun(run.id);
+      const receivedSingleRun = await backend.getRun(backend.authHeader, run.id);
       // last reached and status might diff, but that is okay
       const now = new Date();
       if (typeof run.worker !== "string") {
@@ -873,7 +893,7 @@ registerTests((getBackend: () => TestBackend) => {
             "access": {
               "view": {
                 "users": [
-                  "ricsam",
+                  1,
                 ],
               },
             },
@@ -980,8 +1000,12 @@ registerTests((getBackend: () => TestBackend) => {
       );
       const run = await awaitRunSchedule(backend, schedule.id);
       expect(typeof run.worker !== "string" && run.worker.id).toBe(worker.id);
-      expect((await backend.getWorkers())[0].id).toBe(worker.id);
-      expect((await backend.getWorkers())[0].lastRun?.id).toBe(run.id);
+      expect((await backend.getWorkers("Api-Key secret"))[0].id).toBe(
+        worker.id
+      );
+      expect((await backend.getWorkers("Api-Key secret"))[0].lastRun?.id).toBe(
+        run.id
+      );
     });
     it("should be able to handle multiple versions of a handler", async () => {
       const spyA = jest.fn((data: { url: string }) => {});
@@ -1118,6 +1142,168 @@ registerTests((getBackend: () => TestBackend) => {
       const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).not.toHaveBeenCalled();
       expect(spyB).toBeCalledWith("http://other_url:1234");
+    });
+  });
+
+  describe("get runs with auth", () => {
+    it("should be able to get runs with auth", async () => {
+      const handler = httpJobDeclaration();
+      backend.registerJob(handler);
+      await backend.registerWorker();
+      const [schedule] = await backend.createJobSchedule(
+        "http_request",
+        "title",
+        "description",
+        1,
+        {
+          url: "http://localhost:1234",
+        },
+        {}
+      );
+      const registration = await backend.register({
+        admin: false,
+        name: "test-user",
+        password: "hello",
+        username: "test-user",
+      });
+      if (!registration.access) {
+        throw new Error("user not created");
+      }
+      await backend.runScheduleNow(schedule.id);
+      await awaitOverdueJobs(backend);
+      expect(
+        (
+          await backend.getRuns({
+            authHeader: "Api-Key secret",
+          })
+        ).count
+      ).toBe(1);
+      expect(
+        (
+          await backend.getRuns({
+            authHeader: `Jwt ${registration.access.accessToken}`,
+          })
+        ).count
+      ).toBe(0);
+
+      const [scheduleTwo] = await backend.createJobSchedule(
+        "http_request",
+        "hello",
+        "some description",
+        1,
+        {
+          url: "http://other_url:1234",
+        },
+        {
+          defaultRunAccess: {
+            view: {
+              users: [registration.user.id],
+            },
+          },
+        }
+      );
+
+      await backend.runScheduleNow(scheduleTwo.id);
+      await awaitOverdueJobs(backend);
+
+      expect(
+        (
+          await backend.getRuns({
+            authHeader: "Api-Key secret",
+          })
+        ).count
+      ).toBe(2);
+
+      expect(
+        (
+          await backend.getRuns({
+            authHeader: `Jwt ${registration.access.accessToken}`,
+          })
+        ).count
+      ).toBe(1);
+
+      const registrationTwo = await backend.register({
+        admin: false,
+        name: "test-user-two",
+        password: "hello",
+        username: "test-user-two",
+      });
+      if (!registrationTwo.access) {
+        throw new Error("user not created");
+      }
+
+      expect(
+        (
+          await backend.getRuns({
+            authHeader: `Jwt ${registrationTwo.access.accessToken}`,
+          })
+        ).count
+      ).toBe(0);
+    });
+
+    it("should work with pagination", async () => {
+      const handler = httpJobDeclaration();
+      backend.registerJob(handler);
+      await backend.registerWorker();
+      const [schedule] = await backend.createJobSchedule(
+        "http_request",
+        "title",
+        "description",
+        1,
+        {
+          url: "http://localhost:1234",
+        },
+        {
+          runAt: new Date(0),
+        }
+      );
+      const registration = await backend.register({
+        admin: false,
+        name: "test-user",
+        password: "hello",
+        username: "test-user",
+      });
+      if (!registration.access) {
+        throw new Error("user not created");
+      }
+      for (let i = 0; i < 60; i += 1) {
+        await backend.runScheduleNow(schedule.id);
+        await awaitOverdueJobs(backend);
+      }
+      const runs = await backend.getRuns({
+        authHeader: "Api-Key secret",
+      });
+      expect(runs.count).toBe(60);
+      expect(runs.rows).toHaveLength(25);
+
+      const runsWithOffset = await backend.getRuns({
+        authHeader: "Api-Key secret",
+        offset: 50,
+        limit: 25,
+      });
+      expect(runsWithOffset.count).toBe(60);
+      expect(runsWithOffset.rows).toHaveLength(10);
+
+      const runsWithProblem = await backend.getRuns({
+        authHeader: "Api-Key secret",
+        offset: 25,
+        limit: 25,
+      });
+      expect(runsWithProblem.count).toBe(60);
+      expect(runsWithProblem.rows).toHaveLength(25);
+      const runsWithDurationSorting = await backend.getRuns({
+        authHeader: "Api-Key secret",
+        offset: 25,
+        limit: 25,
+        order: [["duration", "DESC"]],
+      });
+      expect(
+        new Date(runsWithDurationSorting.rows[0].finishedAt!).getTime() -
+          new Date(runsWithDurationSorting.rows[0].startedAt!).getTime()
+      ).toBeGreaterThanOrEqual(
+        new Date(runsWithDurationSorting.rows[24].finishedAt!).getTime() -
+          new Date(runsWithDurationSorting.rows[24].startedAt!).getTime()
+      );
     });
   });
 });

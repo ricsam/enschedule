@@ -1,10 +1,10 @@
 import fs from "node:fs";
-import { ScheduleSchema } from "@enschedule/types";
+import { AuthHeader, ScheduleSchema } from "@enschedule/types";
 import { Command } from "commander";
 import { glob } from "glob";
 import yaml from "js-yaml";
 import { z } from "zod";
-import { getWorker } from "../get-worker";
+import { getAuthHeader, getConfig, getWorker } from "../get-worker";
 
 const isDirectory = async (p: string): Promise<boolean> => {
   const stat = await fs.promises.stat(p);
@@ -25,8 +25,10 @@ export const ScheduleYamlSchema = z.object({
 export const apply = async (
   config: z.infer<typeof ScheduleYamlSchema>
 ): Promise<void> => {
+  const authHeader = await getAuthHeader();
   const worker = await getWorker();
   const { status } = await worker.scheduleJob(
+    authHeader,
     config.spec.handlerId,
     config.spec.handlerVersion,
     config.spec.data,

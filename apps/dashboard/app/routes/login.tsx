@@ -49,8 +49,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
   cookies.refresh.session.set("token", tokens.refreshToken);
   cookies.hasRefresh.session.set("hasRefreshToken", true);
 
-  // Login succeeded, send them to the home page.
-  return redirect("/", {
+  // Login succeeded, send them to the previous page or home
+  const redirectUrlParse = z
+    .string()
+    .refine((val) => val.startsWith("/"))
+    .safeParse(new URL(request.url).searchParams.get("redirect"));
+  const redirectUrl = redirectUrlParse.success ? redirectUrlParse.data : "/";
+  return redirect(redirectUrl, {
     headers: [
       ["Set-Cookie", await cookies.access.commit()],
       ["Set-Cookie", await cookies.refresh.commit()],

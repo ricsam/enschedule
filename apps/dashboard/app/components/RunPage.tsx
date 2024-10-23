@@ -107,9 +107,10 @@ export default function RunPage({
                 </Typography>
                 <Typography color="text.primary" suppressHydrationWarning>
                   {formatDuration(
-                    (run.finishedAt
-                      ? new Date(run.finishedAt).getTime()
-                      : Date.now()) - new Date(run.startedAt).getTime()
+                    run.finishedAt
+                      ? new Date(run.finishedAt).getTime() -
+                          new Date(run.startedAt).getTime()
+                      : Date.now() - new Date(run.startedAt).getTime()
                   )}
                 </Typography>
                 {run.finishedAt && (

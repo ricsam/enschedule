@@ -78,14 +78,14 @@ export type SerializedRun = z.output<typeof serializedRunSchema>;
 export const WorkerAccessSchema = z.object({
   view: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   delete: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
 });
@@ -96,14 +96,14 @@ export type WorkerAccess = z.output<typeof WorkerAccessSchema>;
 export const FunctionAccessSchema = z.object({
   view: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   createSchedule: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
 });
@@ -114,20 +114,20 @@ export type FunctionAccess = z.output<typeof FunctionAccessSchema>;
 export const ScheduleAccessSchema = z.object({
   view: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   edit: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   delete: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
 });
@@ -138,20 +138,20 @@ export type ScheduleAccess = z.output<typeof ScheduleAccessSchema>;
 export const RunAccessSchema = z.object({
   view: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   viewLogs: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
   delete: z
     .object({
-      users: z.array(z.string()).optional(),
-      groups: z.array(z.string()).optional(),
+      users: z.array(z.number()).optional(),
+      groups: z.array(z.number()).optional(),
     })
     .optional(),
 });
@@ -338,6 +338,15 @@ const StringToOptionalPositiveIntSchema = z
 
 export type ListRunsOptions = z.output<typeof ListRunsOptionsSerializedSchema>;
 
+export const AuthHeader = z.custom<`${
+  | "Jwt"
+  | "Api-Key"
+  | "User-Api-Key"} ${string}`>((val) => {
+  return typeof val === "string"
+    ? /^(?:Jwt|Api-Key|User-Api-Key) .+$/.test(val)
+    : false;
+});
+
 export const ListRunsOptionsSerializedSchema = z.object({
   scheduleId: StringToOptionalPositiveIntSchema,
   order: z
@@ -369,7 +378,7 @@ export const ListRunsOptionsSerializedSchema = z.object({
     }),
   limit: StringToOptionalPositiveIntSchema,
   offset: StringToOptionalPositiveIntSchema,
-  authHeader: z.string(),
+  authHeader: AuthHeader,
 });
 
 export const ListRunsOptionsSerialize = (

@@ -25,7 +25,7 @@ export async function getLoaderData(
   const definition = handlerId
     ? await worker.getLatestHandler(handlerId, authHeader)
     : undefined;
-  const schedules = await worker.getSchedules({ handlerId });
+  const schedules = await worker.getSchedules(authHeader, { handlerId });
   return { schedules, definition };
 }
 

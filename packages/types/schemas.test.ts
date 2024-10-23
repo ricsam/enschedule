@@ -24,14 +24,14 @@ describe("ListRunsOptionsSerializedSchema", () => {
       order: "wef-ASC",
       limit: "2",
       offset: "2",
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     },
     {
       limit: 2,
       offset: 2,
       order: [["wef", "ASC"]],
       scheduleId: 2,
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     }
   );
   createTest(
@@ -40,7 +40,7 @@ describe("ListRunsOptionsSerializedSchema", () => {
       order: "wef-ASC,abc-DESC",
       limit: "2",
       offset: "2",
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     },
     {
       limit: 2,
@@ -50,7 +50,7 @@ describe("ListRunsOptionsSerializedSchema", () => {
         ["abc", "DESC"],
       ],
       scheduleId: 2,
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     }
   );
   createTest(
@@ -59,14 +59,14 @@ describe("ListRunsOptionsSerializedSchema", () => {
       order: "",
       limit: "2",
       offset: "2",
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     },
     {
       limit: 2,
       offset: 2,
       order: [],
       scheduleId: 2,
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     }
   );
   it("should work", () => {
@@ -76,7 +76,7 @@ describe("ListRunsOptionsSerializedSchema", () => {
         order: "wef-ASC,abc-DESC,",
         limit: "2",
         offset: "2",
-        authHeader: "authHeader",
+        authHeader: "Jwt authHeader",
       })
     ).toEqual({
       limit: 2,
@@ -86,7 +86,7 @@ describe("ListRunsOptionsSerializedSchema", () => {
         ["abc", "DESC"],
       ],
       scheduleId: 2,
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     });
     expect(
       ListRunsOptionsSerialize({
@@ -97,14 +97,14 @@ describe("ListRunsOptionsSerializedSchema", () => {
           ["abc", "DESC"],
         ],
         scheduleId: 2,
-        authHeader: "authHeader",
+        authHeader: "Jwt authHeader",
       })
     ).toEqual({
       scheduleId: "2",
       order: "wef-ASC,abc-DESC",
       limit: "2",
       offset: "2",
-      authHeader: "authHeader",
+      authHeader: "Jwt authHeader",
     });
   });
 });

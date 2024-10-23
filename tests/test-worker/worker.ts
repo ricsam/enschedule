@@ -37,7 +37,7 @@ if (!process.env.SPECIAL_HANDLERS) {
     },
     access: {
       view: {
-        users: ["ricsam"],
+        users: [1],
       },
     },
   });
@@ -159,7 +159,11 @@ if (!process.env.SPECIAL_HANDLERS) {
   console.log("Starting polling");
   await worker.startPolling({ dontMigrate: true });
   console.log("Scheduling test job");
+  if (!process.env.API_KEY) {
+    throw new Error('Please set the "API_KEY" environment variable');
+  }
   await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
     "send-http-request",
     1,
     { url: "http://localhost:3000" },

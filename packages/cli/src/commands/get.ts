@@ -1,8 +1,8 @@
-import type { PublicJobSchedule} from "@enschedule/types";
+import type { PublicJobSchedule } from "@enschedule/types";
 import { ScheduleStatus } from "@enschedule/types";
 import Table from "cli-table";
 import { Command } from "commander"; // add this line
-import { getWorker } from "../get-worker";
+import { getAuthHeader, getWorker } from "../get-worker";
 
 export const getCommand = new Command("get");
 
@@ -17,14 +17,17 @@ getScheduleCommand
   .argument("<scheduleId>", "id of the schedule to get")
   .option("-o, --output <type>", "output format")
   .action(async (scheduleId: string, options: { output?: string }) => {
+    const authHeader = await getAuthHeader();
     const worker = await getWorker();
     if (scheduleId.startsWith("db:")) {
       const dbId = scheduleId.substring(3);
-      const schedule = await worker.getSchedule(parseInt(dbId, 10));
+      const schedule = await worker.getSchedule(authHeader, parseInt(dbId, 10));
       printSchedules([schedule], { ...options, single: true });
       return;
     }
-    const schedules = await worker.getSchedules({ eventId: scheduleId });
+    const schedules = await worker.getSchedules(authHeader, {
+      eventId: scheduleId,
+    });
     if (schedules.length === 0) {
       console.log(`Schedule ${scheduleId} not found`);
       return;
@@ -75,8 +78,9 @@ getSchedulesCommand
   .description("Get all schedules")
   .option("-o, --output <type>", "output format")
   .action(async (options: { output?: string }) => {
+    const authHeader = await getAuthHeader();
     const worker = await getWorker();
-    const schedules = await worker.getSchedules();
+    const schedules = await worker.getSchedules(authHeader);
     printSchedules(schedules, options);
   });
 

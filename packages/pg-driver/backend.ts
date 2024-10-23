@@ -3,6 +3,7 @@ import * as crypto from "node:crypto";
 import os from "node:os";
 import stream from "node:stream";
 import type {
+  AuthHeader,
   FunctionAccess,
   JobDefinition,
   ListRunsOptions,
@@ -53,6 +54,7 @@ import type {
   InferCreationAttributes,
   NonAttribute,
   Optional,
+  Order,
   WhereOptions,
 } from "sequelize";
 import { DataTypes, Model, Op, Sequelize } from "sequelize";
@@ -410,6 +412,36 @@ export class User extends Model<
   declare hasGroups: HasManyHasAssociationsMixin<Group, number>;
   declare countGroups: HasManyCountAssociationsMixin;
   declare createGroup: HasManyCreateAssociationMixin<Group>;
+
+  //#region access
+  declare runViewAccess?: CreationOptional<Run>;
+  declare getRunViewAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunViewAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunViewAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunViewAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunViewAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunViewAccess: HasManyCountAssociationsMixin;
+  declare createRunViewAccess: HasManyCreateAssociationMixin<Run>;
+
+  declare runViewLogsAccess?: CreationOptional<Run>;
+  declare getRunViewLogsAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunViewLogsAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunViewLogsAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunViewLogsAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunViewLogsAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunViewLogsAccess: HasManyCountAssociationsMixin;
+  declare createRunViewLogsAccess: HasManyCreateAssociationMixin<Run>;
+
+  declare runDeleteAccess?: CreationOptional<Run>;
+  declare getRunDeleteAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunDeleteAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunDeleteAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunDeleteAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunDeleteAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunDeleteAccess: HasManyCountAssociationsMixin;
+  declare createRunDeleteAccess: HasManyCreateAssociationMixin<Run>;
+
+  //#endregion access
 }
 
 export class Group extends Model<
@@ -434,6 +466,36 @@ export class Group extends Model<
   declare hasUsers: HasManyHasAssociationsMixin<User, number>;
   declare countUsers: HasManyCountAssociationsMixin;
   declare createUser: HasManyCreateAssociationMixin<User>;
+
+  //#region access
+  declare runViewAccess?: CreationOptional<Run>;
+  declare getRunViewAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunViewAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunViewAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunViewAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunViewAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunViewAccess: HasManyCountAssociationsMixin;
+  declare createRunViewAccess: HasManyCreateAssociationMixin<Run>;
+
+  declare runViewLogsAccess?: CreationOptional<Run>;
+  declare getRunViewLogsAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunViewLogsAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunViewLogsAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunViewLogsAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunViewLogsAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunViewLogsAccess: HasManyCountAssociationsMixin;
+  declare createRunViewLogsAccess: HasManyCreateAssociationMixin<Run>;
+
+  declare runDeleteAccess?: CreationOptional<Run>;
+  declare getRunDeleteAccess: HasManyGetAssociationsMixin<Run>;
+  declare addRunDeleteAccess: HasManyAddAssociationMixin<Run, number>;
+  declare setRunDeleteAccess: HasManySetAssociationsMixin<Run, number>;
+  declare removeRunDeleteAccess: HasManyRemoveAssociationMixin<Run, number>;
+  declare hasRunDeleteAccess: HasManyHasAssociationMixin<Run, number>;
+  declare countRunDeleteAccess: HasManyCountAssociationsMixin;
+  declare createRunDeleteAccess: HasManyCreateAssociationMixin<Run>;
+
+  //#endregion access
 }
 
 export class Session extends Model<
@@ -560,17 +622,74 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare workerTitle: string; // same as `${worker.title}, #${worker.id}`, but in case worker is deleted a workerTitle can still be found
   declare worker?: NonAttribute<Worker> | null;
 
-  declare access?: CreationOptional<RunAccess>;
+  //#region access
+  declare userViewAccess?: CreationOptional<User[]>;
+  declare getUserViewAccess: HasManyGetAssociationsMixin<User>;
+  declare addUserViewAccess: HasManyAddAssociationMixin<User, number>;
+  declare setUserViewAccess: HasManySetAssociationsMixin<User, number>;
+  declare removeUserViewAccess: HasManyRemoveAssociationMixin<User, number>;
+  declare hasUserViewAccess: HasManyHasAssociationMixin<User, number>;
+  declare countUserViewAccess: HasManyCountAssociationsMixin;
+  declare createUserViewAccess: HasManyCreateAssociationMixin<User>;
+
+  declare groupViewAccess?: CreationOptional<Group[]>;
+  declare getGroupViewAccess: HasManyGetAssociationsMixin<Group>;
+  declare addGroupViewAccess: HasManyAddAssociationMixin<Group, number>;
+  declare setGroupViewAccess: HasManySetAssociationsMixin<Group, number>;
+  declare removeGroupViewAccess: HasManyRemoveAssociationMixin<Group, number>;
+  declare hasGroupViewAccess: HasManyHasAssociationMixin<Group, number>;
+  declare countGroupViewAccess: HasManyCountAssociationsMixin;
+  declare createGroupViewAccess: HasManyCreateAssociationMixin<Group>;
+
+  declare userViewLogsAccess?: CreationOptional<User[]>;
+  declare getUserViewLogsAccess: HasManyGetAssociationsMixin<User>;
+  declare addUserViewLogsAccess: HasManyAddAssociationMixin<User, number>;
+  declare setUserViewLogsAccess: HasManySetAssociationsMixin<User, number>;
+  declare removeUserViewLogsAccess: HasManyRemoveAssociationMixin<User, number>;
+  declare hasUserViewLogsAccess: HasManyHasAssociationMixin<User, number>;
+  declare countUserViewLogsAccess: HasManyCountAssociationsMixin;
+  declare createUserViewLogsAccess: HasManyCreateAssociationMixin<User>;
+
+  declare groupViewLogsAccess?: CreationOptional<Group[]>;
+  declare getGroupViewLogsAccess: HasManyGetAssociationsMixin<Group>;
+  declare addGroupViewLogsAccess: HasManyAddAssociationMixin<Group, number>;
+  declare setGroupViewLogsAccess: HasManySetAssociationsMixin<Group, number>;
+  declare removeGroupViewLogsAccess: HasManyRemoveAssociationMixin<
+    Group,
+    number
+  >;
+  declare hasGroupViewLogsAccess: HasManyHasAssociationMixin<Group, number>;
+  declare countGroupViewLogsAccess: HasManyCountAssociationsMixin;
+  declare createGroupViewLogsAccess: HasManyCreateAssociationMixin<Group>;
+
+  declare userDeleteAccess?: CreationOptional<User[]>;
+  declare getUserDeleteAccess: HasManyGetAssociationsMixin<User>;
+  declare addUserDeleteAccess: HasManyAddAssociationMixin<User, number>;
+  declare setUserDeleteAccess: HasManySetAssociationsMixin<User, number>;
+  declare removeUserDeleteAccess: HasManyRemoveAssociationMixin<User, number>;
+  declare hasUserDeleteAccess: HasManyHasAssociationMixin<User, number>;
+  declare countUserDeleteAccess: HasManyCountAssociationsMixin;
+  declare createUserDeleteAccess: HasManyCreateAssociationMixin<User>;
+
+  declare groupDeleteAccess?: CreationOptional<Group[]>;
+  declare getGroupDeleteAccess: HasManyGetAssociationsMixin<Group>;
+  declare addGroupDeleteAccess: HasManyAddAssociationMixin<Group, number>;
+  declare setGroupDeleteAccess: HasManySetAssociationsMixin<Group, number>;
+  declare removeGroupDeleteAccess: HasManyRemoveAssociationMixin<Group, number>;
+  declare hasGroupDeleteAccess: HasManyHasAssociationMixin<Group, number>;
+  declare countGroupDeleteAccess: HasManyCountAssociationsMixin;
+  declare createGroupDeleteAccess: HasManyCreateAssociationMixin<Group>;
+  //#endregion access
 }
 
 export const createJobDefinition = <T extends ZodType = ZodType>(
   job: JobDefinition<T>
 ) => job;
 
-interface UserAccess {
+interface UserAuth {
   admin: boolean;
-  groups: string[];
-  username?: string;
+  groups: number[];
+  userId?: number;
 }
 
 export interface BackendOptions {
@@ -601,8 +720,8 @@ function createShortShaHash(input: string) {
 }
 
 interface Access {
-  users?: string[];
-  groups?: string[];
+  users?: number[];
+  groups?: number[];
 }
 
 export class PrivateBackend {
@@ -1019,10 +1138,10 @@ export class PrivateBackend {
           type: DataTypes.STRING(),
           allowNull: false,
         },
-        access: {
-          type: DataTypes.JSON,
-          allowNull: true,
-        },
+        // access: {
+        //   type: DataTypes.JSON,
+        //   allowNull: true,
+        // },
       },
       {
         modelName: "Run",
@@ -1168,6 +1287,105 @@ export class PrivateBackend {
     });
     //#endregion
 
+    //#region access
+    //#region run.userViewAccess / user.runViewAccess
+    /**
+     * many-to-many
+     * one run can have many users with view access
+     * one user can have view access to many runs
+     */
+    Run.belongsToMany(User, {
+      through: "RunUserViewAccess",
+      as: "userViewAccess",
+    });
+    User.belongsToMany(Run, {
+      through: "RunUserViewAccess",
+      as: "runViewAccess",
+    });
+    //#endregion
+
+    //#region run.groupViewAccess / group.runViewAccess
+    /**
+     * many-to-many
+     * one run can have many groups with view access
+     * one group can have view access to many runs
+     */
+    Run.belongsToMany(Group, {
+      through: "RunGroupViewAccess",
+      as: "groupViewAccess",
+    });
+    Group.belongsToMany(Run, {
+      through: "RunGroupViewAccess",
+      as: "runViewAccess",
+    });
+    //#endregion
+
+    //#region run.userViewLogsAccess / user.runViewLogsAccess
+    /**
+     * many-to-many
+     * one run can have many users with view logs access
+     * one user can have view logs access to many runs
+     */
+    Run.belongsToMany(User, {
+      through: "RunUserViewLogsAccess",
+      as: "userViewLogsAccess",
+    });
+    User.belongsToMany(Run, {
+      through: "RunUserViewLogsAccess",
+      as: "runViewLogsAccess",
+    });
+    //#endregion
+
+    //#region run.groupViewLogsAccess / group.runViewLogsAccess
+    /**
+     * many-to-many
+     * one run can have many groups with view logs access
+     * one group can have view logs access to many runs
+     */
+    Run.belongsToMany(Group, {
+      through: "RunGroupViewLogsAccess",
+      as: "groupViewLogsAccess",
+    });
+    Group.belongsToMany(Run, {
+      through: "RunGroupViewLogsAccess",
+      as: "runViewLogsAccess",
+    });
+    //#endregion
+
+    //#region run.userDeleteAccess / user.runDeleteAccess
+    /**
+     * many-to-many
+     * one run can have many users with delete access
+     * one user can have delete access to many runs
+     */
+    Run.belongsToMany(User, {
+      through: "RunUserDeleteAccess",
+      as: "userDeleteAccess",
+    });
+    User.belongsToMany(Run, {
+      through: "RunUserDeleteAccess",
+      as: "runDeleteAccess",
+    });
+    //#endregion
+
+    //#region run.groupDeleteAccess / group.runDeleteAccess
+    /**
+     * many-to-many
+     * one run can have many groups with delete access
+     * one group can have delete access to many runs
+     */
+    Run.belongsToMany(Group, {
+      through: "RunGroupDeleteAccess",
+      as: "groupDeleteAccess",
+    });
+    Group.belongsToMany(Run, {
+      through: "RunGroupDeleteAccess",
+      as: "runDeleteAccess",
+    });
+    //#endregion
+
+    //#endregion
+
     this.Run = Run;
     this.Schedule = Schedule;
     this.Worker = Worker;
@@ -1237,103 +1455,157 @@ export class PrivateBackend {
   }
   public async getRuns({
     scheduleId,
-    order,
+    order: frontEndOrder,
     limit,
     offset,
     authHeader,
-  }: ListRunsOptions): Promise<PublicJobRun[]> {
+    logging,
+  }: ListRunsOptions & { logging?: boolean }): Promise<{
+    count: number;
+    rows: PublicJobRun[];
+  }> {
     const userAuth = await this.getUserAuth(authHeader);
 
     if (!userAuth) {
-      return [];
+      return { count: 0, rows: [] };
     }
 
-    if (scheduleId === undefined) {
-      const runs = await Run.findAll({
-        limit,
-        order,
-        offset,
-        include: [
-          {
-            model: Schedule,
-            as: "schedule",
-            include: [
-              {
-                model: Run,
-                as: "lastRun",
-                include: [
-                  {
-                    model: Worker,
-                    as: "worker",
-                  },
-                ],
-              },
-            ],
+    const orConditions = [];
+
+    if (!userAuth.admin) {
+      if (userAuth.userId !== undefined) {
+        // Condition for runs where the user has direct access
+        orConditions.push({
+          "$userViewAccess.id$": {
+            [Op.eq]: userAuth.userId,
           },
-          { model: Worker, as: "worker" },
-        ],
-      });
-      const workers = await this.getWorkers();
-      return Promise.all(
-        runs
-          .filter((run) => {
-            return this.canViewRun(userAuth, run);
-          })
-          .map(async (run) => {
-            const jobSchedule = run.schedule;
-            return createPublicJobRun(
-              run,
-              jobSchedule ?? run.scheduleTitle,
-              await this.getHandler(run.handlerId, run.handlerVersion, workers)
-            );
-          })
-      );
+        });
+      }
+
+      if (userAuth.groups.length > 0) {
+        // Condition for runs where the user's groups have access
+        orConditions.push({
+          "$groupViewAccess.id$": {
+            [Op.in]: userAuth.groups,
+          },
+        });
+      }
+      // If no username and no groups, return an empty array
+      if (orConditions.length === 0) {
+        return { count: 0, rows: [] };
+      }
     }
 
-    const jobSchedule = await Schedule.findByPk(scheduleId, {
-      include: [
-        {
-          model: Run,
-          as: "lastRun",
+    const where: { scheduleId?: number; [Op.or]?: typeof orConditions } = {};
+
+    if (orConditions.length > 0) {
+      where[Op.or] = orConditions;
+    }
+
+    if (typeof scheduleId === "number") {
+      where.scheduleId = scheduleId;
+    }
+
+    let order: Order | undefined = frontEndOrder;
+    if (frontEndOrder) {
+      const getDurationSQL = () => {
+        switch (this.sequelize.getDialect()) {
+          case "postgres":
+          case "mysql":
+          case "mariadb":
+            // These databases support direct date subtraction
+            return this.sequelize.literal(
+              `("Run"."finishedAt" - "Run"."startedAt")`
+            );
+          case "sqlite":
+            // SQLite requires conversion to Unix timestamps
+            return this.sequelize.literal(
+              `(strftime('%s', "Run"."finishedAt") - strftime('%s', "Run"."startedAt"))`
+            );
+          case "mssql":
+            // MSSQL uses DATEDIFF to calculate difference in seconds
+            return this.sequelize.literal(
+              `DATEDIFF(second, "Run"."startedAt", "Run"."finishedAt")`
+            );
+          default:
+            throw new Error(
+              `Unsupported dialect: ${this.sequelize.getDialect()}`
+            );
+        }
+      };
+      order = frontEndOrder.map((o) => {
+        if (o[0] === "duration") {
+          return [getDurationSQL(), o[1]];
+        }
+        return o;
+      });
+    }
+
+    const { count, rows } = await this.sequelize.transaction(
+      async (transaction) => {
+        return Run.findAndCountAll({
+          logging: logging ? console.log : undefined,
           include: [
             {
-              model: Worker,
-              as: "worker",
+              model: Schedule,
+              as: "schedule",
+              include: [
+                {
+                  model: Run,
+                  as: "lastRun",
+                  include: [
+                    {
+                      model: Worker,
+                      as: "worker",
+                    },
+                  ],
+                },
+              ],
+            },
+            { model: Worker, as: "worker" },
+            {
+              model: User,
+              as: "userViewAccess",
+              attributes: ["id"],
+              through: { attributes: [] },
+            },
+            {
+              model: Group,
+              as: "groupViewAccess",
+              attributes: ["id"],
+              through: { attributes: [] },
             },
           ],
-        },
-      ],
-    });
-    if (!jobSchedule) {
-      throw new Error("invalid jobScheduleId");
-    }
-    const runs = await jobSchedule.getRuns({
-      limit,
-      order,
-      offset,
-      include: [
-        {
-          model: Worker,
-          as: "worker",
-        },
-      ],
-    });
-    const workers = await this.getWorkers();
-    return Promise.all(
-      runs.map(async (run) =>
-        createPublicJobRun(
-          run,
-          jobSchedule,
-          await this.getHandler(
-            jobSchedule.handlerId,
-            jobSchedule.handlerVersion,
-            workers
-          )
-        )
-      )
+          where,
+          limit: limit ?? 25,
+          order,
+          subQuery: false,
+          offset: offset ?? 0,
+          transaction,
+        });
+      }
     );
+
+    const workers = await this.getWorkers(authHeader);
+
+    const runs = rows.map((run) => {
+      const jobSchedule = run.schedule;
+      return createPublicJobRun(
+        run,
+        jobSchedule ?? run.scheduleTitle,
+        this.getHandler(run.handlerId, run.handlerVersion, workers)
+      );
+    });
+
+    return {
+      count,
+      rows: runs,
+    };
   }
-  public async getRun(runId: number): Promise<PublicJobRun> {
+  public async getRun(
+    authHeader: z.output<typeof AuthHeader>,
+    runId: number
+  ): Promise<PublicJobRun> {
     const run = await Run.findByPk(runId, {
       include: [
         {
@@ -1356,7 +1628,11 @@ export class PrivateBackend {
     return createPublicJobRun(
       run,
       schedule ?? run.scheduleTitle,
-      await this.getHandler(run.handlerId, run.handlerVersion)
+      this.getHandler(
+        run.handlerId,
+        run.handlerVersion,
+        await this.getWorkers(authHeader)
+      )
     );
   }
 
@@ -1374,12 +1650,15 @@ export class PrivateBackend {
     await this.registerWorker();
   }
 
-  public async deleteRun(runId: number): Promise<PublicJobRun> {
+  public async deleteRun(
+    authHeader: z.output<typeof AuthHeader>,
+    runId: number
+  ): Promise<PublicJobRun> {
     const run = await Run.findByPk(runId);
     if (!run) {
       throw new Error("invalid runId");
     }
-    const publicRun = await this.getRun(runId);
+    const publicRun = await this.getRun(authHeader, runId);
 
     await run.destroy();
 
@@ -1393,7 +1672,10 @@ export class PrivateBackend {
     });
     return runIds;
   }
-  public async getSchedule(id: number): Promise<PublicJobSchedule | undefined> {
+  public async getSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    id: number
+  ): Promise<PublicJobSchedule | undefined> {
     const schedule = await Schedule.findByPk(id, {
       include: [
         {
@@ -1411,23 +1693,23 @@ export class PrivateBackend {
     if (!schedule) {
       return;
     }
-    const handler = await this.getHandler(
+    const handler = this.getHandler(
       schedule.handlerId,
-      schedule.handlerVersion
+      schedule.handlerVersion,
+      await this.getWorkers(authHeader)
     );
     return createPublicJobSchedule(schedule, handler);
   }
 
-  private async getHandler(
+  private getHandler(
     handlerId: string,
     version: number,
-    _workers?: PublicWorker[]
-  ): Promise<string | PublicJobDefinition> {
+    workers: PublicWorker[]
+  ): string | PublicJobDefinition {
     const onServerHandler = this.definedJobs[handlerId]?.[version];
     if (onServerHandler) {
       return createPublicJobDefinition(onServerHandler);
     }
-    const workers = _workers ?? (await this.getWorkers());
     const workersThatAreUp = workers.filter((worker) => {
       // prioritize workers that are up
       return worker.status === WorkerStatus.UP;
@@ -1445,7 +1727,7 @@ export class PrivateBackend {
 
   public async getLatestHandler(
     handlerId: string,
-    authHeader: string
+    authHeader: z.output<typeof AuthHeader>
   ): Promise<PublicJobDefinition> {
     const handlers = await this.getLatestHandlers(authHeader);
     const handler = handlers.find((h) => h.id === handlerId);
@@ -1456,8 +1738,8 @@ export class PrivateBackend {
   }
 
   private canView(
-    user: UserAccess,
-    access?: { users?: string[]; groups?: string[] }
+    user: UserAuth,
+    access?: { users?: number[]; groups?: number[] }
   ) {
     if (!access) {
       return false;
@@ -1465,8 +1747,8 @@ export class PrivateBackend {
     if (user.admin) {
       return true;
     }
-    if (user.username) {
-      if (access.users?.includes(user.username)) {
+    if (user.userId) {
+      if (access.users?.includes(user.userId)) {
         return true;
       }
     }
@@ -1478,14 +1760,14 @@ export class PrivateBackend {
     return false;
   }
 
-  public canViewWorker(user: UserAccess, worker: Worker): boolean {
+  public canViewWorker(user: UserAuth, worker: Worker): boolean {
     if (user.admin) {
       return true;
     }
     return this.canView(user, worker.access?.view);
   }
 
-  public canViewFunction(user: UserAccess, fn: PublicJobDefinition): boolean {
+  public canViewFunction(user: UserAuth, fn: PublicJobDefinition): boolean {
     if (user.admin) {
       return true;
     }
@@ -1495,23 +1777,16 @@ export class PrivateBackend {
     return false;
   }
 
-  public canViewSchedule(user: UserAccess, schedule: Schedule): boolean {
+  public canViewSchedule(user: UserAuth, schedule: Schedule): boolean {
     if (user.admin) {
       return true;
     }
     return this.canView(user, schedule.access?.view);
   }
 
-  public canViewRun(user: UserAccess, run: Run): boolean {
-    if (user.admin) {
-      return true;
-    }
-    return this.canView(user, run.access?.view);
-  }
-
   public async getUserAuth(
-    authHeader: string
-  ): Promise<UserAccess | undefined> {
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<UserAuth | undefined> {
     const [type, token] = z
       .tuple([
         z.union([
@@ -1547,8 +1822,8 @@ export class PrivateBackend {
         if (user) {
           return {
             admin: user.admin,
-            groups: (user.groups ?? []).map((group) => group.groupName),
-            username: user.username,
+            groups: (user.groups ?? []).map((group) => group.id),
+            userId: user.id,
           };
         }
       } catch (error) {
@@ -1584,8 +1859,8 @@ export class PrivateBackend {
       if (apiKey) {
         return {
           admin: apiKey.user.admin,
-          groups: (apiKey.user.groups ?? []).map((group) => group.groupName),
-          username: apiKey.user.username,
+          groups: (apiKey.user.groups ?? []).map((group) => group.id),
+          userId: apiKey.user.id,
         };
       }
     }
@@ -1593,13 +1868,13 @@ export class PrivateBackend {
   }
 
   public async getLatestHandlers(
-    authHeader: string
+    authHeader: z.output<typeof AuthHeader>
   ): Promise<PublicJobDefinition[]> {
     const handlerMap: Record<
       string,
       { def: PublicJobDefinition; version: number } | undefined
     > = {};
-    const upWorkers = (await this.getWorkers()).filter((worker) => {
+    const upWorkers = (await this.getWorkers(authHeader)).filter((worker) => {
       return worker.status === WorkerStatus.UP;
     });
 
@@ -1642,19 +1917,16 @@ export class PrivateBackend {
   }
 
   public async getSchedules(
+    authHeader: z.output<typeof AuthHeader>,
     filters?: z.output<typeof SchedulesFilterSchema>
   ): Promise<PublicJobSchedule[]> {
     const dbSchedules = await this.getDbSchedules(filters);
-    const workers = await this.getWorkers();
+    const workers = await this.getWorkers(authHeader);
     return Promise.all(
-      dbSchedules.map(async (schedule) => {
+      dbSchedules.map((schedule) => {
         return createPublicJobSchedule(
           schedule,
-          await this.getHandler(
-            schedule.handlerId,
-            schedule.handlerVersion,
-            workers
-          )
+          this.getHandler(schedule.handlerId, schedule.handlerVersion, workers)
         );
       })
     );
@@ -1925,18 +2197,21 @@ export class PrivateBackend {
   }
 
   public async scheduleJob(
+    authHeader: z.output<typeof AuthHeader>,
     handlerId: string,
     handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult>;
   public async scheduleJob<T extends ZodType = ZodType>(
+    authHeader: z.output<typeof AuthHeader>,
     job: JobDefinition<T>,
     handlerVersion: number,
     data: z.infer<T>,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult>;
   public async scheduleJob(
+    authHeader: z.output<typeof AuthHeader>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     def: string | JobDefinition<any>,
     handlerVersion: number,
@@ -1974,7 +2249,11 @@ export class PrivateBackend {
     return {
       schedule: createPublicJobSchedule(
         dbSchedule,
-        await this.getHandler(dbSchedule.handlerId, dbSchedule.handlerVersion)
+        this.getHandler(
+          dbSchedule.handlerId,
+          dbSchedule.handlerVersion,
+          await this.getWorkers(authHeader)
+        )
       ),
       status,
     };
@@ -2259,6 +2538,7 @@ export class PrivateBackend {
   }
 
   public async getWorkers(
+    authHeader: z.output<typeof AuthHeader>,
     where?: WhereOptions<
       InferAttributes<
         Worker,
@@ -2268,6 +2548,11 @@ export class PrivateBackend {
       >
     >
   ): Promise<z.output<typeof PublicWorkerSchema>[]> {
+    const userAuth = await this.getUserAuth(authHeader);
+    if (!userAuth) {
+      return [];
+    }
+
     const allWorkers = await this.Worker.findAll({
       where,
       include: [
@@ -2281,7 +2566,9 @@ export class PrivateBackend {
         },
       ],
     });
-    return allWorkers.map(createPublicWorker);
+    return allWorkers
+      .filter((worker) => this.canViewWorker(userAuth, worker))
+      .map(createPublicWorker);
   }
 
   public async migrateDatabase() {
@@ -2353,7 +2640,10 @@ export class PrivateBackend {
   /**
    * Will run a scheduele directly
    */
-  protected async runSchedule(scheduleId: number) {
+  protected async runSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    scheduleId: number
+  ) {
     const schedule = await Schedule.findByPk(scheduleId, {
       include: [
         {
@@ -2381,7 +2671,11 @@ export class PrivateBackend {
     return createPublicJobRun(
       run,
       schedule,
-      await this.getHandler(schedule.handlerId, schedule.handlerVersion)
+      this.getHandler(
+        schedule.handlerId,
+        schedule.handlerVersion,
+        await this.getWorkers(authHeader)
+      )
     );
   }
 
@@ -2389,6 +2683,7 @@ export class PrivateBackend {
    * When updating the schedule from the schedule details page with the update button (this is the modal)
    */
   public async updateSchedule(
+    authHeader: z.output<typeof AuthHeader>,
     updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
   ) {
     const schedule = await Schedule.findByPk(updatePayload.id, {
@@ -2434,7 +2729,11 @@ export class PrivateBackend {
     await schedule.save();
     return createPublicJobSchedule(
       schedule,
-      await this.getHandler(schedule.handlerId, schedule.handlerVersion)
+      this.getHandler(
+        schedule.handlerId,
+        schedule.handlerVersion,
+        await this.getWorkers(authHeader)
+      )
     );
   }
 
@@ -2729,30 +3028,84 @@ export class PrivateBackend {
 
     const worker = await this.registerWorker();
 
-    const run = await schedule.createRun(
-      {
-        scheduledToRunAt: runAt,
-        startedAt,
-        data: schedule.data,
-        workerId: worker.id,
-        handlerId: definition.id,
-        handlerVersion: definition.version,
-        scheduleTitle: `${schedule.title}, #${schedule.id}`,
-        workerTitle: `${worker.title}, #${worker.id}`,
-        // inherit the access from the schedule
-        access: schedule.defaultRunAccess,
-      },
-      {
-        include: {
-          model: Worker,
-          as: "worker",
+    const run = await this.sequelize.transaction(async (transaction) => {
+      const tRun = await schedule.createRun(
+        {
+          scheduledToRunAt: runAt,
+          startedAt,
+          data: schedule.data,
+          workerId: worker.id,
+          handlerId: definition.id,
+          handlerVersion: definition.version,
+          scheduleTitle: `${schedule.title}, #${schedule.id}`,
+          workerTitle: `${worker.title}, #${worker.id}`,
         },
-      }
-    );
+        {
+          include: {
+            model: Worker,
+            as: "worker",
+          },
+          transaction,
+        }
+      );
 
-    schedule.numRuns += 1;
-    await schedule.setLastRun(run);
-    await schedule.save();
+      // inherit the access from the schedule
+      const accessData = schedule.defaultRunAccess;
+
+      if (!accessData) {
+        return tRun;
+      }
+
+      // Set up view access associations
+      if (accessData.view) {
+        if (accessData.view.users && accessData.view.users.length > 0) {
+          await tRun.setUserViewAccess(accessData.view.users, { transaction });
+        }
+        if (accessData.view.groups && accessData.view.groups.length > 0) {
+          await tRun.setGroupViewAccess(accessData.view.groups, {
+            transaction,
+          });
+        }
+      }
+
+      // Set up view logs access associations
+      if (accessData.viewLogs) {
+        if (accessData.viewLogs.users && accessData.viewLogs.users.length > 0) {
+          await tRun.setUserViewLogsAccess(accessData.viewLogs.users, {
+            transaction,
+          });
+        }
+        if (
+          accessData.viewLogs.groups &&
+          accessData.viewLogs.groups.length > 0
+        ) {
+          await tRun.setGroupViewLogsAccess(accessData.viewLogs.groups, {
+            transaction,
+          });
+        }
+      }
+
+      // Set up delete access associations
+      if (accessData.delete) {
+        if (accessData.delete.users && accessData.delete.users.length > 0) {
+          await tRun.setUserDeleteAccess(accessData.delete.users, {
+            transaction,
+          });
+        }
+        if (accessData.delete.groups && accessData.delete.groups.length > 0) {
+          await tRun.setGroupDeleteAccess(accessData.delete.groups, {
+            transaction,
+          });
+        }
+      }
+      return tRun;
+    });
+
+    await this.sequelize.transaction(async (transaction) => {
+      schedule.numRuns += 1;
+      await schedule.setLastRun(run, { transaction });
+      await schedule.save({ transaction });
+    });
 
     const { finishedAt } = await this.runDbSchedule(schedule, run);
     log(
@@ -2871,7 +3224,10 @@ export class PrivateBackend {
     await Schedule.destroy({ where: { id: scheduleIds } });
     return scheduleIds;
   }
-  public async deleteSchedule(scheduleId: number) {
+  public async deleteSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    scheduleId: number
+  ) {
     const schedule = await Schedule.findByPk(scheduleId, {
       include: [
         {
@@ -2889,9 +3245,10 @@ export class PrivateBackend {
     if (!schedule) {
       throw new Error("invalid scheduleId");
     }
-    const jobDef = await this.getHandler(
+    const jobDef = this.getHandler(
       schedule.handlerId,
-      schedule.handlerVersion
+      schedule.handlerVersion,
+      await this.getWorkers(authHeader)
     );
     const publicSchedule = createPublicJobSchedule(schedule, jobDef);
 
@@ -2917,7 +3274,10 @@ export class PrivateBackend {
     password: string;
     name: string;
     admin?: boolean;
-  }) {
+  }): Promise<{
+    access?: { refreshToken: string; accessToken: string };
+    user: User;
+  }> {
     const hashPassword = () => {
       return new Promise<string>((resolve, reject) => {
         const salt = crypto.randomBytes(16).toString("hex");
@@ -2935,7 +3295,7 @@ export class PrivateBackend {
     };
 
     const hashedPassword = await hashPassword();
-    await this.User.findOrCreate({
+    const user = await this.User.findOrCreate({
       where: {
         username,
       },
@@ -2947,7 +3307,7 @@ export class PrivateBackend {
         name,
       },
     });
-    return this.login(username, password);
+    return { access: await this.login(username, password), user: user[0] };
   }
 
   public async login(
@@ -3109,9 +3469,12 @@ export class TestBackend extends PrivateBackend {
 
   public registeredWorker: Worker | undefined = this.registeredWorker;
 
-  private authHeader: string;
+  public authHeader: z.output<typeof AuthHeader>;
 
-  constructor(backendOptions: BackendOptions, authHeader: string) {
+  constructor(
+    backendOptions: BackendOptions,
+    authHeader: z.output<typeof AuthHeader>
+  ) {
     super(backendOptions);
     this.authHeader = authHeader;
   }
@@ -3151,8 +3514,11 @@ export class TestBackend extends PrivateBackend {
   public async fork(runMessage: RunHandlerInCp, streamHandle: StreamHandle) {
     return super.fork(runMessage, streamHandle);
   }
-  public async runSchedule(scheduleId: number) {
-    return super.runSchedule(scheduleId);
+  public async runSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    scheduleId: number
+  ) {
+    return super.runSchedule(authHeader, scheduleId);
   }
   public claimUnclaimedOverdueJobs() {
     return super.claimUnclaimedOverdueJobs();

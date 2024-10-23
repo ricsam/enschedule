@@ -13,8 +13,10 @@ import type { Breadcrumb } from "~/types";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "../../utils/getParentUrl";
 import { Typography } from "@mui/material";
+import { getAuthHeader } from "~/sessions";
 
 export const action: ActionFunction = async ({ request, context }) => {
+  const authHeader = await getAuthHeader(request);
   const fd = await request.formData();
   const url = getParentUrl(request.url);
   const id = z
@@ -22,7 +24,7 @@ export const action: ActionFunction = async ({ request, context }) => {
     .int()
     .positive()
     .parse(Number(fd.get("id")));
-  await (await getWorker(context.worker)).deleteRun(id);
+  await (await getWorker(context.worker)).deleteRun(authHeader, id);
   return redirect(url);
 };
 

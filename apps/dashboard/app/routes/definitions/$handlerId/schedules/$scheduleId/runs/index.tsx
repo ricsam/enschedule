@@ -25,15 +25,15 @@ export const getLoaderData = async (
   worker: DashboardWorker,
   request: Request
 ) => {
+  const authHeader = await getAuthHeader(request);
   const id = getScheduleId(params);
-  const schedule = await worker.getSchedule(id);
+  const schedule = await worker.getSchedule(authHeader, id);
   if (!schedule) {
     throw new Error("invalid id");
   }
-  const authHeader = await getAuthHeader(request);
   const runs = await worker.getRuns({ scheduleId: schedule.id, authHeader });
 
-  const workers = await worker.getWorkers();
+  const workers = await worker.getWorkers(authHeader);
   const activeWorkers = workers.filter(
     (worker) =>
       worker.status === WorkerStatus.UP &&
@@ -78,7 +78,7 @@ export default function Runs() {
       breadcrumbs={breadcrumbs}
       navbar={useNavbar(schedulePage, runsPage)}
     >
-      <RunsTable runs={runs} />
+      <RunsTable runs={runs.rows} count={runs.count} />
     </RootLayout>
   );
 }

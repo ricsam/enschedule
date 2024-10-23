@@ -39,4 +39,5 @@ export {
   ScheduleJobResultSchema,
   SchedulesFilterSchema,
   UserSchema,
+  AuthHeader,
 } from "./types";

@@ -1,3 +1,4 @@
+import type { AuthHeader } from "@enschedule/types";
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import { z } from "zod";
 
@@ -89,11 +90,16 @@ export async function refreshToken(request: Request) {
   const requestUrl = new URL(request.url);
   const refreshUrl = new URL(request.url);
   refreshUrl.pathname = "/refresh";
-  refreshUrl.searchParams.set("referrer", requestUrl.pathname);
-  return redirect(refreshUrl.toString());
+  refreshUrl.searchParams.set(
+    "referrer",
+    requestUrl.pathname + requestUrl.search
+  );
+  return redirect(refreshUrl.pathname + refreshUrl.search);
 }
 
-export async function getAuthHeader(request: Request): Promise<string> {
+export async function getAuthHeader(
+  request: Request
+): Promise<z.output<typeof AuthHeader>> {
   const cookies = await getCookies(request);
 
   if (cookies.access.session.has("token")) {
@@ -103,7 +109,12 @@ export async function getAuthHeader(request: Request): Promise<string> {
     const refreshRedirect = await refreshToken(request);
     throw refreshRedirect;
   }
-  throw redirect("/login");
+  const url = new URL(request.url);
+  url.pathname = "/login";
+  const redirectUrl = new URL(request.url);
+  url.search = "";
+  url.searchParams.set("redirect", redirectUrl.pathname + redirectUrl.search);
+  throw redirect(url.pathname + url.search);
 }
 
 export async function hasRefreshToken(request: Request) {

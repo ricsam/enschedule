@@ -105,6 +105,7 @@ export function ExpandableTable<T>({
   defaultSorting,
   msButtons,
   ToolbarWrapper: _ToolbarWrapper,
+  count,
   ...paperProps
 }: {
   rows: T[];
@@ -114,6 +115,7 @@ export function ExpandableTable<T>({
   msButtons?: React.ReactNode;
   columns: ColumnDef<T, any>[];
   ToolbarWrapper?: React.ComponentType<{ children: React.ReactNode }>;
+  count?: number;
 } & PaperProps) {
   const columns = React.useMemo((): ColumnDef<T, any>[] => {
     const cols = [..._columns];
@@ -152,6 +154,8 @@ export function ExpandableTable<T>({
 
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
+  const rowLen = count ?? rows.length;
+
   const table = useReactTable({
     data: rows,
     columns,
@@ -161,8 +165,10 @@ export function ExpandableTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onRowSelectionChange: msButtons ? setRowSelection : undefined,
+    manualPagination: count !== undefined,
+    manualSorting: count !== undefined,
     enableExpanding: !!renderRow,
-    pageCount: Math.ceil(rows.length / pagination.pageSize),
+    pageCount: Math.ceil(rowLen / pagination.pageSize),
     state: {
       sorting,
       expanded: renderRow ? expanded : undefined,
@@ -184,7 +190,7 @@ export function ExpandableTable<T>({
     setPage(0);
   };
 
-  if (page * rowsPerPage >= rows.length && page > 0) {
+  if (page * rowsPerPage >= rowLen && page > 0) {
     return (
       <Box sx={{ maxWidth: 600 }}>
         <Box pb={1.5} />
@@ -205,8 +211,8 @@ export function ExpandableTable<T>({
             }
           >
             <AlertTitle>Pagination is out of range</AlertTitle>
-            There are only {rows.length} rows in this table, and you want to
-            view page {page + 1} with {rowsPerPage} rows per page.
+            There are only {rowLen} rows in this table, and you want to view
+            page {page + 1} with {rowsPerPage} rows per page.
           </Alert>
         </Stack>
       </Box>
@@ -227,7 +233,7 @@ export function ExpandableTable<T>({
         <ToolbarWrapper>
           <EnhancedTableToolbar
             title={title}
-            totalCount={rows.length}
+            totalCount={rowLen}
             retrieved={rows.length}
             msButtons={msButtons}
           />
@@ -368,7 +374,7 @@ export function ExpandableTable<T>({
         data-testid="pagination"
         data-rows-per-page={rowsPerPage}
         component="div"
-        count={rows.length}
+        count={rowLen}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

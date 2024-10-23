@@ -9,14 +9,20 @@ import type { Breadcrumb, DashboardWorker } from "~/types";
 import { useRunBreadcrumbs } from "~/utils/breadcrumbUtils";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from "..";
+import { getAuthHeader } from "~/sessions";
 
-const getLoaderData = async (params: Params, worker: DashboardWorker) => {
+const getLoaderData = async (
+  params: Params,
+  worker: DashboardWorker,
+  request: Request
+) => {
+  const authHeader = await getAuthHeader(request);
   const runId = Number(params.runId);
   if (Number.isNaN(runId)) {
     throw new Error("Invalid runId provided");
   }
 
-  const run = await worker.getRun(runId);
+  const run = await worker.getRun(authHeader, runId);
   if (!run) {
     throw new Error("Run not found");
   }
@@ -31,8 +37,8 @@ export const useBreadcrumbs = (
   return extendBreadcrumbs(useParentBreadcrumbs(), useRunBreadcrumbs(data));
 };
 
-export const loader: LoaderFunction = async ({ params, context }) => {
-  return json(await getLoaderData(params, await getWorker(context.worker)));
+export const loader: LoaderFunction = async ({ params, context, request }) => {
+  return json(await getLoaderData(params, await getWorker(context.worker), request));
 };
 
 function useData() {

@@ -27,8 +27,8 @@ export const useBreadcrumbs = (
 const getLoaderData = getRunData;
 
 export const loader: LoaderFunction = async (args) => {
-  const { params, context } = args;
-  return json(await getLoaderData(params, await getWorker(context.worker)));
+  const { params, context, request } = args;
+  return json(await getLoaderData(params, await getWorker(context.worker), request));
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

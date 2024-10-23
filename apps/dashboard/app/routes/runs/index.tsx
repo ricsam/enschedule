@@ -1,5 +1,5 @@
-import type { PublicJobRun } from "@enschedule/types";
-import type { LoaderFunction } from "@remix-run/node";
+import type { ListRunsOptions, PublicJobRun } from "@enschedule/types";
+import type { LoaderFunctionArgs, TypedResponse } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
@@ -9,18 +9,59 @@ import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb } from "~/types";
 
 export type LoaderData = {
-  runs: PublicJobRun[];
+  rows: PublicJobRun[];
+  count: number;
 };
 
 export { action } from "~/components/RunsTable";
 
-export const loader: LoaderFunction = async ({ request, context }) => {
+export const loader = async ({
+  request,
+  context,
+}: LoaderFunctionArgs): Promise<TypedResponse<LoaderData>> => {
   const authHeader = await getAuthHeader(request);
+  const url = new URL(request.url);
 
-  const runs: PublicJobRun[] = await (
+  let limit = 25;
+  const rpp = url.searchParams.get("rowsPerPage");
+  if (rpp) {
+    limit = Number(rpp);
+  }
+
+  let offset = 0;
+  if (url.searchParams.has("page")) {
+    offset = (Number(url.searchParams.get("page")) - 1) * limit;
+  }
+
+  const searchParams = url.searchParams;
+
+  const defaultSorting: ListRunsOptions["order"] = [["startedAt", "DESC"]];
+
+  const getOrder = (): ListRunsOptions["order"] => {
+    const urlSorting = searchParams.getAll("sorting");
+    if (urlSorting) {
+      const listOfSortings: ListRunsOptions["order"] = searchParams
+        .getAll("sorting")
+        .map((value) => {
+          const [id, sorting] = value.split(".");
+          return [id, sorting === "desc" ? "DESC" : "ASC"];
+        });
+      if (listOfSortings.length > 0) {
+        return listOfSortings;
+      }
+      return defaultSorting;
+    }
+    return defaultSorting;
+  };
+
+  const order = getOrder();
+
+  console.log("limit, offset, sorting", limit, offset, order);
+
+  const runs: { rows: PublicJobRun[]; count: number } = await (
     await getWorker(context.worker)
-  ).getRuns({ authHeader });
-  return json({ runs });
+  ).getRuns({ authHeader, limit, offset, order });
+  return json(runs);
 };
 
 export function useData() {
@@ -32,7 +73,7 @@ export const useBreadcrumbs = (): Breadcrumb[] => {
 };
 
 export default function Runs() {
-  const { runs } = useData();
+  const { rows, count } = useData();
 
   return (
     <RootLayout
@@ -42,7 +83,7 @@ export default function Runs() {
       }}
       breadcrumbs={useBreadcrumbs()}
     >
-      <RunsTable runs={runs} />
+      <RunsTable runs={rows} count={count} />
     </RootLayout>
   );
 }

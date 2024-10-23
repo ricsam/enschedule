@@ -534,4 +534,171 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
       await queryInterface.dropTable("Users");
     },
   },
+  {
+    name: "00001-improve-access-control-for-runs",
+    up: async ({ context: queryInterface }) => {
+      // Remove the 'access' column from the 'Runs' table
+      await queryInterface.removeColumn("Runs", "access");
+
+      // Create new tables for access control
+      await queryInterface.createTable("RunUserViewAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        UserId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Users", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      await queryInterface.createTable("RunGroupViewAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        GroupId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Groups", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      await queryInterface.createTable("RunUserViewLogsAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        UserId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Users", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      await queryInterface.createTable("RunGroupViewLogsAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        GroupId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Groups", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      await queryInterface.createTable("RunUserDeleteAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        UserId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Users", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      await queryInterface.createTable("RunGroupDeleteAccess", {
+        RunId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Runs", key: "id" },
+          onDelete: "CASCADE",
+        },
+        GroupId: {
+          type: DataTypes.INTEGER,
+          references: { model: "Groups", key: "id" },
+          onDelete: "CASCADE",
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
+      });
+
+      // Add indexes to improve query performance
+      await queryInterface.addIndex("RunUserViewAccess", ["RunId", "UserId"]);
+      await queryInterface.addIndex("RunGroupViewAccess", ["RunId", "GroupId"]);
+      await queryInterface.addIndex("RunUserViewLogsAccess", [
+        "RunId",
+        "UserId",
+      ]);
+      await queryInterface.addIndex("RunGroupViewLogsAccess", [
+        "RunId",
+        "GroupId",
+      ]);
+      await queryInterface.addIndex("RunUserDeleteAccess", ["RunId", "UserId"]);
+      await queryInterface.addIndex("RunGroupDeleteAccess", [
+        "RunId",
+        "GroupId",
+      ]);
+    },
+
+    down: async ({ context: queryInterface }) => {
+      // Drop the new tables in reverse order
+      await queryInterface.dropTable("RunGroupDeleteAccess");
+      await queryInterface.dropTable("RunUserDeleteAccess");
+      await queryInterface.dropTable("RunGroupViewLogsAccess");
+      await queryInterface.dropTable("RunUserViewLogsAccess");
+      await queryInterface.dropTable("RunGroupViewAccess");
+      await queryInterface.dropTable("RunUserViewAccess");
+
+      // Add back the 'access' column to the 'Runs' table
+      await queryInterface.addColumn("Runs", "access", {
+        type: DataTypes.JSON,
+        allowNull: true,
+      });
+    },
+  },
 ];

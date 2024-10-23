@@ -33,6 +33,7 @@ describe("apply", () => {
     expect(scheduleJobMock.mock.calls).toMatchInlineSnapshot(`
       [
         [
+          "Api-Key secret",
           "log-job",
           1,
           {

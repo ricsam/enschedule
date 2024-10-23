@@ -49,6 +49,7 @@ import { RootLayout } from "~/components/Layout";
 import { getWorker } from "~/createWorker.server";
 import icon from "~/icon.svg";
 import { getLoaderData } from "./runLoader.server";
+import { getAuthHeader } from "~/sessions";
 
 const SerializedJobEventSchema = z.intersection(
   z.object({
@@ -61,6 +62,8 @@ const SerializedJobEventSchema = z.intersection(
 );
 
 export const action: ActionFunction = async ({ request, context }) => {
+  const authHeader = await getAuthHeader(request);
+
   const body = await request.formData();
   const jsonString = z.string().parse(body.get("jsonData"));
 
@@ -75,6 +78,7 @@ export const action: ActionFunction = async ({ request, context }) => {
   const response = await (
     await getWorker(context.worker)
   ).scheduleJob(
+    authHeader,
     handlerId,
     handlerVersion,
     data,

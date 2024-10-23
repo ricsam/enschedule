@@ -7,6 +7,7 @@ import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import WorkersTable from "~/components/WorkersTable";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb, DashboardWorker } from "~/types";
 
 export const useBreadcrumbs = (): Breadcrumb[] => {
@@ -20,17 +21,19 @@ export const useBreadcrumbs = (): Breadcrumb[] => {
 
 export async function getLoaderData(
   params: Params<string>,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ): Promise<{
   workers: z.output<typeof PublicWorkerSchema>[];
 }> {
-  const workers = await worker.getWorkers();
+  const authHeader = await getAuthHeader(request);
+  const workers = await worker.getWorkers(authHeader);
   return { workers };
 }
 
-export const loader: LoaderFunction = async ({ params, context }) => {
+export const loader: LoaderFunction = async ({ params, context, request }) => {
   const worker = await getWorker(context.worker);
-  return json<LoaderData>(await getLoaderData(params, worker));
+  return json<LoaderData>(await getLoaderData(params, worker, request));
 };
 
 type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

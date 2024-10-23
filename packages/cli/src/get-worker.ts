@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { WorkerAPI } from "@enschedule/worker-api";
 import { z } from "zod";
+import { AuthHeader } from "@enschedule/types";
 
 // If the config file doesn't exist, create it with default values
 const defaultConfig = {
@@ -23,7 +24,7 @@ const configSchema = z.object({
   apiVersion: ConfigValSchema("apiVersion"),
 });
 
-const getConfig = async () => {
+export const getConfig = async () => {
   const configPath = `${os.homedir()}/.enschedule/config.json`;
 
   try {
@@ -65,4 +66,14 @@ export const getWorker = async () => {
   const options = await getConfig();
   _worker = new WorkerAPI(options.apiKey, options.apiEndpoint);
   return _worker;
+};
+
+export const getAuthHeader = async () => {
+  const options = await getConfig();
+  const authHeader: z.output<typeof AuthHeader> =
+    options.apiKey.startsWith("User-Api-Key ") ||
+    options.apiKey.startsWith("Api-Key ")
+      ? AuthHeader.parse(options.apiKey)
+      : `User-Api-Key ${options.apiKey}`;
+  return authHeader;
 };

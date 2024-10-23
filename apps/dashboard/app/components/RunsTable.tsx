@@ -45,6 +45,8 @@ const columns: ColumnDef<RowData, any>[] = [
       );
     },
     header: "Status",
+    enableSorting: false,
+    enableMultiSort: false
   }),
   columnHelper.accessor("id", {
     cell: (info) => {
@@ -73,7 +75,11 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
   {
     cell: ({ row, getValue }) => {
-      return <Typography suppressHydrationWarning>{getValue()}</Typography>;
+      return (
+        <Typography suppressHydrationWarning fontSize="inherit">
+          {getValue()}
+        </Typography>
+      );
     },
     enableSorting: true,
     header: "Duration",
@@ -83,8 +89,10 @@ const columns: ColumnDef<RowData, any>[] = [
         return "-";
       }
       return formatDuration(
-        (run.finishedAt ? new Date(run.finishedAt).getTime() : Date.now()) -
-          new Date(run.startedAt).getTime()
+        run.finishedAt
+          ? new Date(run.finishedAt).getTime() -
+              new Date(run.startedAt).getTime()
+          : Date.now() - new Date(run.startedAt).getTime()
       );
     },
   },
@@ -217,8 +225,10 @@ const { ToolbarWrapper, MsButtons } = createMsButtons({
 
 export default function RunsTable({
   runs,
+  count,
 }: SerializeFrom<{
   runs: PublicJobRun[];
+  count: number;
 }>) {
   return (
     <ExpandableTable
@@ -230,6 +240,7 @@ export default function RunsTable({
         },
       ]}
       rows={runs}
+      count={count}
       title="Runs"
       columns={columns}
       ToolbarWrapper={ToolbarWrapper}

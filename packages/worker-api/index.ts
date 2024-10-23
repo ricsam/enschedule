@@ -4,6 +4,7 @@
 import http from "node:http";
 import https from "node:https";
 import type {
+  AuthHeader,
   ListRunsOptions,
   PublicJobDefinition,
   PublicJobRun,
@@ -59,19 +60,19 @@ export class WorkerAPI {
     method: "POST" | "PUT",
     path: string,
     data?: unknown,
-    authHeader?: string
+    authHeader?: z.output<typeof AuthHeader>
   ): Promise<unknown>;
   private async request(
     method: "GET" | "DELETE",
     path: string,
     data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: string
+    authHeader?: z.output<typeof AuthHeader>
   ): Promise<unknown>;
   private async request(
     method: "POST" | "DELETE" | "GET" | "PUT",
     path: string,
     data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: string
+    authHeader?: z.output<typeof AuthHeader>
   ) {
     let dataString = "";
     if (data && method === "GET") {
@@ -176,7 +177,9 @@ export class WorkerAPI {
     }
   }
 
-  async getLatestHandlers(authHeader: string): Promise<PublicJobDefinition[]> {
+  async getLatestHandlers(
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<PublicJobDefinition[]> {
     const jobDefinitions = await this.request(
       "GET",
       "/job-definitions",
@@ -192,7 +195,7 @@ export class WorkerAPI {
 
   async getLatestHandler(
     id: string,
-    authHeader: string
+    authHeader: z.output<typeof AuthHeader>
   ): Promise<PublicJobDefinition> {
     const definition = await this.request(
       "GET",
@@ -204,9 +207,15 @@ export class WorkerAPI {
   }
 
   async getSchedules(
+    authHeader: z.output<typeof AuthHeader>,
     filter: z.output<typeof SchedulesFilterSchema> = {}
   ): Promise<PublicJobSchedule[]> {
-    const schedules = await this.request("GET", "/schedules", filter);
+    const schedules = await this.request(
+      "GET",
+      "/schedules",
+      filter,
+      authHeader
+    );
     return z.array(publicJobScheduleSchema).parse(schedules);
   }
 
@@ -215,33 +224,62 @@ export class WorkerAPI {
     return z.array(z.number()).parse(workers);
   }
 
-  async getWorkers(): Promise<PublicWorker[]> {
-    const workers = await this.request("GET", "/workers");
+  async getWorkers(
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<PublicWorker[]> {
+    const workers = await this.request(
+      "GET",
+      "/workers",
+      undefined,
+      authHeader
+    );
     return z.array(PublicWorkerSchema).parse(workers);
   }
 
   async scheduleJob(
+    authHeader: z.output<typeof AuthHeader>,
     handlerId: string,
     handlerVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult> {
-    const result = await this.request("POST", "/schedules", {
-      handlerId,
-      handlerVersion,
-      data,
-      options,
-    });
+    const result = await this.request(
+      "POST",
+      "/schedules",
+      {
+        handlerId,
+        handlerVersion,
+        data,
+        options,
+      },
+      authHeader
+    );
     return ScheduleJobResultSchema.parse(result);
   }
 
-  async getSchedule(id: number): Promise<PublicJobSchedule> {
-    const schedule = await this.request("GET", `/schedules/${id}`);
+  async getSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    id: number
+  ): Promise<PublicJobSchedule> {
+    const schedule = await this.request(
+      "GET",
+      `/schedules/${id}`,
+      undefined,
+      authHeader
+    );
     return publicJobScheduleSchema.parse(schedule);
   }
 
-  async deleteSchedule(id: number): Promise<PublicJobSchedule> {
-    const schedule = await this.request("DELETE", `/schedules/${id}`);
+  async deleteSchedule(
+    authHeader: z.output<typeof AuthHeader>,
+    id: number
+  ): Promise<PublicJobSchedule> {
+    const schedule = await this.request(
+      "DELETE",
+      `/schedules/${id}`,
+      undefined,
+      authHeader
+    );
     return publicJobScheduleSchema.parse(schedule);
   }
 
@@ -252,16 +290,21 @@ export class WorkerAPI {
     return z.array(z.number()).parse(response);
   }
 
-  async getRuns(options: ListRunsOptions): Promise<PublicJobRun[]> {
+  async getRuns(
+    options: ListRunsOptions
+  ): Promise<{ count: number; rows: PublicJobRun[] }> {
     const runs = await this.request(
       "GET",
       "/runs",
       ListRunsOptionsSerialize(options)
     );
-    return z.array(publicJobRunSchema).parse(runs);
+    return z
+      .object({ rows: z.array(publicJobRunSchema), count: z.number() })
+      .parse(runs);
   }
 
   async updateSchedule(
+    authHeader: z.output<typeof AuthHeader>,
     updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
   ): Promise<PublicJobSchedule> {
     const schedule = await this.request(
@@ -272,18 +315,25 @@ export class WorkerAPI {
         runAt: updatePayload.runAt
           ? updatePayload.runAt.toJSON()
           : updatePayload.runAt,
-      }
+      },
+      authHeader
     );
     return publicJobScheduleSchema.parse(schedule);
   }
 
-  async getRun(id: number): Promise<PublicJobRun> {
-    const run = await this.request("GET", `/runs/${id}`);
+  async getRun(
+    authHeader: z.output<typeof AuthHeader>,
+    id: number
+  ): Promise<PublicJobRun> {
+    const run = await this.request("GET", `/runs/${id}`, undefined, authHeader);
     return publicJobRunSchema.parse(run);
   }
 
-  async deleteRun(id: number): Promise<PublicJobRun> {
-    const run = await this.request("DELETE", `/runs/${id}`);
+  async deleteRun(
+    authHeader: z.output<typeof AuthHeader>,
+    id: number
+  ): Promise<PublicJobRun> {
+    const run = await this.request("DELETE", `/runs/${id}`, undefined, authHeader);
     return publicJobRunSchema.parse(run);
   }
 

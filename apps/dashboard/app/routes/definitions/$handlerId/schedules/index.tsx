@@ -26,7 +26,7 @@ export async function getLoaderData(
   assert(handlerId, "You must have a handlerId");
   const authHeader = await getAuthHeader(request);
   const jobDefinition = await worker.getLatestHandler(handlerId, authHeader);
-  const schedules = await worker.getSchedules({ handlerId });
+  const schedules = await worker.getSchedules(authHeader, { handlerId });
   return { schedules, jobDefinition };
 }
 

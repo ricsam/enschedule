@@ -9,17 +9,23 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 import React from "react";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb } from "~/types";
 
 export const useBreadcrumbs = (): Breadcrumb[] => {
   return [{ title: "Settings", href: "/settings" }];
+};
+
+export const loader: LoaderFunction = async ({ context, request }) => {
+  await getAuthHeader(request);
+  return null;
 };
 
 export const action: ActionFunction = async ({ request, context }) => {

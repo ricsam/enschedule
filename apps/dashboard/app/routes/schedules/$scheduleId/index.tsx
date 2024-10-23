@@ -12,19 +12,23 @@ import { getWorker } from "~/createWorker.server";
 import type { Breadcrumb, DashboardWorker, NavBar } from "~/types";
 import { extendBreadcrumbs } from "~/utils/extendBreadcrumbs";
 import { useBreadcrumbs as useParentBreadcrumbs } from ".."; // Importing from parent
+import { getAuthHeader } from "~/sessions";
 export { action } from "~/components/SchedulePage";
 
 export const getLoaderData = async (
   params: Params,
-  worker: DashboardWorker
+  worker: DashboardWorker,
+  request: Request
 ) => {
+  const authHeader = await getAuthHeader(request);
   const id = getScheduleId(params);
-  const schedule = await worker.getSchedule(id);
+  const schedule = await worker.getSchedule(authHeader, id);
   if (!schedule) {
     throw new Error("invalid id");
   }
 
-  const workers = await worker.getWorkers();
+
+  const workers = await worker.getWorkers(authHeader);
   const activeWorkers = workers.filter(
     (worker) =>
       worker.status === WorkerStatus.UP &&
@@ -36,10 +40,11 @@ export const getLoaderData = async (
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
 
-export const loader: LoaderFunction = async ({ params, context }) => {
+export const loader: LoaderFunction = async ({ params, context, request }) => {
   const loaderData = await getLoaderData(
     params,
-    await getWorker(context.worker)
+    await getWorker(context.worker),
+    request
   );
   return json(loaderData);
 };

@@ -3,6 +3,7 @@ const scheduleJobMock = jest.fn(() => {
 });
 jest.mock("../get-worker", () => ({
   getWorker: () => ({ scheduleJob: scheduleJobMock }),
+  getAuthHeader: () => "Api-Key secret",
 }));
 
 import { z } from "zod";

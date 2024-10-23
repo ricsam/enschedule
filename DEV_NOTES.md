@@ -52,7 +52,9 @@ if a version is bumped it will be published in the pipeline
 ```
 pnpm lint
 pnpm typecheck
-pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types --filter=@enschedule/cli test
+pnpm run --filter=@enschedule/types --filter=@enschedule/cli test
+TEST_DIALECT=pg pnpm run --filter=@enschedule/pg-driver
+TEST_DIALECT=sqlite pnpm run --filter=@enschedule/pg-driver
 ```
 
 ## Playwright tests

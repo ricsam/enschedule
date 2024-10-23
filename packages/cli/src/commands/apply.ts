@@ -1,10 +1,10 @@
-import fs from "node:fs";
-import { AuthHeader, ScheduleSchema } from "@enschedule/types";
+import { ScheduleSchema } from "@enschedule/types";
 import { Command } from "commander";
 import { glob } from "glob";
 import yaml from "js-yaml";
+import fs from "node:fs";
 import { z } from "zod";
-import { getAuthHeader, getConfig, getWorker } from "../get-worker";
+import { getAuthHeader, getWorker } from "../get-worker";
 
 const isDirectory = async (p: string): Promise<boolean> => {
   const stat = await fs.promises.stat(p);

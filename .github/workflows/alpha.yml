@@ -46,7 +46,7 @@ jobs:
       - name: Run unit tests for postgres
         run: TEST_DIALECT=pg pnpm run --filter=@enschedule/pg-driver
       - name: Run unit tests for sqlite
-        run: TEST_DIALECT=sqlite run --filter=@enschedule/pg-driver
+        run: TEST_DIALECT=sqlite pnpm run --filter=@enschedule/pg-driver
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
       - name: modify package jsons main fields

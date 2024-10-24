@@ -62,7 +62,7 @@ TEST_DIALECT=sqlite pnpm run --filter=@enschedule/pg-driver
 npm run playwright install
 pnpm run --filter test-worker seed
 pnpm run --filter @enschedule/dashboard build
-npm run playwright test
+SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
 ```
 
 ## Build images to test container locally
@@ -78,4 +78,9 @@ docker container run -itd --rm \
   -e ADMIN_ACCOUNT=ricsam:password \
   -p 3333:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
+```
+
+## Utils
+```
+TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --grep create_many_runs
 ```

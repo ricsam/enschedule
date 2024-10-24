@@ -56,8 +56,6 @@ export const loader = async ({
 
   const order = getOrder();
 
-  console.log("limit, offset, sorting", limit, offset, order);
-
   const runs: { rows: PublicJobRun[]; count: number } = await (
     await getWorker(context.worker)
   ).getRuns({ authHeader, limit, offset, order });

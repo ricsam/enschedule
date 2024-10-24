@@ -105,6 +105,7 @@ test.describe("Multi runs", () => {
       .getByTestId("pagination")
       .getByTestId("KeyboardArrowRightIcon")
       .click();
+    await page.waitForURL(/page=2/);
     expect(await getPaginationText()).toBe("11–11 of 11");
 
     await page.getByTestId("table-row-1").getByRole("checkbox").click();

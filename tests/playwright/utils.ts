@@ -284,7 +284,7 @@ export async function addLoginCookie(
   expire: string
 ) {
   // Replicate the cookie process in remix. This may change in the future!
-  const token = jwt.sign({ userId: 1 }, "secret_key", {
+  const token = jwt.sign({ userId: 1, admin: true }, "secret_key", {
     expiresIn: expire,
   });
   await context.addCookies([

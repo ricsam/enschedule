@@ -400,7 +400,18 @@ test.describe("Can update a single schedule", () => {
         page.getByTestId("submit-edit-data").click(),
         page.waitForResponse(/edit-details/),
       ]);
+      expect(
+        await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
+      ).toMatch(/http:\/\/loc12?3?/);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000);
+      });
       await page.reload();
+      expect(
+        page.getByTestId("data-card").getByTestId("monaco-loading")
+      ).toHaveCount(0, {
+        timeout: 20000,
+      });
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
       ).toMatch(/http:\/\/loc12?3?/);

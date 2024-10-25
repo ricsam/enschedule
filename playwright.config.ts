@@ -20,9 +20,8 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  // retries: 0, // fail if there are flakyness
-  // retries: process.env.CI && process.env.TEST_HELM ? 3 : 2,
-  retries: process.env.SKIP_SETUP ? 1 : 3,
+  // In UI dev no retries. In the CI do 5 retries. If testing everything in parallel locally then do 3 retries.
+  retries: process.env.SKIP_SETUP ? 0 : process.env.CI ? 5 : 3,
   /* Opt out of parallel tests on CI. */
   workers:
     process.env.SKIP_SETUP || process.env.TEST_HELM

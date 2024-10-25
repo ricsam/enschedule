@@ -208,7 +208,7 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
 const reset = async (baseUrl: () => string, page: Page) => {
   await login(baseUrl, page);
 
-  await page.goto(`${baseUrl()}/settings`);
+  await page.goto(`${baseUrl()}/admin`);
 
   // reset enschedule
   await page.getByTestId("reset-enschedule").click();

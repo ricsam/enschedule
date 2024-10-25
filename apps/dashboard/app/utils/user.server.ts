@@ -1,5 +1,7 @@
+import { type AuthHeader } from "@enschedule/types";
 import type { AppLoadContext } from "@remix-run/node";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import { getWorker } from "~/createWorker.server";
 import { getCookies } from "~/sessions";
 import type { User } from "~/types";
@@ -20,7 +22,9 @@ const { ACCESS_TOKEN_SECRET } = getTokenEnvs();
 
 export async function authenticate(
   request: Request
-): Promise<User | undefined> {
+): Promise<
+  { user: User; authHeader: z.output<typeof AuthHeader> } | undefined
+> {
   const cookies = await getCookies(request);
 
   if (!cookies.access.session.has("token")) {
@@ -44,7 +48,7 @@ export async function authenticate(
     });
   });
 
-  return user;
+  return { user, authHeader: `Jwt ${token}` };
 }
 
 export const getCurrentUser = async (
@@ -58,7 +62,7 @@ export const getCurrentUser = async (
     }
     const user = await (
       await getWorker(context.worker)
-    ).getUser(userSession.userId);
+    ).getUser(userSession.authHeader, userSession.user.userId);
     return user;
   } catch (err) {
     // maybe session expired or something

@@ -3350,7 +3350,10 @@ export class PrivateBackend {
       userId: user.id,
       refreshToken,
     });
-    return { accessToken: this.createAccessToken(user.id), refreshToken };
+    return {
+      accessToken: this.createAccessToken(user.id, user.admin),
+      refreshToken,
+    };
   }
 
   public async logout(refreshToken: string, allDevices: boolean) {
@@ -3371,8 +3374,8 @@ export class PrivateBackend {
     await this.Session.destroy({ where });
   }
 
-  private createAccessToken(userId: number) {
-    return jwt.sign({ userId }, ACCESS_TOKEN_SECRET, {
+  private createAccessToken(userId: number, admin: boolean) {
+    return jwt.sign({ userId, admin }, ACCESS_TOKEN_SECRET, {
       expiresIn: "30s",
     });
   }
@@ -3422,7 +3425,14 @@ export class PrivateBackend {
       return;
     }
 
-    const newAccessToken = this.createAccessToken(decoded.userId);
+    const user = await this.User.findByPk(decoded.userId);
+
+    if (!user) {
+      log("User not found, but the session exists. This should not happen");
+      return;
+    }
+
+    const newAccessToken = this.createAccessToken(user.id, user.admin);
     const newRefreshToken = this.createRefreshToken(decoded.userId);
     session.refreshToken = newRefreshToken;
     await session.save();
@@ -3433,9 +3443,28 @@ export class PrivateBackend {
     };
   }
 
-  public async getUser(userId: number) {
+  public async getUser(
+    authHeader: z.output<typeof AuthHeader>,
+    userId: number
+  ) {
+    const auth = await this.getUserAuth(authHeader);
+    if (!auth) {
+      return;
+    }
+    if (auth.userId !== userId && !auth.admin) {
+      return;
+    }
     const user = await this.User.findByPk(userId);
     return user ? createPublicUser(user) : undefined;
+  }
+
+  public async getUsers(authHeader: z.output<typeof AuthHeader>) {
+    const auth = await this.getUserAuth(authHeader);
+    if (!auth?.admin) {
+      return [];
+    }
+    const users = await this.User.findAll();
+    return users.map(createPublicUser);
   }
 }
 

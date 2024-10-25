@@ -138,7 +138,13 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
     );
     worker
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      .scheduleJob(authHeader.data, handlerId, handlerVersion, data as any, options)
+      .scheduleJob(
+        authHeader.data,
+        handlerId,
+        handlerVersion,
+        data as any,
+        options
+      )
       .then((newSchedule) => {
         res.json(newSchedule);
       })
@@ -344,10 +350,27 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   router.get("/users/:id", (req, res, next) => {
     const idSchema = z.number().int().positive();
     const validatedId = idSchema.parse(Number(req.params.id));
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     worker
-      .getUser(validatedId)
+      .getUser(authHeader.data, validatedId)
       .then((user) => {
         res.json(user);
+      })
+      .catch(next);
+  });
+
+  router.get("/users", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    worker
+      .getUsers(authHeader.data)
+      .then((users) => {
+        res.json(users);
       })
       .catch(next);
   });

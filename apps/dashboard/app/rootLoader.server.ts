@@ -19,14 +19,14 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   try {
-    const user = await authenticate(request);
+    const session = await authenticate(request);
     const data: LoaderData = {
       theme: themeSession.getTheme(),
-      user,
+      user: session?.user,
     };
 
     try {
-      if (!user) {
+      if (!session) {
         if (await hasRefreshToken(request)) {
           return refreshToken(request);
         }

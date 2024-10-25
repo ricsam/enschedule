@@ -6,6 +6,9 @@ import { defineConfig, devices } from "@playwright/test";
  */
 // require('dotenv').config();
 
+// process.env.SKIP_SETUP is used for development
+// SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -19,7 +22,7 @@ export default defineConfig({
   /* Retry on CI only */
   // retries: 0, // fail if there are flakyness
   // retries: process.env.CI && process.env.TEST_HELM ? 3 : 2,
-  retries: 3,
+  retries: process.env.SKIP_SETUP ? 1 : 3,
   /* Opt out of parallel tests on CI. */
   workers:
     process.env.SKIP_SETUP || process.env.TEST_HELM

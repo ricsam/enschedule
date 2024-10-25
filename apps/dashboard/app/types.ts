@@ -30,7 +30,9 @@ export type DashboardWorker = WorkerAPI | Worker;
 
 export type User = {
   userId: number;
+  admin: boolean;
 };
 export const UserSchema = z.object({
   userId: z.number(),
+  admin: z.boolean(),
 });

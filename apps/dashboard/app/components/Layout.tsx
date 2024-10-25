@@ -40,7 +40,7 @@ export function RootLayout({
   navbar,
   children,
   breadcrumbs,
-  withoutLiveData
+  withoutLiveData,
 }: {
   navbar?: NavBar;
   children: React.ReactNode;
@@ -55,6 +55,8 @@ export function RootLayout({
     setMobileOpen(!mobileOpen);
   };
   const pathname = useLocation().pathname;
+
+  const user = useUser();
 
   const renderMenuItem = (text: string) => {
     return (
@@ -75,7 +77,11 @@ export function RootLayout({
   const drawer = (
     <div>
       <Toolbar>
-        <Link to="/" style={{ display: "flex", alignItems: "center" }} data-testid="enschedule-logo">
+        <Link
+          to="/"
+          style={{ display: "flex", alignItems: "center" }}
+          data-testid="enschedule-logo"
+        >
           <img src={logo} alt="Enschedule" style={{ width: "100%" }} />
           {/* Schedule */}
         </Link>
@@ -108,18 +114,23 @@ export function RootLayout({
       <Divider />
       <ListSubheader>On worker</ListSubheader>
       <List>{["definitions", "workers"].map(renderMenuItem)}</List>
-      <Divider />
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton
-            to={"/settings"}
-            component={Link}
-            selected={pathname.startsWith("/settings")}
-          >
-            <ListItemText primary={"Settings"} />
-          </ListItemButton>
-        </ListItem>
-      </List>
+
+      {user && user.admin && (
+        <>
+          <Divider />
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                to={"/admin"}
+                component={Link}
+                selected={pathname.startsWith("/admin")}
+              >
+                <ListItemText primary={"Admin area"} />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </>
+      )}
     </div>
   );
   const [theme, setTheme] = useTheme();
@@ -130,8 +141,6 @@ export function RootLayout({
   const location = useLocation();
   const currentTab =
     location.pathname !== "/" ? location.pathname.replace(/\/$/, "") : "/";
-
-  const user = useUser();
 
   return (
     <Box

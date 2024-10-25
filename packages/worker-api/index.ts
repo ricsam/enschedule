@@ -333,7 +333,12 @@ export class WorkerAPI {
     authHeader: z.output<typeof AuthHeader>,
     id: number
   ): Promise<PublicJobRun> {
-    const run = await this.request("DELETE", `/runs/${id}`, undefined, authHeader);
+    const run = await this.request(
+      "DELETE",
+      `/runs/${id}`,
+      undefined,
+      authHeader
+    );
     return publicJobRunSchema.parse(run);
   }
 
@@ -403,10 +408,11 @@ export class WorkerAPI {
   }
 
   async getUser(
+    authHeader: z.output<typeof AuthHeader>,
     userId: number
   ): Promise<undefined | z.output<typeof UserSchema>> {
     try {
-      const user = await this.request("GET", `/users/${userId}`);
+      const user = await this.request("GET", `/users/${userId}`, undefined, authHeader);
       const result = UserSchema.safeParse(user);
 
       if (result.success) {
@@ -415,6 +421,13 @@ export class WorkerAPI {
     } catch (err) {
       // some error that can be ignored
     }
+  }
+
+  async getUsers(
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<z.output<typeof UserSchema>[]> {
+    const users = await this.request("GET", "/users", undefined, authHeader);
+    return z.array(UserSchema).parse(users);
   }
 
   async logout(refreshToken: string, allDevices: boolean): Promise<void> {

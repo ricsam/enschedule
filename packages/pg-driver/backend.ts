@@ -2572,7 +2572,9 @@ export class PrivateBackend {
   }
 
   public async migrateDatabase() {
-    log("Migrating the database");
+    log(
+      `Migrating the database using the (${databaseMigrations.length}) saved migrations`
+    );
 
     // maybe for future
     // 1 load migration files
@@ -2618,7 +2620,6 @@ export class PrivateBackend {
     }
   ) {
     if (!dontMigrate) {
-      log("Migrating the database");
       await this.migrateDatabase();
     }
     await this.registerWorker();

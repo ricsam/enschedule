@@ -535,7 +535,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
     },
   },
   {
-    name: "00001-improve-access-control-for-runs",
+    name: "00002-improve-access-control-for-runs",
     up: async ({ context: queryInterface }) => {
       // Remove the 'access' column from the 'Runs' table
       await queryInterface.removeColumn("Runs", "access");

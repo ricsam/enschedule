@@ -42,7 +42,11 @@ kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
 npm run build
 node ./release-package.js # during dev some packages have their main field point to ts files to aid when jumping to definition in vscode. When publishing to npm it is important that these fields change to pointing at the files in the dist folders. Done using release-package.js script
 npx changeset # create the new changelog
+gst | grep modified | grep package.json | awk '{ print $2  }' | xargs git checkout --
 npx changeset version # update the package.json files
+git add .
+git commit -m "new major version for npm packages to integrate authorization and authentication with api keys and sessions"
+git push
 ```
 
 if a version is bumped it will be published in the pipeline

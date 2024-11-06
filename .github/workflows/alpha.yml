@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: 'add moreutils'
+      - name: "add moreutils"
         run: |
           sudo apt-get install moreutils
       - name: Checkout
@@ -96,29 +96,6 @@ jobs:
       - name: Test docker images, playwright
         run: TEST_HELM=true DASHBOARD_URL=http://localhost:3333 pnpm run playwright test
 
-      - name: Install CLI
-        run: cd packages/cli && npm link
-
-      - name: Test CLI - reset
-        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule reset --force
-
-      - name: Test CLI - get schedules, after a reset there should only be zero schedules (plus line for header)
-        run: |
-          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 1 ]
-
-      - name: Test CLI - apply
-        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule apply -f packages/cli/__fixtures__/cron.yml
-
-      - name: Test CLI - get schedules, after applying a yaml file there should be 3 schedules (plus line for header)
-        run: |
-          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 4 ]
-
-      - name: Test CLI - reset
-        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule reset --force
-
-      - name: Test CLI in the UI
-        run: TEST_HELM=true DASHBOARD_URL=http://localhost:3333 pnpm run playwright test
-      
       - name: Test docker images, stop container
         run: |
           docker container stop enschedule-dashboard
@@ -144,6 +121,8 @@ jobs:
             --set dashboard.image.tag=alpha \
             --set dashboard.service.type=NodePort \
             --set dashboard.service.port=3000 \
+            --set worker.service.type=NodePort \
+            --set worker.service.port=3000 \
             --set config.ADMIN_ACCOUNT=ricsam:password
       - name: Test service URLs
         run: |
@@ -157,6 +136,26 @@ jobs:
 
       - name: Playwright on helm
         run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) pnpm run playwright test
+
+      - name: Install CLI
+        run: cd packages/cli && npm link
+
+      - name: Test CLI - reset
+        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule reset --force
+
+      - name: Test CLI - get schedules, after a reset there should only be zero schedules (plus line for header)
+        run: |
+          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 1 ]
+
+      - name: Test CLI - apply
+        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule apply -f packages/cli/__fixtures__/cron.yml
+
+      - name: Test CLI - get schedules, after applying a yaml file there should be 3 schedules (plus line for header)
+        run: |
+          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 4 ]
+
+      - name: Test CLI - reset
+        run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule reset --force
 
       - uses: actions/upload-artifact@v3
         if: always()
@@ -262,7 +261,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: 'add moreutils'
+      - name: "add moreutils"
         run: |
           sudo apt-get install moreutils
       - name: Checkout

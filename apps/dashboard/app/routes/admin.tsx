@@ -18,12 +18,14 @@ import type {
 } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
-import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import type { ColumnDef} from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import React from "react";
 import { z } from "zod";
 import { RootLayout } from "~/components/Layout";
 import { ExpandableTable } from "~/components/Table";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import type { Breadcrumb } from "~/types";
 import { authenticate } from "~/utils/user.server";
 
@@ -53,10 +55,12 @@ export const action: ActionFunction = async ({ request, context }) => {
   const action = z
     .union([z.literal("reset-enschedule"), z.literal("placeholder")])
     .parse(fd.get("action"));
+  const authHeader = await getAuthHeader(request);
   if (action === "reset-enschedule") {
-    await (await getWorker(context.worker)).reset();
+    let success = await (await getWorker(context.worker)).reset(authHeader);
+    return json({ success });
   }
-  return json({ success: true });
+  return json({ success: false });
 };
 
 type RowData = SerializeFrom<z.output<typeof UserSchema>>;

@@ -40,4 +40,5 @@ export {
   SchedulesFilterSchema,
   UserSchema,
   AuthHeader,
+  UserAuthSchema,
 } from "./types";

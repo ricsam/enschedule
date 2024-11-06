@@ -33,11 +33,31 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
     res: express.Response,
     next: express.NextFunction
   ) => {
+    let authHeader: z.infer<typeof AuthHeader> | undefined;
     const apiKey = req.get("X-API-KEY");
-    if (!apiKey || apiKey !== process.env.API_KEY) {
-      return res.status(403).json({ error: "Unauthorized" });
+
+    const authHeaderParse = AuthHeader.safeParse(req.headers.authorization);
+    if (authHeaderParse.success) {
+      authHeader = authHeaderParse.data;
+    } else if (apiKey && apiKey === process.env.API_KEY) {
+      authHeader = `Api-Key ${apiKey}`;
     }
-    next();
+    if (!authHeader) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    worker
+      .getUserAuth(authHeader)
+      .then((user) => {
+        if (!user) {
+          return res.status(401).json({ error: "Unauthorized" });
+        } 
+          next();
+        
+      })
+      .catch(() => {
+        return res.status(401).json({ error: "Unauthorized" });
+      });
   };
 
   const router = Router({
@@ -302,10 +322,14 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
   });
 
   router.delete("/", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     worker
-      .reset()
-      .then(() => {
-        res.json({ success: true });
+      .reset(authHeader.data)
+      .then((success) => {
+        res.json({ success });
       })
       .catch(next);
   });
@@ -386,6 +410,23 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .logout(refreshToken, allDevices)
       .then(() => {
         res.json({ success: true });
+      })
+      .catch(next);
+  });
+
+  router.get("/user-auth", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    worker
+      .getUserAuth(authHeader.data)
+      .then((user) => {
+        if (!user) {
+          return res.status(401).json({ error: "Unauthorized" });
+        } 
+          res.json(user);
+        
       })
       .catch(next);
   });

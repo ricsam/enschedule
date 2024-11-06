@@ -1,7 +1,7 @@
 import { type AuthHeader } from "@enschedule/types";
 import type { AppLoadContext } from "@remix-run/node";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
+import type { z } from "zod";
 import { getWorker } from "~/createWorker.server";
 import { getCookies } from "~/sessions";
 import type { User } from "~/types";

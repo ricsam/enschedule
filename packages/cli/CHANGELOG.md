@@ -1,5 +1,17 @@
 # @enschedule/cli
 
+## 1.1.0
+
+### Minor Changes
+
+- Improve error and auth handling related to the CLI
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/worker-api@1.1.0
+  - @enschedule/types@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes

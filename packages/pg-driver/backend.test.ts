@@ -64,19 +64,19 @@ const httpJobDeclaration = (
 
 const startInstance = async (backend: TestBackend) => {
   try {
-    await backend.sequelize.drop({});
-    await backend.sequelize.sync({ force: true });
+    await backend.getSequelize().drop({});
+    await backend.getSequelize().sync({ force: true });
   } catch (err) {}
 };
 const closeInstance = async (backend: TestBackend) => {
   try {
-    await backend.sequelize.drop({});
+    await backend.getSequelize().drop({});
   } catch (err) {}
   try {
-    await backend.sequelize.connectionManager.close();
+    await backend.getSequelize().connectionManager.close();
   } catch (err) {}
   try {
-    await backend.sequelize.close();
+    await backend.getSequelize().close();
   } catch (err) {}
 };
 afterAll(async () => {
@@ -409,7 +409,7 @@ registerTests((getBackend: () => TestBackend) => {
       ).toMatchInlineSnapshot(`
         "Error: Error
             at Object.<anonymous> (backend.test.ts)
-        "
+            at awaitOverdueJobs (backend.test.ts)"
       `);
     });
     it("should create a signature", () => {
@@ -622,7 +622,7 @@ registerTests((getBackend: () => TestBackend) => {
       expect(await schedule.getRuns()).toHaveLength(1);
       await schedule.reload({
         include: {
-          model: backend.Run,
+          model: backend.getRunModel(),
           as: "lastRun",
         },
       });
@@ -718,7 +718,10 @@ registerTests((getBackend: () => TestBackend) => {
         }
       );
       const run = await awaitRunSchedule(backend, schedule.id);
-      const receivedSingleRun = await backend.getRun(backend.authHeader, run.id);
+      const receivedSingleRun = await backend.getRun(
+        backend.authHeader,
+        run.id
+      );
       // last reached and status might diff, but that is okay
       const now = new Date();
       if (typeof run.worker !== "string") {
@@ -962,16 +965,16 @@ registerTests((getBackend: () => TestBackend) => {
 
       // pretend we are updating the handler code and restarting the server
       handler.version = 2;
-      backend.registeredWorker = undefined;
-      backend.workerInstance.instanceId = "new-instance-id";
-      backend.definedJobs[handler.id] = { "2": handler } as any;
+      backend.setRegisteredWorker(undefined);
+      backend.getWorkerInstance().instanceId = "new-instance-id";
+      backend.getDefinedJobs()[handler.id] = { "2": handler } as any;
 
-      expect(backend.definedJobs[handler.id]?.[handler.version]?.version).toBe(
-        2
-      );
+      expect(
+        backend.getDefinedJobs()[handler.id]?.[handler.version]?.version
+      ).toBe(2);
 
       const newWorker = await backend.registerWorker();
-      const workers = await backend.Worker.findAll();
+      const workers = await backend.getWorkerModel().findAll();
       expect(workers).toHaveLength(2);
       expect(newWorker.version).toBe(2);
     });

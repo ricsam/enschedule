@@ -450,3 +450,9 @@ export const UserSchema = z.object({
   admin: z.coerce.boolean(),
   createdAt: z.coerce.date(),
 });
+
+export const UserAuthSchema = z.object({
+  admin: z.boolean(),
+  groups: z.array(z.number()),
+  userId: z.number().optional(),
+});

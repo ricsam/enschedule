@@ -22,6 +22,7 @@ import type {
   SerializedRun,
   UserSchema,
   WorkerAccess,
+  UserAuthSchema,
 } from "@enschedule/types";
 import {
   JobDefinitionSchema,
@@ -685,12 +686,6 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
 export const createJobDefinition = <T extends ZodType = ZodType>(
   job: JobDefinition<T>
 ) => job;
-
-interface UserAuth {
-  admin: boolean;
-  groups: number[];
-  userId?: number;
-}
 
 export interface BackendOptions {
   database?: SeqConstructorOptions;
@@ -1636,7 +1631,11 @@ export class PrivateBackend {
     );
   }
 
-  public async reset(): Promise<void> {
+  public async reset(authHeader: z.output<typeof AuthHeader>): Promise<boolean> {
+    const auth = await this.getUserAuth(authHeader);
+    if (!auth || !auth.admin) {
+      return false;
+    }
     await Run.truncate({
       cascade: true,
     });
@@ -1648,6 +1647,7 @@ export class PrivateBackend {
       cascade: true,
     });
     await this.registerWorker();
+    return true;
   }
 
   public async deleteRun(
@@ -1738,7 +1738,7 @@ export class PrivateBackend {
   }
 
   private canView(
-    user: UserAuth,
+    user: z.output<typeof UserAuthSchema>,
     access?: { users?: number[]; groups?: number[] }
   ) {
     if (!access) {
@@ -1760,14 +1760,20 @@ export class PrivateBackend {
     return false;
   }
 
-  public canViewWorker(user: UserAuth, worker: Worker): boolean {
+  public canViewWorker(
+    user: z.output<typeof UserAuthSchema>,
+    worker: Worker
+  ): boolean {
     if (user.admin) {
       return true;
     }
     return this.canView(user, worker.access?.view);
   }
 
-  public canViewFunction(user: UserAuth, fn: PublicJobDefinition): boolean {
+  public canViewFunction(
+    user: z.output<typeof UserAuthSchema>,
+    fn: PublicJobDefinition
+  ): boolean {
     if (user.admin) {
       return true;
     }
@@ -1777,7 +1783,10 @@ export class PrivateBackend {
     return false;
   }
 
-  public canViewSchedule(user: UserAuth, schedule: Schedule): boolean {
+  public canViewSchedule(
+    user: z.output<typeof UserAuthSchema>,
+    schedule: Schedule
+  ): boolean {
     if (user.admin) {
       return true;
     }
@@ -1786,7 +1795,7 @@ export class PrivateBackend {
 
   public async getUserAuth(
     authHeader: z.output<typeof AuthHeader>
-  ): Promise<UserAuth | undefined> {
+  ): Promise<z.output<typeof UserAuthSchema> | undefined> {
     const [type, token] = z
       .tuple([
         z.union([
@@ -3484,20 +3493,30 @@ export class TestBackend extends PrivateBackend {
   public maxJobsPerTick = 4;
   public tickDuration = 5000;
   public logStoreInterval = 1000;
-  public sequelize: Sequelize = this.sequelize;
-  public Run: typeof Run = this.Run;
-  public Schedule: typeof Schedule = this.Schedule;
-  public Worker: typeof Worker = this.Worker;
-  public workerInstance: WorkerInstance = this.workerInstance;
-  /**
-   * `{ [id]: { [version]: JobDefinition }`
-   */
-  public definedJobs: Record<
-    string,
-    undefined | Record<string, JobDefinition | undefined>
-  > = this.definedJobs;
 
-  public registeredWorker: Worker | undefined = this.registeredWorker;
+  public getDefinedJobs() {
+    return this.definedJobs;
+  }
+
+  public getSequelize() {
+    return this.sequelize;
+  }
+
+  public getRunModel() {
+    return this.Run;
+  }
+
+  public getScheduleModel() {
+    return this.Schedule;
+  }
+
+  public getWorkerModel() {
+    return this.Worker;
+  }
+
+  public getWorkerInstance() {
+    return this.workerInstance;
+  }
 
   public authHeader: z.output<typeof AuthHeader>;
 
@@ -3526,6 +3545,11 @@ export class TestBackend extends PrivateBackend {
       options
     );
   }
+
+  public setRegisteredWorker(worker: Worker | undefined) {
+    this.registeredWorker = worker;
+  }
+
   public async getDbSchedules() {
     return super.getDbSchedules();
   }

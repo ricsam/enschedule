@@ -4,58 +4,73 @@ import { WorkerAPI } from "@enschedule/worker-api";
 import { z } from "zod";
 import { AuthHeader } from "@enschedule/types";
 
-// If the config file doesn't exist, create it with default values
-const defaultConfig = {
-  apiKey: "your-api-key",
-  apiEndpoint: "http://localhost:8080",
-  apiVersion: "1",
-};
+export class ConfigError extends Error {}
 
-const ConfigValSchema = (key: keyof typeof defaultConfig) =>
-  z
-    .string()
-    .optional()
-    .transform((value) => (!value ? defaultConfig[key] : value));
+const UserFriendlyKey = z.string().transform((val, ctx) => {
+  let header = val;
+  if (
+    val.startsWith("Api-Key") ||
+    val.startsWith("User-Api-Key") ||
+    val.startsWith("Jwt")
+  ) {
+    header = val;
+  } else {
+    header = `Api-Key ${val}`;
+  }
+
+  const parsed = AuthHeader.safeParse(header);
+  if (!parsed.success) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Invalid auth header / api key",
+    });
+    return z.NEVER;
+  }
+  return parsed.data;
+});
 
 // Define the Zod schema for the config
 const configSchema = z.object({
-  apiEndpoint: ConfigValSchema("apiEndpoint"),
-  apiKey: ConfigValSchema("apiKey"),
-  apiVersion: ConfigValSchema("apiVersion"),
+  apiEndpoint: z.string(),
+  apiKey: UserFriendlyKey,
+  apiVersion: z.literal("1"),
+});
+const configFileSchema = z.object({
+  apiEndpoint: z.string().optional(),
+  apiKey: UserFriendlyKey.optional(),
+  apiVersion: z.literal("1").optional(),
 });
 
 export const getConfig = async () => {
   const configPath = `${os.homedir()}/.enschedule/config.json`;
-
+  let configFile: Partial<z.output<typeof configSchema>> = {};
+  // Read the config file
   try {
-    // Read the config file
-    let config: z.output<typeof configSchema>;
-    try {
-      config = configSchema.parse({
-        apiKey: process.env.ENSCHEDULE_API_KEY,
-        apiEndpoint: process.env.ENSCHEDULE_API_ENDPOINT,
-        apiVersion: process.env.ENSCHEDULE_API_VERSION,
-      });
-    } catch (e) {
-      config = configSchema.parse(
-        await fs.promises.readFile(configPath, "utf8")
-      );
-    }
+    configFile = configFileSchema.parse(
+      JSON.parse(await fs.promises.readFile(configPath, "utf8"))
+    );
+  } catch (err) {}
+  try {
+    let config: z.output<typeof configSchema> = configSchema.parse({
+      apiKey: process.env.ENSCHEDULE_API_KEY ?? configFile.apiKey,
+      apiEndpoint:
+        process.env.ENSCHEDULE_API_ENDPOINT ?? configFile.apiEndpoint,
+      apiVersion: process.env.ENSCHEDULE_API_VERSION ?? configFile.apiVersion,
+    });
 
     // Retrieve the apiKey, apiEndpoint, and apiVersion
     const { apiKey, apiEndpoint, apiVersion } = config;
 
     return { apiKey, apiEndpoint, apiVersion };
   } catch (error) {
-    await fs.promises.mkdir(`${os.homedir()}/.enschedule`, {
-      recursive: true,
-    });
-    await fs.promises.writeFile(
-      configPath,
-      JSON.stringify(defaultConfig, null, 2)
-    );
-
-    return defaultConfig;
+    // await fs.promises.mkdir(`${os.homedir()}/.enschedule`, {
+    //   recursive: true,
+    // });
+    // await fs.promises.writeFile(
+    //   configPath,
+    //   JSON.stringify(defaultConfig, null, 2)
+    // );
+    throw new ConfigError();
   }
 };
 let _worker: WorkerAPI | undefined;
@@ -64,16 +79,13 @@ export const getWorker = async () => {
     return _worker;
   }
   const options = await getConfig();
-  _worker = new WorkerAPI(options.apiKey, options.apiEndpoint);
+  _worker = new WorkerAPI(options.apiKey, options.apiEndpoint, {
+    retries: 0,
+  });
   return _worker;
 };
 
 export const getAuthHeader = async () => {
   const options = await getConfig();
-  const authHeader: z.output<typeof AuthHeader> =
-    options.apiKey.startsWith("User-Api-Key ") ||
-    options.apiKey.startsWith("Api-Key ")
-      ? AuthHeader.parse(options.apiKey)
-      : `User-Api-Key ${options.apiKey}`;
-  return authHeader;
+  return options.apiKey;
 };

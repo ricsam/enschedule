@@ -8,7 +8,7 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "target": "ES6",
+    "target": "ESNext",
     "strict": true,
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,

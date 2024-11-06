@@ -279,7 +279,7 @@ spec:
 npm install -g @enschedule/cli
 
 ENSCHEDULE_API_KEY="Api-Key some_secret" \
-ENSCHEDULE_API_ENDPOINT="https://enschedule-api.your-endpoint.com/api/v1" \
+ENSCHEDULE_API_ENDPOINT="https://enschedule-api.your-endpoint.com" \
 ENSCHEDULE_API_VERSION="1" \
 enschedule apply -f ping-schedule.yml
 ```

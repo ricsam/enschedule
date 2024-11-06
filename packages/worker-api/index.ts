@@ -16,6 +16,7 @@ import type {
   SchedulesFilterSchema,
 } from "@enschedule/types";
 import {
+  UserAuthSchema,
   ListRunsOptionsSerialize,
   PublicWorkerSchema,
   ScheduleJobResultSchema,
@@ -32,6 +33,20 @@ if (process.env.DEBUG) {
   debug.enable(process.env.DEBUG);
 }
 
+interface WorkerApiOptions {
+  retries?: number;
+  apiVersion?: number;
+}
+
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NetworkError";
+  }
+  public originalError?: Error;
+  public cliMessage?: string;
+}
+
 export class WorkerAPI {
   private hostname: string;
   private apiKey: string;
@@ -39,11 +54,14 @@ export class WorkerAPI {
   private port: number;
   private url: string;
 
+  private retries: number;
+  private apiVersion: number;
+
   /**
    * @param apiKey - The API_KEY environment variable provided to the worker
    * @param url - The URL of the worker e.g. https://localhost or http://my-worker.localdomain.localhost:8080
    */
-  constructor(apiKey: string, url: string) {
+  constructor(apiKey: string, url: string, options?: WorkerApiOptions) {
     this.url = url;
     const urlObject = new URL(url);
     this.apiKey = apiKey;
@@ -54,6 +72,8 @@ export class WorkerAPI {
     } else {
       this.port = this.ssl ? 443 : 80;
     }
+    this.retries = options?.retries ?? 4;
+    this.apiVersion = options?.apiVersion ?? 1;
   }
 
   private async request(
@@ -100,7 +120,6 @@ export class WorkerAPI {
     if (authHeader) {
       headers.Authorization = authHeader;
     }
-    const retries = 5;
     const delay = 1000;
     const requestLog = (...args: unknown[]) => {
       log("Req:", method, `${this.url}${decodeURI(options.path)}`, ...args);
@@ -112,7 +131,9 @@ export class WorkerAPI {
 
     let attempt = 0;
 
-    while (attempt < retries) {
+    const totalAttempts = this.retries + 1;
+
+    while (attempt < totalAttempts) {
       try {
         const response = await new Promise((resolve, reject) => {
           const req = (this.ssl ? https : http).request(options, (res) => {
@@ -131,7 +152,18 @@ export class WorkerAPI {
                   ...args
                 );
               };
+
               responseLog();
+
+              if (res.statusCode && res.statusCode > 299) {
+                let statusMessage = `Code: ${res.statusCode}`;
+                if (res.statusMessage) {
+                  statusMessage = `${res.statusCode} ${res.statusMessage}`;
+                }
+                const err = new NetworkError(statusMessage);
+                reject(err);
+                return;
+              }
 
               try {
                 const resData: unknown = JSON.parse(body);
@@ -155,18 +187,27 @@ export class WorkerAPI {
           }
           req.end();
         });
+        log("@reponse 1", response);
         return response;
       } catch (error) {
         attempt += 1;
         requestLog(`Attempt ${attempt} failed:`, String(error));
 
         // If we've used all retries, throw the error
-        if (attempt >= retries) {
-          throw new Error(
-            `Req: ${method} ${this.url}${decodeURI(
+        if (attempt >= totalAttempts) {
+          if (error instanceof NetworkError) {
+            throw error;
+          }
+          const networkError = new NetworkError(
+            `${method} ${this.url}${decodeURI(
               options.path
-            )} failed after ${attempt} attempts: ${String(error)}`
+            )} failed after ${attempt} attempts with ${String(error)}`
           );
+          if (error instanceof Error) {
+            networkError.stack = error.stack;
+            networkError.cliMessage = error.message;
+          }
+          throw networkError;
         }
 
         // Wait for an exponential backoff time before retrying
@@ -254,6 +295,7 @@ export class WorkerAPI {
       },
       authHeader
     );
+    log("scheduleJob result", result);
     return ScheduleJobResultSchema.parse(result);
   }
 
@@ -349,8 +391,9 @@ export class WorkerAPI {
     return z.array(z.number()).parse(response);
   }
 
-  async reset(): Promise<void> {
-    await this.request("DELETE", `/`);
+  async reset(authHeader: z.output<typeof AuthHeader>): Promise<boolean> {
+    const result = await this.request("DELETE", `/`, undefined, authHeader);
+    return z.object({ success: z.boolean() }).parse(result).success;
   }
 
   async runScheduleNow(id: number): Promise<void> {
@@ -412,7 +455,12 @@ export class WorkerAPI {
     userId: number
   ): Promise<undefined | z.output<typeof UserSchema>> {
     try {
-      const user = await this.request("GET", `/users/${userId}`, undefined, authHeader);
+      const user = await this.request(
+        "GET",
+        `/users/${userId}`,
+        undefined,
+        authHeader
+      );
       const result = UserSchema.safeParse(user);
 
       if (result.success) {
@@ -420,6 +468,25 @@ export class WorkerAPI {
       }
     } catch (err) {
       // some error that can be ignored
+    }
+  }
+
+  async getUserAuth(
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<z.output<typeof UserAuthSchema> | undefined> {
+    try {
+      const userAuth = await this.request(
+        "GET",
+        "/user-auth",
+        undefined,
+        authHeader
+      );
+      const result = UserAuthSchema.safeParse(userAuth);
+      if (result.success) {
+        return result.data;
+      }
+    } catch (err) {
+      // ignore error
     }
   }
 

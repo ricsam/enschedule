@@ -277,8 +277,18 @@ spec:
 
 ```bash
 npm install -g @enschedule/cli
+
+ENSCHEDULE_API_KEY="Api-Key some_secret" \
+ENSCHEDULE_API_ENDPOINT="https://enschedule-api.your-endpoint.com/api/v1" \
+ENSCHEDULE_API_VERSION="1" \
 enschedule apply -f ping-schedule.yml
 ```
+
+* `apiVersion` - not used
+* `ENSCHEDULE_API_VERSION` - not used
+* `api/v1` - is the default endpint
+
+**NOTE** it has not yet been decided how the versioning will work
 
 # Workers
 

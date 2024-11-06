@@ -103,13 +103,15 @@ jobs:
         run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule reset --force
 
       - name: Test CLI - get schedules, after a reset there should only be zero schedules (plus line for header)
-        run: [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 1 ]
+        run: |
+          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 1 ]
 
       - name: Test CLI - apply
         run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule apply -f packages/cli/__fixtures__/cron.yml
 
       - name: Test CLI - get schedules, after applying a yaml file there should be 3 schedules (plus line for header)
-        run: [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 4 ]
+        run: |
+          [ $(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule get schedules | wc -l) -eq 4 ]
 
       - name: Test CLI - reset
         run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT="http://localhost:3333" ENSCHEDULE_API_VERSION="1" enschedule reset --force

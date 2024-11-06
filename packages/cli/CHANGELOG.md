@@ -1,5 +1,11 @@
 # @enschedule/cli
 
+## 1.0.1
+
+### Patch Changes
+
+- The package.json bin field must point to the correct dist file
+
 ## 1.0.0
 
 ### Major Changes

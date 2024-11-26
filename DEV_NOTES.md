@@ -88,3 +88,8 @@ docker container run -itd --rm \
 ```
 TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --grep create_many_runs
 ```
+
+## Debug playwright in the UI
+```bash
+npm run playwright show-report '~/Downloads/playwright-report (1)'
+```

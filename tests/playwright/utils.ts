@@ -18,18 +18,31 @@ export const navigate = async (baseUrl: string, page: Page, link: Locator) => {
   return fullUrl;
 };
 
-export async function numRows(page: Page) {
+export async function numRows(page: Page, attempt = 0) {
+  let innerText;
   try {
-    const innerText = await (
+    innerText = await (
       await page.$(
         '[data-testid="pagination"] .MuiTablePagination-displayedRows'
       )
     )?.innerText();
     return Number(innerText!.match(/ of (\d+)/)![1]);
   } catch (err) {
-    throw new Error(
-      "Failed to parse the pagination, can not read number of rows in the table"
-    );
+    if (attempt < 3) {
+      console.warn(
+        "Failed to parse the pagination, can not read number of rows in the table, inner text is " +
+          innerText,
+        "attempt:",
+        attempt
+      );
+      await page.reload();
+      return numRows(page, attempt + 1);
+    } else {
+      throw new Error(
+        "Failed to parse the pagination, can not read number of rows in the table, inner text is " +
+          innerText
+      );
+    }
   }
 }
 

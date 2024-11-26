@@ -1633,7 +1633,7 @@ export class PrivateBackend {
 
   public async reset(authHeader: z.output<typeof AuthHeader>): Promise<boolean> {
     const auth = await this.getUserAuth(authHeader);
-    if (!auth || !auth.admin) {
+    if (!auth?.admin) {
       return false;
     }
     await Run.truncate({

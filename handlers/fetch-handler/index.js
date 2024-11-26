@@ -7,11 +7,27 @@ module.exports = async (worker) => {
     title: "Send HTTP request",
     dataSchema: z.object({
       url: z.string(),
+      method: z
+        .union([
+          z.literal("GET"),
+          z.literal("POST"),
+          z.literal("PUT"),
+          z.literal("DELETE"),
+        ])
+        .optional(),
+      headers: z.record(z.string()).optional(),
+      body: z.string().optional(),
     }),
     job: async (data) => {
-      const result = await fetch(data.url);
-      const jsonData = await result.json();
-      console.log(jsonData);
+      const result = await fetch(data.url, {
+        method: data.method,
+        headers: data.headers,
+        body: data.body,
+      });
+      console.log("status", result.status);
+      console.log("headers", result.headers);
+      const body = await result.body();
+      console.log("body", body);
     },
     description: "Provide HTTP parameters as data to send a request",
     example: {

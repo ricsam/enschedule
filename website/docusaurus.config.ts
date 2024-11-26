@@ -82,9 +82,9 @@ const config: Config = {
         },
         {
           type: 'docSidebar',
-          sidebarId: 'docsSidebar',
+          sidebarId: 'apiSidebar',
           position: 'left',
-          label: 'Docs',
+          label: 'Api',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
@@ -98,11 +98,11 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Api',
           items: [
             {
               label: 'Tutorial',
-              to: '/docs/intro',
+              to: '/docs/api/intro',
             },
           ],
         },

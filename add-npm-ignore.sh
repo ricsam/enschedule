@@ -5,7 +5,7 @@ set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
-for pkg in handlers/fetch-handler handlers/log-handler packages/types packages/pg-driver packages/worker-api packages/worker packages/hub; do
+for pkg in functions/fetch functions/log packages/types packages/pg-driver packages/worker-api packages/worker packages/hub; do
   cat <<EOF > ./$pkg/.npmignore
 .env
 .npmignore

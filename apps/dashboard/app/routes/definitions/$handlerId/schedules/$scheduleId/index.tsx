@@ -23,7 +23,7 @@ export const useBreadcrumbs = (
 
 export { action } from "~/components/SchedulePage";
 
-export const useNavbar = (action: string, runRedirect: string) => {
+export const useNavbar = (action: string) => {
   const data = useData();
 
   const def = data.schedule.jobDefinition;
@@ -46,7 +46,6 @@ export const useNavbar = (action: string, runRedirect: string) => {
     actions: (
       <Actions
         action={action}
-        runRedirect={runRedirect}
         pendingRunNow={data.schedule.runNow}
         activeWorkers={data.activeWorkers}
       />
@@ -60,7 +59,7 @@ export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
-      navbar={useNavbar("", "")}
+      navbar={useNavbar("")}
     >
       <SchedulePage schedule={schedule} editDetails={editDetails} />
     </RootLayout>

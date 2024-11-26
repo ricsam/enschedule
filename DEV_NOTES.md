@@ -63,9 +63,12 @@ TEST_DIALECT=sqlite pnpm run --filter=@enschedule/pg-driver test
 
 ## Playwright tests
 ```
+docker compose up -d
 npm run playwright install
 pnpm run --filter test-worker seed
 pnpm run --filter @enschedule/dashboard build
+
+pnpm run dev
 SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
 ```
 
@@ -75,7 +78,7 @@ SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --u
 docker container run -itd --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \
-  -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \
+  -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \
   -e ACCESS_TOKEN_SECRET=secret_key \
   -e REFRESH_TOKEN_SECRET=secret_key \
   -e COOKIE_SESSION_SECRET=s3cr3t \

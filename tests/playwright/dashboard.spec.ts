@@ -202,13 +202,13 @@ test.describe("Single schedule", () => {
 
       // run now works
       let numRuns = 1;
-      await waitForNumRows(page, numRuns);
+      await waitForNumRows(page, numRuns, 'SUCCESS');
 
       const run = async () => {
         numRuns += 1;
         await page.getByTestId("run-now").click();
         await page.getByTestId("run-now-snackbar").isVisible();
-        await waitForNumRows(page, numRuns);
+        await waitForNumRows(page, numRuns, 'SUCCESS');
         expect(await numRows(page)).toBe(numRuns);
       };
 

@@ -86,8 +86,39 @@ const hasRefreshTokenSession = createCookieSessionStorage<
   },
 });
 
+async function getRequestUrl(request: Request) {
+  /**
+   * e.g. run now button passes a redirect in the action, so on refresh
+   * it shoudn't redirect to the request.url but to the redirect param
+   */
+  let requestUrlString = request.url;
+  let actionRedirectPath =
+    new URL(request.url).searchParams.get("postActionRedirect") ||
+    request.headers.get("referrer");
+  if (actionRedirectPath && typeof actionRedirectPath === "string") {
+    const newRequest = new URL(request.url);
+    if (actionRedirectPath.startsWith("http")) {
+      requestUrlString = actionRedirectPath;
+    } else {
+      const parts = actionRedirectPath.split("?");
+      if (parts[0]) {
+        newRequest.pathname = actionRedirectPath;
+      }
+      if (parts[1]) {
+        newRequest.search = parts[1];
+      }
+      if (newRequest.searchParams.has("postActionRedirect")) {
+        newRequest.searchParams.delete("postActionRedirect");
+      }
+      requestUrlString = newRequest.toString();
+      console.log("requestUrlString", requestUrlString);
+    }
+  }
+  return requestUrlString;
+}
+
 export async function refreshToken(request: Request) {
-  const requestUrl = new URL(request.url);
+  const requestUrl = new URL(await getRequestUrl(request));
   const refreshUrl = new URL(request.url);
   refreshUrl.pathname = "/refresh";
   refreshUrl.searchParams.set(
@@ -111,7 +142,7 @@ export async function getAuthHeader(
   }
   const url = new URL(request.url);
   url.pathname = "/login";
-  const redirectUrl = new URL(request.url);
+  const redirectUrl = new URL(await getRequestUrl(request));
   url.search = "";
   url.searchParams.set("redirect", redirectUrl.pathname + redirectUrl.search);
   throw redirect(url.pathname + url.search);

@@ -11,8 +11,8 @@ export const inlineWorker = async () => {
 
   await worker.migrateDatabase();
 
-  if (process.env.IMPORT_HANDLERS) {
-    const imports = process.env.IMPORT_HANDLERS.split(",");
+  if (process.env.IMPORT_FUNCTIONS) {
+    const imports = process.env.IMPORT_FUNCTIONS.split(",");
     for (const imp of imports) {
       await require(imp)(worker);
     }

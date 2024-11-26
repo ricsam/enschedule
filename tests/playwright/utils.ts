@@ -18,31 +18,19 @@ export const navigate = async (baseUrl: string, page: Page, link: Locator) => {
   return fullUrl;
 };
 
-export async function numRows(page: Page, attempt = 0) {
+export async function numRows(page: Page) {
   let innerText;
+
   try {
-    innerText = await (
-      await page.$(
-        '[data-testid="pagination"] .MuiTablePagination-displayedRows'
-      )
-    )?.innerText();
+    innerText = await page.innerText(
+      '[data-testid="pagination"] .MuiTablePagination-displayedRows'
+    );
     return Number(innerText!.match(/ of (\d+)/)![1]);
   } catch (err) {
-    if (attempt < 3) {
-      console.warn(
-        "Failed to parse the pagination, can not read number of rows in the table, inner text is " +
-          innerText,
-        "attempt:",
-        attempt
-      );
-      await page.reload();
-      return numRows(page, attempt + 1);
-    } else {
-      throw new Error(
-        "Failed to parse the pagination, can not read number of rows in the table, inner text is " +
-          innerText
-      );
-    }
+    throw new Error(
+      "Failed to parse the pagination, can not read number of rows in the table, inner text is " +
+        innerText
+    );
   }
 }
 
@@ -237,7 +225,11 @@ const reset = async (baseUrl: () => string, page: Page) => {
   expect(await numRows(page)).toBe(0);
 };
 
-export const waitForNumRows = async (page: Page, num: number) => {
+export const waitForNumRows = async (
+  page: Page,
+  num: number,
+  status?: string
+) => {
   const TIMEOUT = 40000;
   const RETRY_DURATION = 5000;
   if ((await numRows(page)) !== num) {
@@ -249,12 +241,27 @@ export const waitForNumRows = async (page: Page, num: number) => {
           resolve();
         }, RETRY_DURATION);
       });
-    } while ((await numRows(page)) !== num && i++ < maxIter);
+    } while (
+      ((await numRows(page)) !== num ||
+        (status && !(await allRowsHasStatus(page, status)))) &&
+      i++ < maxIter
+    );
     if (i >= maxIter) {
       throw new Error("Timed out waiting for the runs to show up in the table");
     }
   }
 };
+
+async function allRowsHasStatus(page: Page, status: string) {
+  return page.evaluate(
+    ([status]) => {
+      return [
+        ...document.querySelectorAll('.table-row [data-testid="status"]'),
+      ].every((node) => (node as HTMLElement).dataset.status === status);
+    },
+    [status]
+  );
+}
 
 type ArgType<T> = T extends (baseUrl: () => string, ...args: infer U) => any
   ? U

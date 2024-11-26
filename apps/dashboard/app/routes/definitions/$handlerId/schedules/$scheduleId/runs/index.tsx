@@ -71,12 +71,12 @@ export const useBreadcrumbs = (
 export default function Runs() {
   const { runs, schedule } = useData();
   const breadcrumbs = useBreadcrumbs(schedule);
-  const schedulePage = useHref("../", { relative: "path" });
   const runsPage = useHref("", { relative: "path" });
+  const schedulePage = useHref("../?postActionRedirect=" + runsPage, { relative: "path" });
   return (
     <RootLayout
       breadcrumbs={breadcrumbs}
-      navbar={useNavbar(schedulePage, runsPage)}
+      navbar={useNavbar(schedulePage)}
     >
       <RunsTable runs={runs.rows} count={runs.count} />
     </RootLayout>

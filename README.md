@@ -10,7 +10,7 @@ Enschedule is an open-source project that combines a UI dashboard with a databas
 docker container run -it --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \ # Use in-memory sqlite
-  -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \ # Load included handlers
+  -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \ # Load included handlers
   -e ADMIN_ACCOUNT=adm1n:s3cret_pw \
   -p 3000:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
@@ -64,7 +64,7 @@ Only a `WORKER_URL` or database connection variables are required to run `@ensch
 | `DB_DATABASE`     | The name of the database to connect to. Not used if `WORKER_URL` is provided.                                                                               | `string`                 |
 | `DB_PORT`         | The port number on which the database server is running. Not used if `WORKER_URL` is provided.                                                              | `integer`                |
 | `ORM_LOGGING`     | Enables or disables ORM logging. Not used if `WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
-| `IMPORT_HANDLERS` | Comma separated list of node modules that are imported to define handlers or schedules                                                                      | `string`                 |
+| `IMPORT_FUNCTIONS` | Comma separated list of node modules that are imported to define handlers or schedules                                                                      | `string`                 |
 
 ##### Database dialect options
 

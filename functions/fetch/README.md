@@ -1,6 +1,6 @@
 ## Enschedule fetch function
-Usage
 
+Usage:
 ```json
 {
   "url": "http://localhost:3000",
@@ -12,4 +12,4 @@ Usage
 }
 ```
 
-Provide HTTP parameters as data to send a request. It will be sent by the built in fetch function. The response will be logged.
+Provide HTTP parameters as data to send a request. It will be sent by the built in fetch function. The response status, headers and body will be logged to stdout.

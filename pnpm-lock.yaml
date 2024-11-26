@@ -155,18 +155,6 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2
 
-  handlers/fetch-handler:
-    dependencies:
-      zod:
-        specifier: ^3.22.2
-        version: 3.22.2
-
-  handlers/log-handler:
-    dependencies:
-      zod:
-        specifier: ^3.22.2
-        version: 3.22.2
-
   packages/cli:
     dependencies:
       '@enschedule/types':

@@ -16,5 +16,3 @@
 * fix horizontal scroll on data on runs 
 * // connect repo to deploy functions
 * Run page: `Ran Transition Pending Drafts which completed ran 11 hours ago and took 20793 ms to run`
-* rename IMPORT_HANDLERS to IMPORT_FUNCTIONS
-* rename @enschedule/fetch-handler,@enschedule/log-handler" to @enschedule-functions/fetch,@enschedule-functions/log

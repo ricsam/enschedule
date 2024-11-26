@@ -49,8 +49,8 @@ void (async () => {
     returns.default = await require(defaultRegisterJob)(worker);
   }
 
-  if (process.env.IMPORT_HANDLERS) {
-    const imports = process.env.IMPORT_HANDLERS.split(",");
+  if (process.env.IMPORT_FUNCTIONS) {
+    const imports = process.env.IMPORT_FUNCTIONS.split(",");
     for (const imp of imports) {
       // eslint-disable-next-line no-await-in-loop
       returns[imp] = await require(imp)(worker);

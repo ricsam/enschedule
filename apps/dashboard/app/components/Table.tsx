@@ -313,6 +313,7 @@ export function ExpandableTable<T>({
               return (
                 <React.Fragment key={row.id}>
                   <TableRow
+                    className="table-row"
                     data-testid={`table-row-${index + 1}`}
                     sx={
                       open || !renderRow

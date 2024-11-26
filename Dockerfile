@@ -23,8 +23,8 @@ RUN ./release-package.sh
 RUN turbo prune \
   --scope="@enschedule/worker" \
   --scope="@enschedule/dashboard" \
-  --scope="@enschedule/log-handler" \
-  --scope="@enschedule/fetch-handler" \
+  --scope="@enschedule-fns/log" \
+  --scope="@enschedule-fns/fetch" \
   --docker
 
 RUN rm -rf /app/out/**/node_modules
@@ -59,13 +59,13 @@ RUN rm -rf /app/packages/worker/node_modules
 COPY --from=prod-deps /app/packages/worker/node_modules/ /app/packages/worker/node_modules
 COPY --from=build /app/packages/worker/dist /app/packages/worker/dist
 
-# Install handlers
-## fetch-handler
-RUN rm -rf /app/handlers/fetch-handler/node_modules
-COPY --from=prod-deps /app/handlers/fetch-handler/node_modules/ /app/handlers/fetch-handler/node_modules
-## log-handler
-RUN rm -rf /app/handlers/log-handler/node_modules
-COPY --from=prod-deps /app/handlers/log-handler/node_modules/ /app/handlers/log-handler/node_modules
+# Install functions
+## fetch-fn
+RUN rm -rf /app/functions/fetch/node_modules
+COPY --from=prod-deps /app/functions/fetch/node_modules/ /app/functions/fetch/node_modules
+## log-fn
+RUN rm -rf /app/functions/log/node_modules
+COPY --from=prod-deps /app/functions/log/node_modules/ /app/functions/log/node_modules
 
 # Root node_modules
 COPY --from=prod-deps /app/node_modules/ /app/node_modules
@@ -75,7 +75,7 @@ RUN mkdir /app/packages/worker/definitions
 
 WORKDIR /app/packages/worker
 
-RUN cp -r /app/handlers/* ./node_modules/@enschedule/
+RUN cp -r /app/functions/* ./node_modules/@enschedule/
 
 RUN echo '#!/bin/bash' > docker-entry.sh && \
     echo 'API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
@@ -107,20 +107,20 @@ COPY --from=prod-deps /app/apps/dashboard/node_modules/ /app/apps/dashboard/node
 COPY --from=build /app/apps/dashboard/build /app/apps/dashboard/build
 COPY --from=build /app/apps/dashboard/public/build /app/apps/dashboard/public/build
 
-# Install handlers
-## fetch-handler
-RUN rm -rf /app/handlers/fetch-handler/node_modules
-COPY --from=prod-deps /app/handlers/fetch-handler/node_modules/ /app/handlers/fetch-handler/node_modules
-## log-handler
-RUN rm -rf /app/handlers/log-handler/node_modules
-COPY --from=prod-deps /app/handlers/log-handler/node_modules/ /app/handlers/log-handler/node_modules
+# Install functions
+## fetch-fn
+RUN rm -rf /app/functions/fetch/node_modules
+COPY --from=prod-deps /app/functions/fetch/node_modules/ /app/functions/fetch/node_modules
+## log-fn
+RUN rm -rf /app/functions/log/node_modules
+COPY --from=prod-deps /app/functions/log/node_modules/ /app/functions/log/node_modules
 
 # Root node_modules
 COPY --from=prod-deps /app/node_modules/ /app/node_modules
 
 WORKDIR /app/apps/dashboard
 
-RUN cp -r /app/handlers/* ./node_modules/@enschedule/
+RUN cp -r /app/functions/* ./node_modules/@enschedule/
 
 RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
     chmod +x docker-entry.sh

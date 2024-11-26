@@ -80,7 +80,7 @@ jobs:
             --name enschedule-dashboard \
             --network enschedule_docker_test \
             -e SQLITE=":memory:" \
-            -e IMPORT_HANDLERS="@enschedule/fetch-handler,@enschedule/log-handler" \
+            -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \
             -e ACCESS_TOKEN_SECRET=secret_key \
             -e REFRESH_TOKEN_SECRET=secret_key \
             -e COOKIE_SESSION_SECRET=s3cr3t \

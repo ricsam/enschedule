@@ -616,12 +616,10 @@ function DataCard({
 
 export function Actions({
   action,
-  runRedirect,
   activeWorkers,
   pendingRunNow,
 }: {
   action: string;
-  runRedirect: string;
   activeWorkers: SerializeFrom<PublicWorker>[];
   pendingRunNow: boolean;
 }) {
@@ -719,7 +717,6 @@ export function Actions({
             Run now
           </Button>
           <input type="hidden" name="action" value="run" />
-          <input type="hidden" name="redirect" value={runRedirect} />
         </Form>
       </Box>
     </>
@@ -746,7 +743,9 @@ export const action: ActionFunction = async (arg) => {
 
   const id = getScheduleId(params);
   if (action === "run") {
-    const redirectTo = z.string().parse(fd.get("redirect"));
+    const redirectTo = z
+      .string()
+      .parse(new URL(request.url).searchParams.get("postActionRedirect"));
     await (await getWorker(context.worker)).runScheduleNow(id);
     return redirect(redirectTo);
   } else {

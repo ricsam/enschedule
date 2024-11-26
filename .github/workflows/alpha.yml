@@ -255,7 +255,7 @@ jobs:
           charts_dir: infrastructure/charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_RELEASE_NAME_TEMPLATE: "helm-{{ .Version }}"
+          CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}-app-v{{ .AppVersion }}"
 
   npm_publish:
     needs: test

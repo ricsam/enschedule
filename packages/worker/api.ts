@@ -51,9 +51,8 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .then((user) => {
         if (!user) {
           return res.status(401).json({ error: "Unauthorized" });
-        } 
-          next();
-        
+        }
+        next();
       })
       .catch(() => {
         return res.status(401).json({ error: "Unauthorized" });
@@ -424,9 +423,8 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .then((user) => {
         if (!user) {
           return res.status(401).json({ error: "Unauthorized" });
-        } 
-          res.json(user);
-        
+        }
+        res.json(user);
       })
       .catch(next);
   });
@@ -438,7 +436,7 @@ export class Worker extends PrivateBackend {
   serve(
     serveOptions: ServeOptions,
     app: express.Express = express()
-  ): { listen: (cb?: (url: string) => void) => void } {
+  ): { listen: (cb?: (url: string) => void) => http.Server } {
     const router = expressRouter(this);
 
     app.use("/api/v1", router);
@@ -466,6 +464,7 @@ export class Worker extends PrivateBackend {
         } else {
           server.listen(port, onListen);
         }
+        return server;
       },
     };
   }

@@ -44,6 +44,7 @@ RUN turbo build
 FROM base AS worker
 LABEL org.opencontainers.image.description="Worker"
 COPY --from=install-base /app/out/full/ .
+COPY --from=install-base /app/random-token.sh ./
 
 # Install pg-driver
 RUN rm -rf /app/packages/pg-driver/node_modules
@@ -76,7 +77,12 @@ WORKDIR /app/packages/worker
 
 RUN cp -r /app/handlers/* ./node_modules/@enschedule/
 
-RUN echo "API_HOSTNAME=0.0.0.0 node dist/docker-entry.js" > docker-entry.sh && \
+RUN echo '#!/bin/bash' > docker-entry.sh && \
+    echo 'API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
+    echo 'ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-$(/app/random-token.sh REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET:-$(/app/random-token.sh COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
+    echo 'node dist/docker-entry.js' >> docker-entry.sh && \
     chmod +x docker-entry.sh
 
 CMD ["sh", "docker-entry.sh"]
@@ -85,6 +91,7 @@ CMD ["sh", "docker-entry.sh"]
 FROM base AS dashboard
 LABEL org.opencontainers.image.description="Dashboard"
 COPY --from=install-base /app/out/full/ .
+COPY --from=install-base /app/random-token.sh ./
 
 # Install worker-api
 RUN rm -rf /app/packages/worker-api/node_modules
@@ -116,6 +123,14 @@ WORKDIR /app/apps/dashboard
 RUN cp -r /app/handlers/* ./node_modules/@enschedule/
 
 RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
+    chmod +x docker-entry.sh
+
+RUN echo '#!/bin/bash' > docker-entry.sh && \
+    echo 'HOST=0.0.0.0 \\' >> docker-entry.sh && \
+    echo 'ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-$(/app/random-token.sh REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET:-$(/app/random-token.sh COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
+    echo 'npm run docker:start' >> docker-entry.sh && \
     chmod +x docker-entry.sh
 
 CMD ["sh", "docker-entry.sh"]

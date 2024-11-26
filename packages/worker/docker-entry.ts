@@ -3,8 +3,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import fs from "node:fs";
 import path from "node:path";
+import type http from "node:http";
 import { z } from "zod";
+import { debug } from "debug";
 import { Worker } from "./api.js";
+
+const log = debug("worker");
 
 if (!process.env.WORKER_ID) {
   throw new Error("Missing WORKER_ID environment variable");
@@ -24,6 +28,8 @@ const pollInterval = z
   .int()
   .positive()
   .safeParse(Number(process.env.POLL_INTERVAL));
+
+let server: http.Server | undefined;
 worker.tickDuration = pollInterval.success ? pollInterval.data : 10000;
 
 void (async () => {
@@ -61,7 +67,7 @@ void (async () => {
   }
 
   if (process.env.ENSCHEDULE_API) {
-    worker
+    server = worker
       .serve({
         port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
         hostname: process.env.API_HOSTNAME,
@@ -71,3 +77,23 @@ void (async () => {
 
   await worker.startPolling();
 })();
+
+function shutdown() {
+  log("\nCleaning up resources...");
+  if (server) {
+    server.close(() => {
+      log("HTTP server closed.");
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+process.on("exit", (code) => {
+  log(`Process exiting with code ${code}`);
+  log("Memory usage:", process.memoryUsage());
+});

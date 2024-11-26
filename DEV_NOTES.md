@@ -37,7 +37,7 @@ kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
 * worker must have main field that points to "./dist/index.js"
 
 
-# Publishing
+# Publishing npm packages
 ```bash
 npm run build
 node ./release-package.js # during dev some packages have their main field point to ts files to aid when jumping to definition in vscode. When publishing to npm it is important that these fields change to pointing at the files in the dist folders. Done using release-package.js script

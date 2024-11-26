@@ -2,5 +2,5 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tests/*"
-  - "handlers/*"
+  - "functions/*"
   - "website"

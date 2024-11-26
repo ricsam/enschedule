@@ -1,5 +1,14 @@
 # @enschedule/worker
 
+## 1.1.1
+
+### Patch Changes
+
+- Rename handlers to functions and fix stability of redirects when token refreshes in the dashboard
+- Updated dependencies
+  - @enschedule/pg-driver@1.1.1
+  - @enschedule/worker-api@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes

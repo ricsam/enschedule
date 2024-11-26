@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["website", "test-worker", "@enschedule/hub-test", "@enschedule/playwright-tests"]
 }

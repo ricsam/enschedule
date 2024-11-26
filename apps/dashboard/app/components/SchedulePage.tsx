@@ -650,12 +650,15 @@ export function Actions({
             <Box>
               {activeWorkers.map((worker) => {
                 return (
-                  <Box key={worker.id} display="flex">
-                    <span>{worker.title} - </span>
+                  <Box key={worker.id} display="flex" alignItems={"center"}>
+                    {'• '}
                     <MuiLink to={`/workers/${worker.id}`} component={Link}>
-                      {worker.instanceId}
+                      <b>{worker.title}</b> ({worker.instanceId})
                     </MuiLink>
-                    <span> - {worker.pollInterval}</span>
+                    <Box component={"span"} sx={{ ml: 1 }}>
+                      <b>Polling every</b>
+                      {worker.pollInterval} ms
+                    </Box>
                   </Box>
                 );
               })}

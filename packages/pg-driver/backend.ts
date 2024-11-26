@@ -2269,6 +2269,7 @@ export class PrivateBackend {
   }
 
   public async runScheduleNow(scheduleId: number) {
+    log(`Will mark schedule (${scheduleId}) as "run now"`);
     const schedule = await Schedule.findByPk(scheduleId, {
       include: [
         {
@@ -2289,6 +2290,7 @@ export class PrivateBackend {
     schedule.runNow = true;
     schedule.claimed = false;
     await schedule.save();
+    log(`Marked schedule (${scheduleId}) as "run now"`);
   }
 
   public async runSchedulesNow(scheduleIds: number[]) {

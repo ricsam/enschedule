@@ -337,7 +337,9 @@ export default function SchedulePage({
               </Typography>
               <Typography color="text.secondary">Next run</Typography>
               <Typography color="text.primary" data-testid="next-run">
-                {schedule.runAt ? (
+                {schedule.runNow ? (
+                  "Scheduled to run now"
+                ) : schedule.runAt ? (
                   formatDate(new Date(schedule.runAt), { verbs: false }).label
                 ) : (
                   <>
@@ -651,13 +653,12 @@ export function Actions({
               {activeWorkers.map((worker) => {
                 return (
                   <Box key={worker.id} display="flex" alignItems={"center"}>
-                    {'• '}
+                    {"• "}
                     <MuiLink to={`/workers/${worker.id}`} component={Link}>
                       <b>{worker.title}</b> ({worker.instanceId})
                     </MuiLink>
                     <Box component={"span"} sx={{ ml: 1 }}>
-                      <b>Polling every</b>
-                      {worker.pollInterval} ms
+                      <b>Polling every</b> {worker.pollInterval} ms
                     </Box>
                   </Box>
                 );

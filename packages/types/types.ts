@@ -14,6 +14,8 @@ export enum ScheduleStatus {
   UNSCHEDULED = "UNSCHEDULED",
   SCHEDULED = "SCHEDULED",
   RUNNING = "RUNNING",
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  NO_WORKER = "NO_WORKER",
 }
 export enum WorkerStatus {
   UP = "UP",

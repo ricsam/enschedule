@@ -268,7 +268,7 @@ test.describe("Single schedule", () => {
       page.getByTestId("table-row-1").getByTestId("schedule-link")
     );
     await page.getByTestId("delete-schedule").click();
-    await page.waitForURL(/\/schedules\/?$/);
+    await page.waitForURL(/\/schedules\/?(\?.*)?$/);
     await page.waitForSelector("div#SchedulesTable");
     await waitForNumRows(page, 1);
     expect(await numRows(page)).toBe(1);
@@ -294,7 +294,7 @@ test.describe("Single schedule", () => {
       page.getByTestId("table-row-1").getByTestId("schedule-link")
     );
     await page.getByTestId("delete-schedule").click();
-    await page.waitForURL(/\/schedules\/?$/);
+    await page.waitForURL(/\/schedules\/?(\?.*)?$/);
     await page.waitForSelector("div#SchedulesTable");
     await waitForNumRows(page, 0);
     expect(await numRows(page)).toBe(0);

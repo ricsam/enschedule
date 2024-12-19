@@ -54,16 +54,16 @@ Configuration of the `@enschedule/dashboard` is primarily handled through enviro
 
 Only a `WORKER_URL` or database connection variables are required to run `@enschedule/dashboard`
 
-| Variable          | Description                                                                                                                                                 | Accepted Values          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `WORKER_URL`      | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL                      |
-| `API_KEY`         | The API key for authenticating with the worker service.                                                                                                     | `string`                 |
-| `DB_USER`         | The username for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
-| `DB_HOST`         | The host address of the database. Not used if `WORKER_URL` is provided.                                                                                     | `string`                 |
-| `DB_PASSWORD`     | The password for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
-| `DB_DATABASE`     | The name of the database to connect to. Not used if `WORKER_URL` is provided.                                                                               | `string`                 |
-| `DB_PORT`         | The port number on which the database server is running. Not used if `WORKER_URL` is provided.                                                              | `integer`                |
-| `ORM_LOGGING`     | Enables or disables ORM logging. Not used if `WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
+| Variable           | Description                                                                                                                                                 | Accepted Values          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `WORKER_URL`       | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL                      |
+| `API_KEY`          | The API key for authenticating with the worker service.                                                                                                     | `string`                 |
+| `DB_USER`          | The username for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
+| `DB_HOST`          | The host address of the database. Not used if `WORKER_URL` is provided.                                                                                     | `string`                 |
+| `DB_PASSWORD`      | The password for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
+| `DB_DATABASE`      | The name of the database to connect to. Not used if `WORKER_URL` is provided.                                                                               | `string`                 |
+| `DB_PORT`          | The port number on which the database server is running. Not used if `WORKER_URL` is provided.                                                              | `integer`                |
+| `ORM_LOGGING`      | Enables or disables ORM logging. Not used if `WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
 | `IMPORT_FUNCTIONS` | Comma separated list of node modules that are imported to define handlers or schedules                                                                      | `string`                 |
 
 ##### Database dialect options
@@ -284,9 +284,9 @@ ENSCHEDULE_API_VERSION="1" \
 enschedule apply -f ping-schedule.yml
 ```
 
-* `apiVersion` - not used
-* `ENSCHEDULE_API_VERSION` - not used
-* `api/v1` - is the default endpint
+- `apiVersion` - not used
+- `ENSCHEDULE_API_VERSION` - not used
+- `api/v1` - is the default endpint
 
 **NOTE** it has not yet been decided how the versioning will work
 
@@ -302,10 +302,11 @@ Fields
 - `version hash` - if the hash changes the version is bumped
 
 # Definitions / Functions / Handlers
-Have a version constructed of 
 
-* id
-* version
+Have a version constructed of
+
+- id
+- version
 
 If anything else on a function updates, such as title, job, example, access then you must bumb the version key for it to be updated. This is your responsibility as a developer to make sure versions is bumped as Enschedule CAN NOT serialize the code in e.g. the job and thus detect newer versions.
 
@@ -386,8 +387,8 @@ const worker = new Worker({
       groups: ["group1"],
     },
     delete: {
-      users: ["admin"]
-    }
+      users: ["admin"],
+    },
   },
   defaultFunctionAccess: {
     /*...*/
@@ -525,5 +526,35 @@ await worker.scheduleJob(
       },
     },
   }
+);
+```
+
+# Migrations
+
+If you update the data schema you must update the version. If the new data schema is not compatible with the old one you must create a function migration:
+
+```ts
+await worker.migrateHandler(
+  "log-number",
+  {
+    dataSchema: z.number(),
+    version: 1,
+  },
+  {
+    title: "Number logger",
+    dataSchema: z.object({ value: z.number() }),
+    version: 1,
+    job: async ({ value }) => {
+      console.log(value);
+    },
+    description: "this will log a number",
+    example: {
+      value: 100,
+    },
+  },
+  // this is the migration where we convert data from `z.number()` to `z.object({ value: z.number() })`
+  (value) => ({
+    value,
+  })
 );
 ```

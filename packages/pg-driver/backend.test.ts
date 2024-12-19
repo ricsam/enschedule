@@ -6,7 +6,6 @@ import { PublicJobRun, WorkerStatus } from "@enschedule/types";
 import { z } from "zod";
 import { Schedule, TestBackend, createJobDefinition } from "./backend";
 import { envSequalizeOptions } from "./env-sequalize-options";
-import { Transaction } from "sequelize";
 
 let sequalizeInstances: TestBackend[] = [];
 
@@ -1099,8 +1098,8 @@ registerTests((getBackend: () => TestBackend) => {
       const spyB = jest.fn((url: string) => {});
 
       await backend.migrateHandler(
+        handler.id,
         {
-          id: handler.id,
           dataSchema: handler.dataSchema,
           version: handler.version,
         },
@@ -1145,6 +1144,50 @@ registerTests((getBackend: () => TestBackend) => {
       const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).not.toHaveBeenCalled();
       expect(spyB).toBeCalledWith("http://other_url:1234");
+    });
+    it("should fail to run a job if the version is incremented without a migration", async () => {
+      const spyA = jest.fn((data: { url: string }) => {});
+
+      const handler = httpJobDeclaration(spyA);
+      backend.registerJob(handler);
+      const worker = await backend.registerWorker();
+
+      const [schedule] = await backend.createJobSchedule(
+        "http_request",
+        "title",
+        "description",
+        1,
+        {
+          url: "http://localhost:1234",
+        },
+        {
+          runAt: new Date(0),
+          eventId: "default-1",
+        }
+      );
+      expect(schedule.id).toBe(1);
+
+      const runA = await awaitRunSchedule(backend, schedule.id);
+      expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
+      expect(runA.data).toBe('{"url":"http://localhost:1234"}');
+
+      // bump version
+      handler.version = 2;
+      backend.getDefinedJobs()[handler.id]!["2"] = handler as any;
+      delete backend.getDefinedJobs()[handler.id]!["1"];
+      expect(async () => {
+        await awaitRunSchedule(backend, schedule.id);
+      }).rejects.toThrow();
+
+      let claimed = await backend.claimUnclaimedOverdueJobs();
+
+      expect(claimed).toHaveLength(0);
+
+      // we change the version to 2 and the job should now be claimed
+      schedule.handlerVersion = 2;
+      await schedule.save();
+      claimed = await backend.claimUnclaimedOverdueJobs();
+      expect(claimed).toHaveLength(1);
     });
   });
 

@@ -217,10 +217,16 @@ function createPublicUser(user: User): z.output<typeof UserSchema> {
   };
 }
 
-const getScheduleStatus = (schedule: Schedule): ScheduleStatus => {
+const getScheduleStatus = (
+  schedule: Schedule,
+  hasFunction: boolean
+): ScheduleStatus => {
   let status = ScheduleStatus.UNSCHEDULED;
   if (schedule.runAt || schedule.runNow === true) {
     status = ScheduleStatus.SCHEDULED;
+    if (!hasFunction) {
+      status = ScheduleStatus.NO_WORKER;
+    }
   }
   if (schedule.lastRun) {
     const runStatus = getRunStatus(schedule.lastRun);
@@ -253,7 +259,7 @@ export const createPublicJobSchedule = (
   schedule: Schedule,
   jobDef: PublicJobDefinition | string
 ): PublicJobSchedule => {
-  const status = getScheduleStatus(schedule);
+  const status = getScheduleStatus(schedule, typeof jobDef !== "string");
   return {
     id: schedule.id,
     title: schedule.title,
@@ -1407,7 +1413,7 @@ export class PrivateBackend {
     if (sequalizeSanitizedWhere) {
       Object.entries(sequalizeSanitizedWhere).forEach(([key, value]) => {
         if (value === undefined) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-dynamic-delete
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
           delete (sequalizeSanitizedWhere as any)[key];
         }
       });
@@ -1436,18 +1442,59 @@ export class PrivateBackend {
     });
     return jobs;
   }
-  protected getLocalHandler(id: string, version: number): JobDefinition {
+
+  /* eslint-disable */
+  /**
+   * Will get the function/handler, the latest version, and how to migrate to it
+   */
+  protected getLocalHandler(
+    id: string,
+    version: number
+  ): {
+    definition: JobDefinition;
+    migrateData: (data: any) => any;
+    version: number;
+  } {
     const versions = this.definedJobs[id];
     if (!versions) {
       throw new Error("invalid id");
     }
-    const def = versions[version];
+    let def = versions[version];
+    if (!def) {
+      const migrations = this.migrations[id];
+
+      if (!migrations) {
+        throw new Error("invalid version");
+      }
+
+      let migratedVersion = version;
+      let migrateFn = (data: any) => data;
+      while (true) {
+        const migration = this.migrations[id]?.[migratedVersion];
+        if (migration) {
+          migratedVersion = migration.targetVersion;
+          migrateFn = (data: any) => migration.migrateFn(migrateFn(data));
+        } else {
+          break;
+        }
+      }
+
+      def = versions[migratedVersion];
+      if (def) {
+        return {
+          definition: def,
+          version: migratedVersion,
+          migrateData: migrateFn,
+        };
+      }
+    }
     if (!def) {
       throw new Error("invalid version");
     }
 
-    return def;
+    return { definition: def, version, migrateData: (data) => data };
   }
+  /* eslint-enable */
   public async getRuns({
     scheduleId,
     order: frontEndOrder,
@@ -1631,7 +1678,9 @@ export class PrivateBackend {
     );
   }
 
-  public async reset(authHeader: z.output<typeof AuthHeader>): Promise<boolean> {
+  public async reset(
+    authHeader: z.output<typeof AuthHeader>
+  ): Promise<boolean> {
     const auth = await this.getUserAuth(authHeader);
     if (!auth?.admin) {
       return false;
@@ -1722,7 +1771,7 @@ export class PrivateBackend {
         return handler;
       }
     }
-    return handlerId;
+    return `${handlerId} v${version}`;
   }
 
   public async getLatestHandler(
@@ -2074,7 +2123,6 @@ export class PrivateBackend {
   ) {
     let migratedVersion = handlerVersion;
     let migratedData = data;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, no-constant-condition
     while (true) {
       const migration = this.migrations[defId]?.[migratedVersion];
       if (migration) {
@@ -2165,7 +2213,7 @@ export class PrivateBackend {
     }
     // to support the enschedule apply, we want to update the schedule if it already exists
     if (!created && eventId) {
-      /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-condition */
+      /* eslint-disable */
       // update the schedule
       let updated = false;
 
@@ -2197,7 +2245,7 @@ export class PrivateBackend {
       if (updated) {
         status = "updated";
       }
-      /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-condition */
+      /* eslint-enable */
 
       await schedule.save();
     }
@@ -2349,9 +2397,47 @@ export class PrivateBackend {
           [Op.and]: [
             {
               // this worker must have the handler for this schedule
-              handlerId: {
-                [Op.in]: jobKeys,
-              },
+              [Op.or]: jobKeys.flatMap((key) => {
+                const definedJobs = this.definedJobs[key];
+                if (definedJobs) {
+                  const eligibleVersions = new Set(Object.keys(definedJobs));
+                  const migrations = { ...this.migrations[key] };
+                  eligibleVersions.forEach((version) => {
+                    delete migrations[version];
+                  });
+                  // if we can migrate from a -> b -> c and c is in the eligible versions, then b will be added as well to the eligible versions followed by a being added.
+                  while (Object.keys(migrations).length > 0) {
+                    let didAction = false;
+                    Object.entries(migrations).forEach(
+                      ([fromVersion, migration]) => {
+                        if (!migration) {
+                          return;
+                        }
+                        if (
+                          eligibleVersions.has(String(migration.targetVersion))
+                        ) {
+                          delete migrations[fromVersion];
+                          eligibleVersions.add(fromVersion);
+                          didAction = true;
+                        }
+                      }
+                    );
+                    if (!didAction) {
+                      break;
+                    }
+                  }
+                  return [
+                    {
+                      handlerId: key,
+                      handlerVersion: {
+                        [Op.in]: Array.from(eligibleVersions).map(Number),
+                      },
+                    },
+                  ];
+                }
+                return [];
+              }),
+
               // it must not already be claimed by another worker
               claimed: {
                 [Op.eq]: false,
@@ -2504,45 +2590,56 @@ export class PrivateBackend {
   > = {};
 
   public async migrateHandler<T extends ZodType, U extends ZodType>(
-    a: Pick<JobDefinition<T>, "id" | "dataSchema" | "version">,
-    b: JobDefinition<U>,
+    id: string,
+    from: Pick<JobDefinition<T>, "dataSchema" | "version">,
+    to: Omit<JobDefinition<U>, "id">,
     migrateFn: (a: z.infer<T>) => z.infer<U>
   ) {
-    if (a.id !== b.id) {
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+    if (
+      ((from as any).id && (from as any).id !== id) ||
+      ((to as any).id && (to as any).id !== id)
+    ) {
       throw new Error("The definition ids must be the same");
     }
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
 
-    const job = this.registerJob(b);
+    const job = this.registerJob({ ...to, id });
 
-    const migrations = this.migrations[a.id] ?? {};
-    migrations[a.version] = {
-      targetVersion: b.version,
+    const migrations = this.migrations[id] ?? {};
+    migrations[from.version] = {
+      targetVersion: to.version,
       migrateFn,
     };
-    this.migrations[a.id] = migrations;
+    this.migrations[id] = migrations;
 
-    const schedules = await Schedule.findAll({
+    const newSchedules = await Schedule.findAll({
       order: [["createdAt", "DESC"]],
       include: {
         model: Run,
         as: "lastRun",
       },
       where: {
-        handlerId: a.id,
+        [Op.and]: [
+          {
+            handlerId: id,
+          },
+          {
+            handlerVersion: from.version,
+          },
+        ],
       },
     });
 
     await Promise.all(
-      schedules.map(async (schedule) => {
-        if (schedule.handlerVersion === a.version) {
-          const data = a.dataSchema.parse(
-            JSON.parse(schedule.data)
-          ) as z.infer<T>;
-          const newData = b.dataSchema.parse(migrateFn(data)) as z.infer<U>;
-          schedule.data = JSON.stringify(newData);
-          schedule.handlerVersion = b.version;
-          await schedule.save();
-        }
+      newSchedules.map(async (schedule) => {
+        const data = from.dataSchema.parse(
+          JSON.parse(schedule.data)
+        ) as z.infer<T>;
+        const newData = to.dataSchema.parse(migrateFn(data)) as z.infer<U>;
+        schedule.data = JSON.stringify(newData);
+        schedule.handlerVersion = to.version;
+        await schedule.save();
       })
     );
     return job;
@@ -2755,12 +2852,14 @@ export class PrivateBackend {
       schedule.handlerId,
       schedule.handlerVersion
     );
-    const data: any = definition.dataSchema.parse(JSON.parse(schedule.data));
+    const data: any = definition.definition.dataSchema.parse(
+      definition.migrateData(JSON.parse(schedule.data))
+    );
     return this.runDefinition(
       {
         handlerId: schedule.handlerId,
         data,
-        version: schedule.handlerVersion,
+        version: definition.version,
       },
       run
     );
@@ -2909,7 +3008,9 @@ export class PrivateBackend {
       let exitSignal = "0";
       toggleBuffering(true);
       try {
-        await definition.job(runMessage.data);
+        await definition.definition.job(
+          definition.migrateData(runMessage.data)
+        );
       } catch (err) {
         console.error(err);
         exitSignal = "1";
@@ -2979,7 +3080,7 @@ export class PrivateBackend {
           const definition = this.getLocalHandler(handlerId, version);
           (async () => {
             try {
-              await definition.job(data);
+              await definition.definition.job(definition.migrateData(data));
             } catch (err) {
               console.error(err);
               return true;
@@ -3027,7 +3128,11 @@ export class PrivateBackend {
     );
     log(
       "Will run",
-      definition.title,
+      definition.definition.title,
+      "version",
+      definition.version === schedule.handlerVersion
+        ? definition.version
+        : `${definition.version} (migrated from ${schedule.handlerVersion})`,
       "according to the",
       schedule.title,
       "schedule"
@@ -3047,7 +3152,7 @@ export class PrivateBackend {
           startedAt,
           data: schedule.data,
           workerId: worker.id,
-          handlerId: definition.id,
+          handlerId: definition.definition.id,
           handlerVersion: definition.version,
           scheduleTitle: `${schedule.title}, #${schedule.id}`,
           workerTitle: `${worker.title}, #${worker.id}`,
@@ -3122,7 +3227,11 @@ export class PrivateBackend {
     const { finishedAt } = await this.runDbSchedule(schedule, run);
     log(
       "Finished running",
-      definition.title,
+      definition.definition.title,
+      "version",
+      definition.version === schedule.handlerVersion
+        ? definition.version
+        : `${definition.version} (migrated from ${schedule.handlerVersion})`,
       "according to the",
       schedule.title,
       "schedule",
@@ -3131,7 +3240,7 @@ export class PrivateBackend {
     );
 
     log(
-      `Storing the stdout and stderr from the job (${definition.title} @ ${schedule.title})`
+      `Storing the stdout and stderr from the job (${definition.definition.title} @ ${schedule.title})`
     );
 
     await worker.setLastRun(run);
@@ -3162,7 +3271,7 @@ export class PrivateBackend {
                 this.getLocalHandler(
                   schedule.handlerId,
                   schedule.handlerVersion
-                ).title
+                ).definition.title
               }${schedule.title}`
           )
           .join(", ")
@@ -3192,7 +3301,7 @@ export class PrivateBackend {
                     this.getLocalHandler(
                       schedule.handlerId,
                       schedule.handlerVersion
-                    )
+                    ).definition
                   )
                 )
               );

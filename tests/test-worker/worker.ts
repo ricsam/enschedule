@@ -4,6 +4,7 @@ import "dotenv/config";
 import { Worker } from "@enschedule/worker";
 import add from "date-fns/add";
 import { z } from "zod";
+import express from "express";
 
 const worker = new Worker({
   name: process.env.SPECIAL_HANDLERS ? "Special worker" : "Test worker",
@@ -150,10 +151,19 @@ if (!process.env.SPECIAL_HANDLERS) {
 
   if (process.env.ENSCHEDULE_API) {
     console.log("Starting the API");
+    const app = express();
+    const router = express.Router();
+    router.get("/increase-version", (req, res) => {
+      res.send("Increased version");
+    });
+    app.use("/test", router);
     worker
-      .serve({
-        port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
-      })
+      .serve(
+        {
+          port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+        },
+        app
+      )
       .listen();
   }
   console.log("Starting polling");
@@ -175,6 +185,18 @@ if (!process.env.SPECIAL_HANDLERS) {
       title: "Programatically Created",
       description:
         "This is an automatically created job which will run in 5 days",
+    }
+  );
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "send-http-request",
+    10,
+    { url: "http://localhost:3000" },
+    {
+      eventId: "non_existing_function",
+      title: "Run on a non existing function version",
+      description:
+        "This is an automatically created job which will not run, because there is no function with id send-http-request and version 10",
     }
   );
   console.log("Worker up and running");

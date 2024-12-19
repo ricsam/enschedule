@@ -31,8 +31,12 @@ module.exports = {
     },
   },
   rules: {
-    'no-console': 0,
-    '@typescript-eslint/explicit-function-return-type': 0
+    "no-console": 0,
+    "@typescript-eslint/explicit-function-return-type": 0,
+    "@typescript-eslint/no-dynamic-delete": 0,
+    "@typescript-eslint/no-unnecessary-condition": 0,
+    "no-constant-condition": 0,
+    "eslint-comments/no-unlimited-disable": 0,
   },
   ignorePatterns: ["node_modules/", "dist/", "coverage/", "*.test.ts"],
 };

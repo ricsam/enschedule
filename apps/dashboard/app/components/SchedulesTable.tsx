@@ -25,12 +25,13 @@ const columns: ColumnDef<RowData, any>[] = [
     cell: (info) => {
       const s: ScheduleStatus = info.getValue();
       const icons: { [key in ScheduleStatus]: string } = {
-        [ScheduleStatus.FAILED]: "⚠️",
+        [ScheduleStatus.FAILED]: "❌",
         [ScheduleStatus.SCHEDULED]: "📅",
         [ScheduleStatus.UNSCHEDULED]: "❔",
         [ScheduleStatus.RETRYING]: "🔄",
         [ScheduleStatus.RUNNING]: "🚀",
         [ScheduleStatus.SUCCESS]: "✅",
+        [ScheduleStatus.NO_WORKER]: "⚠️",
       };
       return (
         <Tooltip title={sentenceCase(s)} disableInteractive>
@@ -71,7 +72,9 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
   columnHelper.accessor(
     (data) => {
-      return data.runAt
+      return data.runNow
+        ? "Now"
+        : data.runAt
         ? formatDate(new Date(data.runAt), { verbs: false }).label
         : "Not scheduled";
     },

@@ -2,7 +2,7 @@ import { WorkerStatus, type PublicJobSchedule } from "@enschedule/types";
 import type { LoaderFunction, SerializeFrom } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { useLoaderData } from "@remix-run/react";
+import { useHref, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulePage, {
   Actions,
@@ -95,11 +95,12 @@ export const useNavbar = (action: string): NavBar => {
 export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
   const { schedule } = useLoaderData<LoaderData>();
+  const thisUrl = useHref("", { relative: "path" });
 
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
-      navbar={useNavbar("")}
+      navbar={useNavbar("?postActionRedirect=" + thisUrl)}
     >
       <SchedulePage schedule={schedule} editDetails={editDetails} />
     </RootLayout>

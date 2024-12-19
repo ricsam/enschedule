@@ -3,8 +3,8 @@ import { WorkerStatus } from "@enschedule/types";
 import { Tooltip, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import MuiLink from "@mui/material/Link";
-import { Link as RemixLink } from "@remix-run/react";
 import type { SerializeFrom } from "@remix-run/node";
+import { Link as RemixLink } from "@remix-run/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import { sentenceCase } from "sentence-case";
@@ -17,27 +17,35 @@ export type RowData = SerializeFrom<z.output<typeof PublicWorkerSchema>>;
 
 const columnHelper = createColumnHelper<RowData>();
 
+const getWorkerStatusIcon = (status: WorkerStatus) => {
+  const icons: { [key in WorkerStatus]: string } = {
+    [WorkerStatus.PENDING]: "⚠️",
+    [WorkerStatus.UP]: "✅",
+    [WorkerStatus.DOWN]: "❗️",
+  };
+  return icons[status];
+};
+
+export const WorkerStatusIcon = ({ status }: { status: WorkerStatus }) => {
+  return (
+    <Tooltip title={sentenceCase(status)} disableInteractive>
+      <Typography
+        variant="inherit"
+        data-testid="status"
+        data-status={status}
+        sx={{ cursor: "default" }}
+      >
+        {getWorkerStatusIcon(status)}
+      </Typography>
+    </Tooltip>
+  );
+};
+
 const columns: ColumnDef<RowData, any>[] = [
   columnHelper.accessor("status", {
     cell: (info) => {
-      const s: WorkerStatus = info.getValue();
-      const icons: { [key in WorkerStatus]: string } = {
-        [WorkerStatus.PENDING]: "⚠️",
-        [WorkerStatus.UP]: "✅",
-        [WorkerStatus.DOWN]: "❗️",
-      };
-      return (
-        <Tooltip title={sentenceCase(s)} disableInteractive>
-          <Typography
-            variant="inherit"
-            data-testid="status"
-            data-status={s}
-            sx={{ cursor: "default" }}
-          >
-            {icons[s]}
-          </Typography>
-        </Tooltip>
-      );
+      const s = info.getValue();
+      return <WorkerStatusIcon status={s} />;
     },
     header: "Status",
   }),

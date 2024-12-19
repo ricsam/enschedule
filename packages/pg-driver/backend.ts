@@ -2301,6 +2301,7 @@ export class PrivateBackend {
         failureTrigger,
         defaultRunAccess: options.defaultRunAccess,
         access: options.access,
+        workerId: options.workerId,
       }
     );
     return {

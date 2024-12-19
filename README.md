@@ -558,3 +558,7 @@ await worker.migrateHandler(
   })
 );
 ```
+
+# FAQ
+* How can I make a scheduled job run on a specific worker?\
+  *You can add a workerId to the schedule and the job will run on the specified worker*

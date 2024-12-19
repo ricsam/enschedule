@@ -5,5 +5,6 @@ export async function getLoaderData(worker: DashboardWorker, request: Request) {
   const authHeader = await getAuthHeader(request);
   const definitions = await worker.getLatestHandlers(authHeader);
   const schedules = await worker.getSchedules(authHeader);
-  return { definitions, schedules };
+  const workers = await worker.getWorkers(authHeader);
+  return { definitions, schedules, workers };
 }

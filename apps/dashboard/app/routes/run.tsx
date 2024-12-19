@@ -6,6 +6,7 @@ import type {
 import {
   ScheduleJobOptionsSchema,
   ScheduleJobResultSchema,
+  WorkerStatus,
 } from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
 import type { SxProps } from "@mui/material";
@@ -13,6 +14,7 @@ import {
   Avatar,
   CardHeader,
   Link as MuiLink,
+  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -46,10 +48,11 @@ import React from "react";
 import { z } from "zod";
 import { Editor, ReadOnlyEditor } from "~/components/Editor";
 import { RootLayout } from "~/components/Layout";
+import { WorkerStatusIcon } from "~/components/WorkersTable";
 import { getWorker } from "~/createWorker.server";
 import icon from "~/icon.svg";
-import { getLoaderData } from "./runLoader.server";
 import { getAuthHeader } from "~/sessions";
+import { getLoaderData } from "./runLoader.server";
 
 const SerializedJobEventSchema = z.intersection(
   z.object({
@@ -225,7 +228,7 @@ const InputArea = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function Run() {
-  const { definitions, schedules } = useLoaderData<LoaderData>();
+  const { definitions, schedules, workers } = useLoaderData<LoaderData>();
   const fetcher = useFetcher<PublicJobSchedule>();
   const qps: { def?: string } = Object.fromEntries(
     useSearchParams()[0].entries()
@@ -312,7 +315,7 @@ export default function Run() {
                   failureTrigger: selectedSchedule
                     ? selectedSchedule.id
                     : undefined,
-                  // TODO, the UI could allow for selecting schedule access + default run access and if that is the case 
+                  // TODO, the UI could allow for selecting schedule access + default run access and if that is the case
                   // we should merge the selectedDef.defaultScheduleAccess and selectedDef.defaultRunAccess with the selections made in the UI
                   // but for now we just inherit them from the function / handler / definition
                   access: selectedDef.defaultScheduleAccess,
@@ -327,6 +330,9 @@ export default function Run() {
                   } else {
                     job.runAt = parsedRunLater.toJSON();
                   }
+                }
+                if (workerId) {
+                  job.workerId = workerId;
                 }
                 fetcher.submit(
                   { jsonData: JSON.stringify(job) },
@@ -667,6 +673,17 @@ export default function Run() {
     </>
   );
 
+  const [hasMadeWorkerChoice, setHasMadeWorkerChoice] = React.useState(false);
+  const [wantsToSelectAWorker, setWantsToSelectAWorker] = React.useState(false);
+  const [workerId, setWorkerId] = React.useState<string | undefined>(undefined);
+  const workerDict: Record<string, typeof workers> = {};
+  workers.forEach((worker) => {
+    if (!workerDict[worker.workerId]) {
+      workerDict[worker.workerId] = [];
+    }
+    workerDict[worker.workerId].push(worker);
+  });
+
   return (
     <RootLayout breadcrumbs={[{ title: "Run", href: "/run" }]}>
       <Box
@@ -681,39 +698,7 @@ export default function Run() {
       >
         <EnscheduleBotMessage message="Which definition would you like to schedule?" />
 
-        {selectedDef && (
-          <>
-            <MyMessage message={selectedDef.title} />
-
-            <EnscheduleBotMessage
-              message={
-                <div>
-                  The <LightB>{selectedDef.title}</LightB> definition is
-                  described as <i>{selectedDef.description}</i>
-                </div>
-              }
-            />
-
-            <EnscheduleBotMessage
-              message={
-                <div>
-                  <div>
-                    Let's create a schedule for the{" "}
-                    <LightB>{selectedDef.title}</LightB> definition, please
-                    provide the data according to the following schema:
-                  </div>
-                  <Box pt={1}>
-                    <ReadOnlyEditor
-                      example={selectedDef.codeBlock}
-                      lang="typescript"
-                    />
-                  </Box>
-                </div>
-              }
-            />
-          </>
-        )}
-        {!selectedDef ? (
+        {!selectedDef && (
           <InputArea>
             <Autocomplete
               data-testid="definition-autocomplete"
@@ -733,116 +718,232 @@ export default function Run() {
             />
             <SendButton onClick={() => {}} />
           </InputArea>
-        ) : (
+        )}
+
+        {selectedDef && !hasMadeWorkerChoice && (
           <>
-            {data && (
-              <>
-                <MyMessage
-                  message={<FormattedJson data={data} />}
-                  sx={{
-                    flex: 1,
-                    ".MuiChip-label": {
-                      flex: 1,
-                    },
-                    ".read-only-editor": {
-                      /* the up most container of the editor */
-                      filter:
-                        "invert(1) hue-rotate(100deg) brightness(1) grayscale(0)",
-                    },
+            <MyMessage message={selectedDef.title} />
+            <EnscheduleBotMessage
+              message={`Would you like this job to run on a specific worker?`}
+            />
+
+            {!wantsToSelectAWorker ? (
+              <InputArea>
+                <Button
+                  data-testid="no-specific-worker"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => {
+                    setHasMadeWorkerChoice(true);
                   }}
+                >
+                  No
+                </Button>
+                <Box pr={1} />
+                <Button
+                  data-testid="select-specific-worker"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => {
+                    setWantsToSelectAWorker(true);
+                  }}
+                >
+                  Yes
+                </Button>
+              </InputArea>
+            ) : (
+              <>
+                <MyMessage message="Yes" />
+                <EnscheduleBotMessage
+                  message={`Which worker would you like to run this job on?`}
                 />
+                <InputArea>
+                  <Autocomplete
+                    data-testid="worker-autocomplete"
+                    disablePortal
+                    multiple={false}
+                    options={[
+                      ...new Set(
+                        workers
+                          .filter(
+                            (worker) =>
+                              worker.status === WorkerStatus.UP &&
+                              worker.definitions.find(
+                                (def) => def.id === selectedDef.id
+                              )
+                          )
+                          .map(({ workerId, title, status }) => workerId)
+                      ),
+                    ]}
+                    renderOption={(props, workerId) => {
+                      const { accessKey, ...optionProps } = props;
+                      const workers = workerDict[workerId];
+                      return (
+                        <Box key={accessKey} component="li" {...optionProps}>
+                          <Box component="span" sx={{ mr: 1 }}>
+                            {workers[0].title} ({workerId})
+                          </Box>
+                          <Tooltip
+                            title={workers
+                              .map(({ hostname }) => hostname)
+                              .join(", ")}
+                          >
+                            <Box
+                              component="span"
+                              sx={{ mr: 1, fontWeight: "bold" }}
+                            >
+                              ({workers.length})
+                            </Box>
+                          </Tooltip>
+                          <WorkerStatusIcon status={WorkerStatus.UP} />
+                        </Box>
+                      );
+                    }}
+                    value={workerId ?? null}
+                    onChange={(ev, workerId) => {
+                      setWorkerId(workerId ?? undefined);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Select a worker" />
+                    )}
+                    fullWidth
+                  />
+                  <SendButton
+                    onClick={() => {
+                      setHasMadeWorkerChoice(true);
+                    }}
+                  />
+                </InputArea>
+              </>
+            )}
+          </>
+        )}
 
-                <EnscheduleBotMessage message="Congratulations, we have not defined a job, a definition + data = job" />
-                <EnscheduleBotMessage message="Do you want to run this job now, later or manually?" />
-                {whenToSend === undefined ? (
-                  <InputArea>
-                    <>
-                      <Button
-                        data-testid="run-now"
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => {
-                          setWhenToSend("now");
-                        }}
-                      >
-                        Now
-                      </Button>
-                      <Box pr={1} />
-                      <Button
-                        data-testid="run-later"
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => {
-                          setWhenToSend("later");
-                        }}
-                      >
-                        Later
-                      </Button>
-                      <Box pr={1} />
-                      <Button
-                        data-testid="run-manual"
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => {
-                          setWhenToSend("manual");
-                        }}
-                      >
-                        Manually
-                      </Button>
-                    </>
-                  </InputArea>
-                ) : (
+        {selectedDef && hasMadeWorkerChoice && (
+          <>
+            <MyMessage message={selectedDef.title} />
+            <EnscheduleBotMessage
+              message={`Would you like this job to run on a specific worker?`}
+            />
+            <MyMessage message={wantsToSelectAWorker ? "Yes" : "No"} />
+            {wantsToSelectAWorker && workerId && (
+              <>
+                <EnscheduleBotMessage
+                  message={`Which worker would you like to run this job on?`}
+                />
+                <MyMessage message={workerDict[workerId][0].title} />
+              </>
+            )}
+            {selectedDef && (
+              <>
+                {data && (
                   <>
-                    <MyMessage message={pascalCase(whenToSend)} />
+                    <MyMessage
+                      message={<FormattedJson data={data} />}
+                      sx={{
+                        flex: 1,
+                        ".MuiChip-label": {
+                          flex: 1,
+                        },
+                        ".read-only-editor": {
+                          /* the up most container of the editor */
+                          filter:
+                            "invert(1) hue-rotate(100deg) brightness(1) grayscale(0)",
+                        },
+                      }}
+                    />
 
-                    {whenToSend === "later" ? (
+                    <EnscheduleBotMessage message="Congratulations, we have not defined a job, a definition + data = job" />
+                    <EnscheduleBotMessage message="Do you want to run this job now, later or manually?" />
+                    {whenToSend === undefined ? (
+                      <InputArea>
+                        <>
+                          <Button
+                            data-testid="run-now"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => {
+                              setWhenToSend("now");
+                            }}
+                          >
+                            Now
+                          </Button>
+                          <Box pr={1} />
+                          <Button
+                            data-testid="run-later"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => {
+                              setWhenToSend("later");
+                            }}
+                          >
+                            Later
+                          </Button>
+                          <Box pr={1} />
+                          <Button
+                            data-testid="run-manual"
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => {
+                              setWhenToSend("manual");
+                            }}
+                          >
+                            Manually
+                          </Button>
+                        </>
+                      </InputArea>
+                    ) : (
                       <>
-                        <EnscheduleBotMessage message="Do you want this job to repeat?" />
+                        <MyMessage message={pascalCase(whenToSend)} />
 
-                        {isCron === undefined ? (
-                          <InputArea>
-                            <>
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => {
-                                  setIsCron(false);
-                                }}
-                                data-testid="repeat-no"
-                              >
-                                No
-                              </Button>
-                              <Box pr={1} />
-                              <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => {
-                                  setIsCron(true);
-                                }}
-                                data-testid="repeat-yes"
-                              >
-                                Yes
-                              </Button>
-                            </>
-                          </InputArea>
-                        ) : isCron ? (
+                        {whenToSend === "later" ? (
                           <>
-                            <MyMessage message={"Yes"} />
-                            <EnscheduleBotMessage
-                              sx={{
-                                maxWidth: "none",
-                                width: "536px",
-                                ".MuiChip-label": { width: "100%" },
-                              }}
-                              message={
-                                <div>
-                                  <div>
-                                    Please provide a CRON expression according
-                                    to the following schema:
-                                  </div>
-                                  <Box pt={1}>
-                                    <ReadOnlyEditor
-                                      example={`*    *    *    *    *    *
+                            <EnscheduleBotMessage message="Do you want this job to repeat?" />
+
+                            {isCron === undefined ? (
+                              <InputArea>
+                                <>
+                                  <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => {
+                                      setIsCron(false);
+                                    }}
+                                    data-testid="repeat-no"
+                                  >
+                                    No
+                                  </Button>
+                                  <Box pr={1} />
+                                  <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => {
+                                      setIsCron(true);
+                                    }}
+                                    data-testid="repeat-yes"
+                                  >
+                                    Yes
+                                  </Button>
+                                </>
+                              </InputArea>
+                            ) : isCron ? (
+                              <>
+                                <MyMessage message={"Yes"} />
+                                <EnscheduleBotMessage
+                                  sx={{
+                                    maxWidth: "none",
+                                    width: "536px",
+                                    ".MuiChip-label": { width: "100%" },
+                                  }}
+                                  message={
+                                    <div>
+                                      <div>
+                                        Please provide a CRON expression
+                                        according to the following schema:
+                                      </div>
+                                      <Box pt={1}>
+                                        <ReadOnlyEditor
+                                          example={`*    *    *    *    *    *
 ┬    ┬    ┬    ┬    ┬    ┬
 │    │    │    │    │    |
 │    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
@@ -864,150 +965,183 @@ You can also combine L expressions with other weekday expressions.
 For example, the following cron will run every Monday as well as
 the last Wednesday of the month:
 0 0 * * * 1,3L`}
-                                      lang="md"
-                                    />
-                                  </Box>
-                                </div>
-                              }
-                            />
-                            {!cronDefined ? (
-                              <>
-                                <InputArea>
-                                  <TextField
-                                    placeholder="CRON expression"
-                                    type="text"
-                                    value={cronExpression}
-                                    error={!parsedCron}
-                                    helperText={
-                                      parsedCron ? (
-                                        <Box
-                                          component="span"
-                                          sx={{
-                                            display: "grid",
-                                            gridTemplateColumns: "auto 1fr",
-                                            columnGap: 1,
-                                          }}
-                                        >
-                                          <span>Parses to:</span>
-                                          <span>{parsedCron}</span>
-                                          <span>Next run:</span>
-                                          <span>
-                                            {cronParser
-                                              .parseExpression(parsedCron)
-                                              .next()
-                                              .toString()}
-                                          </span>
-                                          <span>Next next run:</span>
-                                          <span>
-                                            {(() => {
-                                              const expr =
-                                                cronParser.parseExpression(
-                                                  parsedCron
-                                                );
-                                              expr.next();
-                                              return expr.next().toString();
-                                            })()}
-                                          </span>
-                                        </Box>
-                                      ) : undefined
-                                    }
-                                    onChange={(ev) => {
-                                      // setComment(ev.target.value);
-                                      setCronExpression(ev.target.value);
-                                    }}
-                                    fullWidth
-                                  />
-                                  <SendButton
-                                    disabled={!parsedCron}
-                                    onClick={() => {
-                                      setCronDefined(true);
-                                    }}
-                                  />
-                                </InputArea>
+                                          lang="md"
+                                        />
+                                      </Box>
+                                    </div>
+                                  }
+                                />
+                                {!cronDefined ? (
+                                  <>
+                                    <InputArea>
+                                      <TextField
+                                        placeholder="CRON expression"
+                                        type="text"
+                                        value={cronExpression}
+                                        error={!parsedCron}
+                                        helperText={
+                                          parsedCron ? (
+                                            <Box
+                                              component="span"
+                                              sx={{
+                                                display: "grid",
+                                                gridTemplateColumns: "auto 1fr",
+                                                columnGap: 1,
+                                              }}
+                                            >
+                                              <span>Parses to:</span>
+                                              <span>{parsedCron}</span>
+                                              <span>Next run:</span>
+                                              <span>
+                                                {cronParser
+                                                  .parseExpression(parsedCron)
+                                                  .next()
+                                                  .toString()}
+                                              </span>
+                                              <span>Next next run:</span>
+                                              <span>
+                                                {(() => {
+                                                  const expr =
+                                                    cronParser.parseExpression(
+                                                      parsedCron
+                                                    );
+                                                  expr.next();
+                                                  return expr.next().toString();
+                                                })()}
+                                              </span>
+                                            </Box>
+                                          ) : undefined
+                                        }
+                                        onChange={(ev) => {
+                                          // setComment(ev.target.value);
+                                          setCronExpression(ev.target.value);
+                                        }}
+                                        fullWidth
+                                      />
+                                      <SendButton
+                                        disabled={!parsedCron}
+                                        onClick={() => {
+                                          setCronDefined(true);
+                                        }}
+                                      />
+                                    </InputArea>
+                                  </>
+                                ) : (
+                                  <>
+                                    <MyMessage message={parsedCron} />
+                                    {describeJob}
+                                  </>
+                                )}
                               </>
                             ) : (
                               <>
-                                <MyMessage message={parsedCron} />
-                                {describeJob}
+                                <MyMessage message={"No"} />
+                                <EnscheduleBotMessage message="When would you like to run this job?" />
+                                {!acceptRunLater ? (
+                                  <InputArea>
+                                    <TextField
+                                      fullWidth
+                                      inputProps={{
+                                        type: "datetime-local",
+                                        pattern:
+                                          "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}",
+                                        "data-testid": "runAt-input",
+                                      }}
+                                      value={runLater}
+                                      onChange={(ev) => {
+                                        setRunLater(ev.target.value);
+                                      }}
+                                    ></TextField>
+                                    <SendButton
+                                      data-testid="submit-runAt"
+                                      onClick={() => {
+                                        setAcceptRunLater(true);
+                                      }}
+                                    />
+                                  </InputArea>
+                                ) : (
+                                  <>
+                                    <MyMessage
+                                      message={parsedRunLater.toString()}
+                                    />
+                                    {describeJob}
+                                  </>
+                                )}
                               </>
                             )}
                           </>
                         ) : (
-                          <>
-                            <MyMessage message={"No"} />
-                            <EnscheduleBotMessage message="When would you like to run this job?" />
-                            {!acceptRunLater ? (
-                              <InputArea>
-                                <TextField
-                                  fullWidth
-                                  inputProps={{
-                                    type: "datetime-local",
-                                    pattern:
-                                      "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}",
-                                    "data-testid": "runAt-input",
-                                  }}
-                                  value={runLater}
-                                  onChange={(ev) => {
-                                    setRunLater(ev.target.value);
-                                  }}
-                                ></TextField>
-                                <SendButton
-                                  data-testid="submit-runAt"
-                                  onClick={() => {
-                                    setAcceptRunLater(true);
-                                  }}
-                                />
-                              </InputArea>
-                            ) : (
-                              <>
-                                <MyMessage
-                                  message={parsedRunLater.toString()}
-                                />
-                                {describeJob}
-                              </>
-                            )}
-                          </>
+                          describeJob
                         )}
                       </>
-                    ) : (
-                      describeJob
                     )}
                   </>
                 )}
               </>
             )}
-          </>
-        )}
 
-        {selectedDef && !data && (
-          <InputArea>
-            <Box
-              display="flex"
-              flex="1"
-              sx={{
-                borderWidth: 2,
-                borderStyle: "solid",
-                borderColor: isValid ? "transparent" : "error.main",
-              }}
-            >
-              <Editor
-                globalEditorRefName="schedule-data-editor"
-                jsonSchema={selectedDef.jsonSchema}
-                example={selectedDef.example}
-                getValueRef={dataValueRef}
-                setIsValid={setIsValid}
-              />
-            </Box>
-            <SendButton
-              disabled={!isValid}
-              onClick={() => {
-                const value = dataValueRef.current
-                  ? dataValueRef.current()
-                  : JSON.stringify(selectedDef.example, null, 2);
-                setData(JSON.parse(value));
-              }}
-            />
-          </InputArea>
+            {selectedDef && (
+              <>
+                <EnscheduleBotMessage
+                  message={
+                    <div>
+                      The <LightB>{selectedDef.title}</LightB> definition is
+                      described as <i>{selectedDef.description}</i>
+                    </div>
+                  }
+                />
+
+                <EnscheduleBotMessage
+                  message={
+                    <div>
+                      <div>
+                        Let's create a schedule for the{" "}
+                        <LightB>{selectedDef.title}</LightB> definition, please
+                        provide the data according to the following schema:
+                      </div>
+                      <Box pt={1}>
+                        <ReadOnlyEditor
+                          example={selectedDef.codeBlock}
+                          lang="typescript"
+                        />
+                      </Box>
+                    </div>
+                  }
+                />
+              </>
+            )}
+
+            {selectedDef && !data && (
+              <InputArea>
+                <Box
+                  display="flex"
+                  flex="1"
+                  sx={{
+                    borderWidth: 2,
+                    borderStyle: "solid",
+                    borderColor: isValid ? "transparent" : "error.main",
+                  }}
+                >
+                  <Editor
+                    globalEditorRefName="schedule-data-editor"
+                    jsonSchema={selectedDef.jsonSchema}
+                    example={selectedDef.example}
+                    getValueRef={dataValueRef}
+                    setIsValid={setIsValid}
+                  />
+                </Box>
+                <SendButton
+                  disabled={!isValid}
+                  onClick={() => {
+                    const value = dataValueRef.current
+                      ? dataValueRef.current()
+                      : JSON.stringify(selectedDef.example, null, 2);
+                    setData(JSON.parse(value));
+                  }}
+                />
+              </InputArea>
+            )}
+          </>
         )}
       </Box>
     </RootLayout>

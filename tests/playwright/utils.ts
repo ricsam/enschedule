@@ -68,6 +68,8 @@ const createRun = async (
   }
   await page.keyboard.press("Enter"); // Press the enter key
 
+  await page.getByTestId("no-specific-worker").click();
+
   if (options.data) {
     const ref = `window['${options.data.globalEditorRefName}']`;
     await page.waitForFunction(`!!${ref}`);

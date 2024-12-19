@@ -16,7 +16,7 @@ Object.assign(process.env, {
 });
 
 module.exports = async () => {
-  if (process.env.TEST_DIALECT === "postgres") {
+  if (process.env.TEST_DIALECT === "pg") {
     const client = new Client({
       user: process.env.DB_USER,
       host: process.env.DB_HOST,

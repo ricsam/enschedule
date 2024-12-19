@@ -68,6 +68,7 @@ const verboseScheduleStatus: Record<ScheduleStatus, string> = {
   [ScheduleStatus.SCHEDULED]: "Scheduled",
   [ScheduleStatus.UNSCHEDULED]: "Unscheduled",
   [ScheduleStatus.RUNNING]: "Running",
+  [ScheduleStatus.NO_WORKER]: "No Workers Found",
 };
 
 const verboseStatus = (status: ScheduleStatus) => {

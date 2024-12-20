@@ -20,6 +20,8 @@
     "@enschedule/types": "workspace:*",
     "@enschedule/worker": "workspace:*",
     "@enschedule/worker-api": "workspace:*",
+    "@enschedule-fns/log": "workspace:*",
+    "@enschedule-fns/fetch": "workspace:*",
     "@fontsource/roboto": "~4.5.8",
     "@lexical/code": "~0.6.2",
     "@lexical/react": "~0.6.2",

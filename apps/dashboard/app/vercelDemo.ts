@@ -109,6 +109,19 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
 
   await worker.scheduleJob(
     `Api-Key ${process.env.API_KEY}`,
+    "long-running",
+    1,
+    {},
+    {
+      eventId: "long_running_every_night",
+      cronExpression: "0 0 * * *",
+      title: "Daily job",
+      description: "Run every night at midnight",
+    }
+  );
+
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
     "send-http-request",
     1,
     { url: "http://localhost:3000" },
@@ -117,11 +130,11 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
       runAt: add(new Date(), {
         days: 5,
       }),
-      title: "Programatically Created",
-      description:
-        "This is an automatically created job which will run in 5 days",
+      title: "Send an http request in 5 days",
+      description: "Send http request in 5 days",
     }
   );
+
   await worker.scheduleJob(
     `Api-Key ${process.env.API_KEY}`,
     "send-http-request",
@@ -131,7 +144,75 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
       eventId: "non_existing_function",
       title: "Run on a non existing function version",
       description:
-        "This is an automatically created job which will not run, because there is no function with id send-http-request and version 10",
+        "Schedule targeting an non existing function, because there is no function with id send-http-request and version 10",
+    }
+  );
+
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "log-job",
+    1,
+    { message: "Sending email" },
+    {
+      eventId: "send_email_in_one_week",
+      runAt: add(new Date(), {
+        weeks: 1,
+      }),
+      title: "Send email in one week",
+      description: "Will send emails in one week",
+    }
+  );
+
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "log-job",
+    1,
+    { message: "Purging activity logs" },
+    {
+      eventId: "purge_activity_logs_monthly",
+      cronExpression: "0 0 1 * *",
+      title: "Purge activity logs every month",
+      description: "Will log purging activity logs every month",
+    }
+  );
+
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "error-job",
+    1,
+    { message: "no error" },
+    {
+      eventId: "no_error",
+      title: "Run without error",
+      description: "Will retry the job 3 times",
+      retryFailedJobs: true,
+      maxRetries: 3,
+    }
+  );
+
+  const notify = await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "log-job",
+    1,
+    { message: "Will notify on slack..." },
+    {
+      eventId: "notify_on_slack",
+      title: "Run without error",
+      description: "Will notify us on slack if there is an error in some job",
+    }
+  );
+
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    "error-job",
+    1,
+    { message: "some error" },
+    {
+      eventId: "error_notify",
+      title: "Run with error",
+      description: "Will fail the job",
+      retryFailedJobs: false,
+      failureTrigger: notify.schedule.id,
     }
   );
 };

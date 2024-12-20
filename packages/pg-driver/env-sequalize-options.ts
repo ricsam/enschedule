@@ -64,7 +64,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
     if (dialect.value.startsWith(`${dialect.type}://`)) {
       return {
         ...options,
-        uri: dialect.value.replace(/\?.*$/, ""),
+        uri: dialect.value,
       };
     }
     if (dialect.type === "sqlite") {
@@ -81,7 +81,6 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
       ...options,
       dialect: dialect.type,
       database: dbDatabase,
-      ssl: dialect.value.includes("sslmode=require"),
       host: dbHost,
       username: dbUser,
       password: dbPassword,

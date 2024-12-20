@@ -1,5 +1,5 @@
 import type { Worker } from "@enschedule/worker";
-import { add } from "date-fns";
+import { add, endOfMonth } from "date-fns";
 import { z } from "zod";
 
 export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
@@ -56,22 +56,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
       message: "some error",
     },
   });
-  worker.registerJob({
-    id: "mix-job",
-    version: 1,
-    title: "Throw message and log stuff",
-    dataSchema: z.object({
-      message: z.string(),
-    }),
-    job: (data) => {
-      console.log("Will throw an error now");
-      throw new Error(data.message);
-    },
-    description: "Will throw the message as an error and log stuff",
-    example: {
-      message: "some message",
-    },
-  });
+
   worker.registerJob({
     id: "big-output",
     title: "This job will output a lot of data",
@@ -115,8 +100,8 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     {
       eventId: "long_running_every_night",
       cronExpression: "0 0 * * *",
-      title: "Daily job",
-      description: "Run every night at midnight",
+      title: "Daily backups",
+      description: "Run backups every night at midnight",
     }
   );
 
@@ -126,12 +111,12 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     1,
     { url: "http://localhost:3000" },
     {
-      eventId: "first_event",
-      runAt: add(new Date(), {
+      eventId: "pkg_audit",
+      runAt: add(endOfMonth(new Date()), {
         days: 5,
       }),
-      title: "Send an http request in 5 days",
-      description: "Send http request in 5 days",
+      title: "Package audit",
+      description: "Audit out packages 5 days after the end of this month",
     }
   );
 
@@ -143,6 +128,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     {
       eventId: "non_existing_function",
       title: "Run on a non existing function version",
+      runNow: true,
       description:
         "Schedule targeting an non existing function, because there is no function with id send-http-request and version 10",
     }
@@ -155,11 +141,9 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     { message: "Sending email" },
     {
       eventId: "send_email_in_one_week",
-      runAt: add(new Date(), {
-        weeks: 1,
-      }),
-      title: "Send email in one week",
-      description: "Will send emails in one week",
+      cronExpression: "0 0 0 * * 1", // every monday
+      title: "Weekly digest",
+      description: "Send out the weekly digest email",
     }
   );
 
@@ -167,12 +151,12 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     `Api-Key ${process.env.API_KEY}`,
     "log-job",
     1,
-    { message: "Purging activity logs" },
+    { message: "Purging logs..." },
     {
-      eventId: "purge_activity_logs_monthly",
+      eventId: "purge_logs_monthly",
       cronExpression: "0 0 1 * *",
-      title: "Purge activity logs every month",
-      description: "Will log purging activity logs every month",
+      title: "Log purger",
+      description: "Purge logs every month",
     }
   );
 
@@ -180,13 +164,15 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     `Api-Key ${process.env.API_KEY}`,
     "error-job",
     1,
-    { message: "no error" },
+    { message: "Failed to copy data from postgres into elasticsearch" },
     {
-      eventId: "no_error",
-      title: "Run without error",
-      description: "Will retry the job 3 times",
+      eventId: "retry_job",
+      title: "Copy data into elasticsearch",
+      description:
+        "Copy data into elastic search. Retries the job 3 times on failure",
       retryFailedJobs: true,
       maxRetries: 3,
+      runNow: true,
     }
   );
 
@@ -197,8 +183,8 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     { message: "Will notify on slack..." },
     {
       eventId: "notify_on_slack",
-      title: "Run without error",
-      description: "Will notify us on slack if there is an error in some job",
+      title: "Slack notifier",
+      description: "Notify us on slack if there is an error in some job",
     }
   );
 
@@ -206,13 +192,14 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
     `Api-Key ${process.env.API_KEY}`,
     "error-job",
     1,
-    { message: "some error" },
+    { message: "Failed to update ssl certs" },
     {
       eventId: "error_notify",
-      title: "Run with error",
-      description: "Will fail the job",
+      title: "Update ssl certs",
+      description: "Update ssl certs, if it fails it will notify on slack",
       retryFailedJobs: false,
       failureTrigger: notify.schedule.id,
+      cronExpression: "0 0 1 * *",
     }
   );
 };

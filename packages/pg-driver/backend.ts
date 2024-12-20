@@ -337,6 +337,7 @@ interface CreateJobScheduleOptions {
   workerId?: string;
   defaultRunAccess?: RunAccess;
   access?: ScheduleAccess;
+  runNow?: boolean;
 }
 
 typeAssert<
@@ -1017,6 +1018,7 @@ export class PrivateBackend {
         eventId: {
           type: DataTypes.STRING,
           allowNull: true,
+          unique: true,
         },
         retries: {
           type: DataTypes.INTEGER,
@@ -2143,6 +2145,7 @@ export class PrivateBackend {
       workerId,
       defaultRunAccess,
       access,
+      runNow,
     } = options;
     const signature = this.createSignature(
       defId,
@@ -2189,6 +2192,7 @@ export class PrivateBackend {
       failureTriggerId: failureTrigger,
       defaultRunAccess,
       access,
+      runNow,
     };
     const result = await Schedule.findOrCreate({
       where,
@@ -2302,6 +2306,7 @@ export class PrivateBackend {
         defaultRunAccess: options.defaultRunAccess,
         access: options.access,
         workerId: options.workerId,
+        runNow: options.runNow,
       }
     );
     return {

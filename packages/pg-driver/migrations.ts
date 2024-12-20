@@ -845,4 +845,29 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
       });
     },
   },
+  {
+    name: "00003-add-unique-constraint-to-eventid",
+    up: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Add unique constraint to eventId
+        await queryInterface.addConstraint("Schedules", {
+          fields: ["eventId"],
+          type: "unique",
+          name: "schedules_eventid_unique",
+          transaction,
+        });
+      });
+    },
+
+    down: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Remove unique constraint from eventId
+        await queryInterface.removeConstraint(
+          "Schedules",
+          "schedules_eventid_unique",
+          { transaction }
+        );
+      });
+    },
+  },
 ];

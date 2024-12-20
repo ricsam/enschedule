@@ -273,6 +273,7 @@ export const ScheduleJobOptionsSchema = z.object({
   workerId: z.string().optional(),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
   access: nullishToUndefined(ScheduleAccessSchema),
+  runNow: z.boolean().optional(),
 });
 export type ScheduleJobOptions = z.output<typeof ScheduleJobOptionsSchema>;
 //#endregion

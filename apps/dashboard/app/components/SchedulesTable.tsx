@@ -27,7 +27,7 @@ const columns: ColumnDef<RowData, any>[] = [
       const icons: { [key in ScheduleStatus]: string } = {
         [ScheduleStatus.FAILED]: "❌",
         [ScheduleStatus.SCHEDULED]: "📅",
-        [ScheduleStatus.UNSCHEDULED]: "❔",
+        [ScheduleStatus.UNSCHEDULED]: "💭",
         [ScheduleStatus.RETRYING]: "🔄",
         [ScheduleStatus.RUNNING]: "🚀",
         [ScheduleStatus.SUCCESS]: "✅",

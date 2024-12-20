@@ -47,7 +47,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
     const value = process.env[dialectType.toUpperCase()];
     if (value) {
       dialect = {
-        value,
+        value: value.replace(/^postgressql/, "postgres"),
         type: dialectType,
       };
       break;
@@ -64,7 +64,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
     if (dialect.value.startsWith(`${dialect.type}://`)) {
       return {
         ...options,
-        uri: dialect.value,
+        uri: dialect.value.replace(/\?.*$/, ""),
       };
     }
     if (dialect.type === "sqlite") {
@@ -81,6 +81,7 @@ export const envSequalizeOptions = (): SeqConstructorOptions => {
       ...options,
       dialect: dialect.type,
       database: dbDatabase,
+      ssl: dialect.value.includes("sslmode=require"),
       host: dbHost,
       username: dbUser,
       password: dbPassword,

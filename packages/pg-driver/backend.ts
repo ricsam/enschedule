@@ -2383,7 +2383,7 @@ export class PrivateBackend {
     // only fetch jobs for a server that has a job definition for the schedule handlerId
     const jobKeys = Object.keys(this.definedJobs);
     if (jobKeys.length === 0) {
-      throw new Error("You have no registered jobs on this client");
+      return [];
     }
     const claimId = createShortShaHash(String(Math.random()));
     await Schedule.update(

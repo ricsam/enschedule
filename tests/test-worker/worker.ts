@@ -4,7 +4,7 @@ import "dotenv/config";
 import { Worker } from "@enschedule/worker";
 import add from "date-fns/add";
 import { z } from "zod";
-import express from "express";
+import express, { Router } from "express";
 
 const worker = new Worker({
   name: process.env.SPECIAL_HANDLERS ? "Special worker" : "Test worker",
@@ -152,7 +152,7 @@ if (!process.env.SPECIAL_HANDLERS) {
   if (process.env.ENSCHEDULE_API) {
     console.log("Starting the API");
     const app = express();
-    const router = express.Router();
+    const router = Router();
     router.get("/increase-version", (req, res) => {
       res.send("Increased version");
     });

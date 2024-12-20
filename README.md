@@ -560,5 +560,57 @@ await worker.migrateHandler(
 ```
 
 # FAQ
-* How can I make a scheduled job run on a specific worker?\
-  *You can add a workerId to the schedule and the job will run on the specified worker*
+
+- How can I make a scheduled job run on a specific worker?\
+  _You can add a workerId to the schedule and the job will run on the specified worker_
+- What is the difference between IMPORT_FUNCTIONS and REGISTER_JOBS_SCRIPT?\
+  `IMPORT_FUNCTIONS` are used to load functions, e.g. `@enschedule-fns/log` and it can be comma separated.\
+  `REGISTER_JOBS_SCRIPT` is is mainly supposed to point to a module / script that defines schedules. It will get an object of functions that it can schedule. For example:
+
+```js
+const { z } = require("zod");
+const cp = require("child_process");
+
+module.exports = async (worker, functions) => {
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    functions['@enschedule-fns/log'],
+    1,
+    {
+      message: "Hello"
+    },
+    {
+      eventId: "log-hello",
+      title: "Log hello",
+      cronExpression: "0 0 2 * * *", // 2 am every day
+      description:
+        "Will log hello every night at 2 am",
+    }
+  );
+};
+```
+
+But! `scheduleJob` also accepts the function id:
+```js
+const { z } = require("zod");
+const cp = require("child_process");
+
+module.exports = async (worker, functions) => {
+  await worker.scheduleJob(
+    `Api-Key ${process.env.API_KEY}`,
+    'log-job'
+    1,
+    {
+      message: "Hello"
+    },
+    {
+      eventId: "log-hello",
+      title: "Log hello",
+      cronExpression: "0 0 2 * * *", // 2 am every day
+      description:
+        "Will log hello every night at 2 am",
+    }
+  );
+};
+```
+```

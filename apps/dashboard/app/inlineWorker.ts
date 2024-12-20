@@ -1,14 +1,5 @@
 import { Worker } from "@enschedule/worker";
-
-if (process.env.IMPORT_FUNCTIONS) {
-  const imports = process.env.IMPORT_FUNCTIONS.split(",");
-  for (const imp of imports) {
-    try {
-      // require the modules during the build step to ensure they are included in the bundle on vercel
-      require(imp);
-    } catch (err) {}
-  }
-}
+import { registerDemoFunctionsAndSchedules } from "./vercelDemo";
 
 export const inlineWorker = async () => {
   const worker = new Worker({
@@ -26,6 +17,9 @@ export const inlineWorker = async () => {
     for (const imp of imports) {
       await require(imp)(worker);
     }
+  }
+  if (process.env.VERCEL) {
+    await registerDemoFunctionsAndSchedules(worker);
   }
   await worker.startPolling();
   return worker;

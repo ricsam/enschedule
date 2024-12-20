@@ -1,5 +1,15 @@
 import { Worker } from "@enschedule/worker";
 
+if (process.env.IMPORT_FUNCTIONS) {
+  const imports = process.env.IMPORT_FUNCTIONS.split(",");
+  for (const imp of imports) {
+    try {
+      // require the modules during the build step to ensure they are included in the bundle on vercel
+      require(imp);
+    } catch (err) {}
+  }
+}
+
 export const inlineWorker = async () => {
   const worker = new Worker({
     name: "Dashboard integrated worker",

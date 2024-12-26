@@ -26,7 +26,13 @@ import Typography from "@mui/material/Typography";
 import type { ActionFunction, SerializeFrom } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import type { Params } from "@remix-run/react";
-import { Form, Link, useNavigate, useNavigation } from "@remix-run/react";
+import {
+  Form,
+  Link,
+  useNavigate,
+  useNavigation,
+  useRevalidator,
+} from "@remix-run/react";
 import format from "date-fns/format";
 import parseISO from "date-fns/parseISO";
 import React from "react";
@@ -34,10 +40,10 @@ import { sentenceCase } from "sentence-case";
 import { z } from "zod";
 import { Editor } from "~/components/Editor";
 import { getWorker } from "~/createWorker.server";
+import { getAuthHeader } from "~/sessions";
 import { formatDate } from "~/utils/formatDate";
 import { getParentUrl } from "~/utils/getParentUrl";
 import RunPage from "./RunPage";
-import { getAuthHeader } from "~/sessions";
 
 export const editDetailsAction: ActionFunction = async ({
   request,
@@ -59,6 +65,7 @@ export const editDetailsAction: ActionFunction = async ({
   const init = {
     runAt: schedule.runAt ? normalizeDate(schedule.runAt.toJSON()) : "",
     description: schedule.description,
+    runNow: schedule.runNow,
     title: schedule.title,
     data: schedule.data,
     retryFailedJobs: schedule.retryFailedJobs,
@@ -68,6 +75,7 @@ export const editDetailsAction: ActionFunction = async ({
   const p = (k: string) => z.string().nullable().parse(fd.get(k));
 
   const runAt = p("runAt");
+  const runNow = p("runNow");
   const description = p("description");
   const title = p("title");
   const data = p("data");
@@ -78,6 +86,15 @@ export const editDetailsAction: ActionFunction = async ({
   if (runAt !== null && init.runAt !== runAt) {
     scheduleUpdatePayload.runAt = runAt === "" ? null : DateSchema.parse(runAt);
     updated = true;
+  }
+  if (runNow !== null && init.runNow !== (runNow === "true")) {
+    if (runNow === "true") {
+      scheduleUpdatePayload.runNow = true;
+      updated = true;
+    } else {
+      scheduleUpdatePayload.runNow = false;
+      updated = true;
+    }
   }
   if (description !== null && init.description !== description) {
     scheduleUpdatePayload.description = description;
@@ -146,6 +163,7 @@ function EditForm({
     ? normalizeDate(schedule.runAt)
     : undefined;
   const [scheduledFor, setScheduledFor] = React.useState(initScheduledFor);
+  const [runNow, setRunNow] = React.useState(schedule.runNow);
   const [retryFailedJobs, setRetryFailedJobs] = React.useState(
     schedule.retryFailedJobs
   );
@@ -163,6 +181,9 @@ function EditForm({
   }
   if (scheduledFor !== initScheduledFor) {
     formValues.runAt = scheduledFor ?? null;
+  }
+  if (runNow !== schedule.runNow) {
+    formValues.runNow = runNow ? "true" : "false";
   }
   if (retryFailedJobs !== schedule.retryFailedJobs) {
     formValues.retryFailedJobs = String(retryFailedJobs);
@@ -205,6 +226,11 @@ function EditForm({
 
         <Box sx={{ display: "flex", alignItems: "flex-end" }} gap={0.5}>
           <input type="hidden" value={scheduledFor ?? ""} name="runAt" />
+          <input
+            type="hidden"
+            value={runNow ? "true" : "false"}
+            name="runNow"
+          />
           <TextField
             InputLabelProps={{ shrink: true }}
             label="Next run (local time)"
@@ -227,7 +253,8 @@ function EditForm({
               width: "140px",
             }}
           >
-            {!scheduledFor && "runAt" in formValues ? (
+            {(!scheduledFor && "runAt" in formValues) ||
+            (!runNow && schedule.runNow) ? (
               <Button
                 size="large"
                 variant="text"
@@ -235,6 +262,7 @@ function EditForm({
                 fullWidth
                 onClick={() => {
                   setScheduledFor(initScheduledFor);
+                  setRunNow(schedule.runNow);
                 }}
               >
                 Reset
@@ -245,9 +273,10 @@ function EditForm({
                 fullWidth
                 variant="text"
                 color="inherit"
-                disabled={!scheduledFor}
+                disabled={!scheduledFor && !schedule.runNow}
                 onClick={() => {
                   setScheduledFor(undefined);
+                  setRunNow(false);
                 }}
                 data-testid="unschedule"
               >
@@ -627,13 +656,14 @@ export function Actions({
 }) {
   const navigation = useNavigation();
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const runNowRoute = navigation?.formData?.get("action") === "run";
+  const revalidator = useRevalidator();
   React.useEffect(() => {
-    if (navigation.formData) {
-      if (navigation.formData.get("action") === "run") {
-        setSnackbarOpen(true);
-      }
+    if (runNowRoute) {
+      revalidator.revalidate();
+      setSnackbarOpen(true);
     }
-  }, [navigation.formData]);
+  }, [revalidator, runNowRoute]);
   return (
     <>
       <Snackbar

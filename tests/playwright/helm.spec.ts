@@ -1,18 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { numRows, utils, waitForNumRows } from "./utils";
 
-export const baseURL = process.env.DASHBOARD_URL;
-if (!baseURL) {
+export const dashboardUrl = process.env.DASHBOARD_URL;
+if (!dashboardUrl) {
   throw new Error(
     "You must provide the DASHBOARD_URL env pointing to the url of the deployed helm chart"
   );
 }
+export const workerUrl = process.env.WORKER_URL;
 
 test.describe.configure({ mode: "serial" });
 
-const { reset, createRun, visitRunPages, login, addLoginCookie } = utils(
-  () => baseURL
-);
+const { reset, createRun, visitRunPages, login, addLoginCookie } = utils({
+  get dashboardUrl() {
+    return dashboardUrl;
+  },
+  get workerUrl() {
+    return workerUrl;
+  },
+});
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot", async ({ page }) => {
@@ -39,15 +45,15 @@ test.describe("Single-Run", () => {
       });
     }
 
-    await page.goto(`${baseURL}/runs`);
+    await page.goto(`${dashboardUrl}/runs`);
     await waitForNumRows(page, 2);
 
     // There should be 4 runs / schedules in the tables
-    await page.goto(`${baseURL}/runs`);
+    await page.goto(`${dashboardUrl}/runs`);
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
     expect(await numRows(page)).toBe(2);
 
-    await page.goto(`${baseURL}/schedules`);
+    await page.goto(`${dashboardUrl}/schedules`);
     expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
     expect(await numRows(page)).toBe(2);
   });

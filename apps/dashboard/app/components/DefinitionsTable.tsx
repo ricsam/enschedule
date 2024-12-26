@@ -43,6 +43,12 @@ const columns: ColumnDef<DefinitionRowData, any>[] = [
     },
     header: "Description",
   }),
+  columnHelper.accessor("version", {
+    cell: (info) => {
+      return info.getValue();
+    },
+    header: "Version",
+  }),
 ];
 
 export default function DefinitionsTable({

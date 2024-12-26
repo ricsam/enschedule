@@ -6,6 +6,11 @@ import add from "date-fns/add";
 import { z } from "zod";
 import express, { Router } from "express";
 
+const apiKey = process.env.API_KEY;
+if (!apiKey) {
+  throw new Error('Please set the "API_KEY" environment variable');
+}
+
 const worker = new Worker({
   name: process.env.SPECIAL_HANDLERS ? "Special worker" : "Test worker",
   workerId: process.env.SPECIAL_HANDLERS
@@ -153,8 +158,28 @@ if (!process.env.SPECIAL_HANDLERS) {
     console.log("Starting the API");
     const app = express();
     const router = Router();
-    router.get("/increase-version", (req, res) => {
-      res.send("Increased version");
+    router.get("/healthz", (req, res) => {
+      res.send("Test endpoint is Ok");
+    });
+    router.get("/set-poll-interval", (req, res, next) => {
+      const val = Number(req.query.pollInterval);
+      if (typeof val === "number" && val > 0) {
+        worker
+          .updatePollInterval(val)
+          .then(() => {
+            return worker.getWorkers(`Api-Key ${apiKey}`);
+          })
+          .then((workers) => {
+            res.send(
+              `Updated poll interval to ${String(val)}, there are now ${
+                workers.length
+              } workers`
+            );
+          })
+          .catch(next);
+      } else {
+        res.status(400).send("Invalid poll interval");
+      }
     });
     app.use("/test", router);
     worker
@@ -169,11 +194,8 @@ if (!process.env.SPECIAL_HANDLERS) {
   console.log("Starting polling");
   await worker.startPolling({ dontMigrate: true });
   console.log("Scheduling test job");
-  if (!process.env.API_KEY) {
-    throw new Error('Please set the "API_KEY" environment variable');
-  }
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${apiKey}`,
     "send-http-request",
     1,
     { url: "http://localhost:3000" },
@@ -188,7 +210,7 @@ if (!process.env.SPECIAL_HANDLERS) {
     }
   );
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${apiKey}`,
     "send-http-request",
     10,
     { url: "http://localhost:3000" },

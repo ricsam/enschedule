@@ -43,7 +43,7 @@ export const sleep = async (ms: number) => {
 };
 
 const createRun = async (
-  baseUrl: () => string,
+  baseUrl: { dashboardUrl: string; workerUrl?: string },
   page: Page,
   definitionNumber: number,
   options: {
@@ -58,7 +58,7 @@ const createRun = async (
     };
   } = {}
 ) => {
-  await page.goto(`${baseUrl()}/run`);
+  await page.goto(`${baseUrl.dashboardUrl}/run`);
 
   // Select a job definition from the dropdown
   await page.getByTestId("definition-autocomplete").click();
@@ -132,7 +132,7 @@ const createRun = async (
 
   const link = page.getByTestId("schedule-link");
 
-  await navigate(baseUrl(), page, link);
+  await navigate(baseUrl.dashboardUrl, page, link);
 
   await page.waitForURL("**/schedules/*");
 
@@ -142,14 +142,17 @@ const createRun = async (
   expect(details).toBeTruthy();
 };
 
-const visitRunPages = async (baseUrl: () => string, page: Page) => {
+const visitRunPages = async (
+  baseUrl: { workerUrl?: string; dashboardUrl: string },
+  page: Page
+) => {
   const runPageUrls: string[] = [];
   const runsTableUrls: string[] = [];
 
   const clickOnFirstRow = async () => {
     runPageUrls.push(
       await navigate(
-        baseUrl(),
+        baseUrl.dashboardUrl,
         page,
         page.getByTestId("table-row-1").getByTestId("run-link")
       )
@@ -157,8 +160,8 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   };
 
   // Given I visit the Runs page /runs
-  runsTableUrls.push(`${baseUrl()}/runs`);
-  await page.goto(`${baseUrl()}/runs`);
+  runsTableUrls.push(`${baseUrl.dashboardUrl}/runs`);
+  await page.goto(`${baseUrl.dashboardUrl}/runs`);
   expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
 
   // Click on the first row and navigate to the RunPage /runs/$runId
@@ -166,12 +169,16 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
 
   // Click on the schedules link /schedules/$scheduleId
-  await navigate(baseUrl(), page, page.getByTestId("schedule-link"));
+  await navigate(baseUrl.dashboardUrl, page, page.getByTestId("schedule-link"));
   expect(await page.waitForSelector("div#SchedulePage")).toBeTruthy();
 
   // Click on the runs tab to navigate to the RunsTable /schedules/$scheduleId/runs
   runsTableUrls.push(
-    await navigate(baseUrl(), page, page.getByRole("tab", { name: "Runs" }))
+    await navigate(
+      baseUrl.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    )
   );
   expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
 
@@ -180,16 +187,24 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   expect(await page.waitForSelector("div#RunPage")).toBeTruthy();
 
   // Click on the definitions link /definitions/$handlerId
-  await navigate(baseUrl(), page, page.getByTestId("definition-link"));
+  await navigate(
+    baseUrl.dashboardUrl,
+    page,
+    page.getByTestId("definition-link")
+  );
   expect(await page.waitForSelector("div#DefinitionPage")).toBeTruthy();
 
   // Click on the schedules tab to navigate to the RunsTable /definitions/$handlerId/schedules
-  await navigate(baseUrl(), page, page.getByRole("tab", { name: "Schedules" }));
+  await navigate(
+    baseUrl.dashboardUrl,
+    page,
+    page.getByRole("tab", { name: "Schedules" })
+  );
   expect(await page.waitForSelector("div#SchedulesTable")).toBeTruthy();
 
   // Click on the first row and navigate to the SchedulePage /definitions/$handlerId/schedules/$scheduleId
   await navigate(
-    baseUrl(),
+    baseUrl.dashboardUrl,
     page,
     page.getByTestId("table-row-1").getByTestId("schedule-link")
   );
@@ -197,7 +212,11 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
 
   // Click on the runs tab to navigate to the RunsTable /definitions/$handlerId/schedules/$scheduleId/runs
   runsTableUrls.push(
-    await navigate(baseUrl(), page, page.getByRole("tab", { name: "Runs" }))
+    await navigate(
+      baseUrl.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    )
   );
   expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
 
@@ -208,21 +227,30 @@ const visitRunPages = async (baseUrl: () => string, page: Page) => {
   return { runPageUrls, runsTableUrls };
 };
 
-const reset = async (baseUrl: () => string, page: Page) => {
+const reset = async (
+  baseUrl: { dashboardUrl: string; workerUrl?: string },
+  page: Page
+) => {
+  if (baseUrl.workerUrl) {
+    await fetch(
+      `${baseUrl.workerUrl}/test/set-poll-interval?pollInterval=${1000}`
+    );
+  }
+
   await login(baseUrl, page);
 
-  await page.goto(`${baseUrl()}/admin`);
+  await page.goto(`${baseUrl.dashboardUrl}/admin`);
 
   // reset enschedule
   await page.getByTestId("reset-enschedule").click();
   await page.getByTestId("confirm-reset-enschedule").click();
 
   // make sure tables are empty
-  await page.goto(`${baseUrl()}/runs`);
+  await page.goto(`${baseUrl.dashboardUrl}/runs`);
   expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
   expect(await numRows(page)).toBe(0);
 
-  await page.goto(`${baseUrl()}/schedules`);
+  await page.goto(`${baseUrl.dashboardUrl}/schedules`);
   expect(await page.waitForSelector("#SchedulesTable")).toBeTruthy();
   expect(await numRows(page)).toBe(0);
 };
@@ -265,11 +293,17 @@ async function allRowsHasStatus(page: Page, status: string) {
   );
 }
 
-type ArgType<T> = T extends (baseUrl: () => string, ...args: infer U) => any
+type ArgType<T> = T extends (
+  baseUrl: { dashboardUrl: string; workerUrl?: string },
+  ...args: infer U
+) => any
   ? U
   : never;
 
-export const utils = (baseUrl: () => string) => {
+export const utils = (baseUrl: {
+  dashboardUrl: string;
+  workerUrl?: string;
+}) => {
   return {
     createRun: (...args: ArgType<typeof createRun>) =>
       createRun(baseUrl, ...args),
@@ -282,8 +316,11 @@ export const utils = (baseUrl: () => string) => {
   };
 };
 
-async function login(baseUrl: () => string, page: Page) {
-  await page.goto(`${baseUrl()}/`);
+async function login(
+  baseUrl: { workerUrl?: string; dashboardUrl: string },
+  page: Page
+) {
+  await page.goto(`${baseUrl.dashboardUrl}/`);
   await page.waitForSelector('[data-testid="enschedule-logo"]');
   if (await page.isVisible('[data-testid="login-link"]')) {
     await page.click('[data-testid="login-link"]');
@@ -291,7 +328,7 @@ async function login(baseUrl: () => string, page: Page) {
     await page.getByLabel("Username").fill("ricsam");
     await page.getByLabel("Password").fill("password");
     await page.click('#login-form [type="submit"]');
-    await page.waitForURL(baseUrl());
+    await page.waitForURL(baseUrl.dashboardUrl);
     await page.waitForSelector('[data-testid="profile-link"]');
   } else if (await page.isVisible('[data-testid="profile-link"]')) {
     // Already logged in
@@ -301,7 +338,7 @@ async function login(baseUrl: () => string, page: Page) {
   }
 }
 export async function addLoginCookie(
-  baseUrl: () => string,
+  baseUrl: { workerUrl?: string; dashboardUrl: string },
   context: BrowserContext,
   expire: string
 ) {
@@ -318,7 +355,7 @@ export async function addLoginCookie(
       ),
       httpOnly: true,
       sameSite: "Lax",
-      url: baseUrl(),
+      url: baseUrl.dashboardUrl,
       secure: false,
     },
   ]);

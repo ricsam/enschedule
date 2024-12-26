@@ -25,6 +25,7 @@ export class Setup {
   };
 
   private _dashboardUrl = "";
+  private _workerUrl = "";
 
   get dashboardUrl() {
     if (process.env.SKIP_SETUP) {
@@ -43,6 +44,26 @@ export class Setup {
 
   set dashboardUrl(value: string) {
     this._dashboardUrl = value;
+  }
+
+
+  get workerUrl() {
+    if (process.env.SKIP_SETUP) {
+      if (!process.env.WORKER_URL) {
+        throw new Error(
+          "If SKIP_SETUP is enabled you must also provide process.env.WORKER_URL"
+        );
+      }
+      return process.env.WORKER_URL;
+    }
+    if (!this._workerUrl) {
+      throw new Error("Please call setup before accessing this property");
+    }
+    return this._workerUrl;
+  }
+
+  set workerUrl(value: string) {
+    this._workerUrl = value;
   }
 
   private _TEST_DB = "";
@@ -319,6 +340,7 @@ export class Setup {
     console.log(`Started dashboard on http://localhost:${dashboardPort}`);
 
     this.dashboardUrl = `http://localhost:${dashboardPort}`;
+    this.workerUrl = `http://localhost:${workerApiPort}`;
 
     console.log("Setup done");
   }

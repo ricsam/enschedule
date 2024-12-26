@@ -15,7 +15,7 @@ brew install pstree
 echo 'WORKER_URL=http://localhost:3333\nAPI_KEY=secret_key' > apps/dashboard/.env
 
 npm run dev
-SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
+SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
 ```
 
 #### Run all tests in parallel
@@ -69,7 +69,7 @@ pnpm run --filter test-worker seed
 pnpm run --filter @enschedule/dashboard build
 
 pnpm run dev
-SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
+SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
 ```
 
 ## Build images to test container locally
@@ -89,7 +89,7 @@ docker container run -itd --rm \
 
 ## Utils
 ```
-TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --grep create_many_runs
+TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --grep create_many_runs
 ```
 
 ## Debug playwright in the UI

@@ -1398,6 +1398,25 @@ export class PrivateBackend {
     this.ApiKey = ApiKey;
   }
 
+  async updatePollInterval(pollInterval: number) {
+    if (this.tickDuration === pollInterval) {
+      return;
+    }
+    const isPolling = this.isPolling;
+    if (isPolling) {
+      this.stopPolling();
+    }
+    this.tickDuration = pollInterval;
+    // create a new worker
+    this.registeredWorker = undefined;
+    this.workerInstance.instanceId = createShortShaHash(String(Math.random()));
+    if (isPolling) {
+      await this.startPolling({
+        dontMigrate: true,
+      });
+    }
+  }
+
   protected async getDbRuns() {
     const runs = await Run.findAll({
       order: [["createdAt", "DESC"]],
@@ -2056,6 +2075,7 @@ export class PrivateBackend {
         const [worker] = await this.Worker.findOrCreate({
           where: {
             workerId: this.workerInstance.workerId,
+            // instance id is random, so every time the server is booted up and new worker is created
             instanceId: this.workerInstance.instanceId,
           },
           defaults: {
@@ -2728,23 +2748,42 @@ export class PrivateBackend {
     }
   }
 
+  pollingStartTimer: NodeJS.Timeout | undefined;
+  pollingInterval: NodeJS.Timeout | undefined;
+  isPolling = false;
+
   public async startPolling(
     { dontMigrate = false }: { dontMigrate?: boolean } = {
       dontMigrate: false,
     }
   ) {
-    if (!dontMigrate) {
+    this.isPolling = true;
+    if (!dontMigrate && this.isPolling) {
       await this.migrateDatabase();
+    }
+    if (!this.isPolling) {
+      // async check
+      return;
     }
     await this.registerWorker();
     log("Polling the database for jobs");
     const now = Date.now();
-    setTimeout(() => {
-      setInterval(() => {
+    this.pollingStartTimer = setTimeout(() => {
+      this.pollingInterval = setInterval(() => {
         log("Tick", String(new Date()));
         void this.tick();
       }, this.tickDuration);
     }, 1000 - (now - Math.floor(now / 1000) * 1000));
+  }
+
+  public stopPolling() {
+    this.isPolling = false;
+    if (this.pollingStartTimer) {
+      clearTimeout(this.pollingStartTimer);
+    }
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
 
   protected async tick() {
@@ -2834,6 +2873,9 @@ export class PrivateBackend {
     } else if (updatePayload.runAt instanceof Date) {
       schedule.runAt = updatePayload.runAt;
       schedule.claimed = false;
+    }
+    if (typeof updatePayload.runNow === "boolean") {
+      schedule.runNow = updatePayload.runNow;
     }
     if (typeof updatePayload.retryFailedJobs === "boolean") {
       schedule.retryFailedJobs = updatePayload.retryFailedJobs;

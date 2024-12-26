@@ -299,6 +299,7 @@ export const ScheduleUpdatePayloadSchema = z.object({
   description: z.string().optional(),
   retryFailedJobs: z.boolean().optional(),
   maxRetries: z.number().optional(),
+  runNow: z.boolean().optional(),
 });
 export type ScheduleUpdatePayload = z.infer<typeof ScheduleUpdatePayloadSchema>;
 //#endregion

@@ -14,9 +14,14 @@ test.afterEach(async () => {
   await setup.teardown();
 });
 
-const { reset, createRun, visitRunPages, login, addLoginCookie } = utils(
-  () => setup.dashboardUrl
-);
+const { reset, createRun, visitRunPages, login, addLoginCookie } = utils({
+  get dashboardUrl() {
+    return setup.dashboardUrl;
+  },
+  get workerUrl() {
+    return setup.workerUrl;
+  },
+});
 
 test.describe("Single-Run", () => {
   test("Should create new runs via chatbot, and then test the delete", async ({
@@ -202,13 +207,13 @@ test.describe("Single schedule", () => {
 
       // run now works
       let numRuns = 1;
-      await waitForNumRows(page, numRuns, 'SUCCESS');
+      await waitForNumRows(page, numRuns, "SUCCESS");
 
       const run = async () => {
         numRuns += 1;
         await page.getByTestId("run-now").click();
         await page.getByTestId("run-now-snackbar").isVisible();
-        await waitForNumRows(page, numRuns, 'SUCCESS');
+        await waitForNumRows(page, numRuns, "SUCCESS");
         expect(await numRows(page)).toBe(numRuns);
       };
 
@@ -253,6 +258,64 @@ test.describe("Single schedule", () => {
     // make sure filtering works in the table
     await waitForNumRows(page, 5);
     expect(await numRows(page)).toBe(5);
+  });
+  test("Can cancel run now", async ({ page }) => {
+    test.slow();
+    await reset(page);
+    await login(page);
+
+    await createRun(page, 1);
+    await page.goto(`${setup.dashboardUrl}/schedules`);
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("schedule-link")
+    );
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+
+    // run now works
+    await waitForNumRows(page, 1, "SUCCESS");
+
+    await page.getByTestId("run-now").click();
+    await page.getByTestId("run-now-snackbar").isVisible();
+    await waitForNumRows(page, 2, "SUCCESS");
+    expect(await numRows(page)).toBe(2);
+
+    const response = await fetch(
+      `${setup.workerUrl}/test/set-poll-interval?pollInterval=${3600 * 1000}`
+    );
+    const data = await response.body?.getReader().read();
+    console.log(new TextDecoder().decode(data?.value));
+
+    await page.getByTestId("run-now").click();
+    await page.getByTestId("run-now-snackbar").isVisible();
+    await expect(page.getByTestId("run-now-snackbar")).toContainText(
+      "Polling every 3600000 ms"
+    );
+
+    expect(page.getByTestId("run-now")).toBeDisabled();
+
+    // unschedule
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Details" })
+    );
+    await page.getByTestId("edit-details").click();
+
+    await page
+      .getByTestId("edit-details-form")
+      .getByTestId("unschedule")
+      .click();
+
+    await page.click(
+      `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+    );
+    expect(page.getByTestId("run-now")).toBeEnabled();
   });
   test("Delete schedule button", async ({ page }) => {
     await reset(page);

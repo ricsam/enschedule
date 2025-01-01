@@ -62,17 +62,37 @@ spec:
             - name: DB_HOST
               value: "database-service"
             - name: DB_PASSWORD
-              value: "postgres"
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
             - name: DB_DATABASE
               value: "postgres"
+            - name: NAFS_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: nafsUri
             - name: API_KEY
-              value: {{ .Values.config.API_KEY | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: apiKey
             - name: ACCESS_TOKEN_SECRET
-              value: {{ .Values.config.ACCESS_TOKEN_SECRET | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: accessTokenSecret
             - name: REFRESH_TOKEN_SECRET
-              value: {{ .Values.config.REFRESH_TOKEN_SECRET | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: refreshTokenSecret
             - name: ADMIN_ACCOUNT
-              value: {{ .Values.config.ADMIN_ACCOUNT | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: adminAccount
             - name: ENSCHEDULE_API
               value: "true"
             - name: API_PORT

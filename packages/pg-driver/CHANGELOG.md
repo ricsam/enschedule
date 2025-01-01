@@ -1,5 +1,13 @@
 # @enschedule/pg-driver
 
+## 1.1.2
+
+### Patch Changes
+
+- use nafs for storing and reading logs
+- Updated dependencies
+  - @enschedule/types@1.1.1
+
 ## 1.1.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @enschedule/worker-api
 
+## 1.1.2
+
+### Patch Changes
+
+- use nafs for storing and reading logs
+
 ## 1.1.1
 
 ### Patch Changes

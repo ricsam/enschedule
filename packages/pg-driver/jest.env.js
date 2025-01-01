@@ -1,3 +1,4 @@
+const fs = require("node:fs");
 const { Client } = require("pg");
 
 const TEST_DB = "enschedule_test";
@@ -13,7 +14,10 @@ Object.assign(process.env, {
   ACCESS_TOKEN_SECRET: "secret",
   REFRESH_TOKEN_SECRET: "secret",
   API_KEY: "secret",
+  NAFS_URI: `file://${__dirname}/test-data/nafs`,
 });
+
+fs.mkdirSync(`${__dirname}/test-data/nafs`, { recursive: true });
 
 module.exports = async () => {
   if (process.env.TEST_DIALECT === "pg") {

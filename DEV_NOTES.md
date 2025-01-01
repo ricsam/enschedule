@@ -82,7 +82,7 @@ docker container run -itd --rm \
   -e ACCESS_TOKEN_SECRET=secret_key \
   -e REFRESH_TOKEN_SECRET=secret_key \
   -e COOKIE_SESSION_SECRET=s3cr3t \
-  -e ADMIN_ACCOUNT=ricsam:password \
+  -e ADMIN_ACCOUNT=adm1n:s3cr3t \
   -p 3333:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
 ```

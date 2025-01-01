@@ -3,24 +3,32 @@
 # Declare variables to be passed into your templates.
 
 config:
+
+  # Password for the postgres database
+  pgPassword: password
+
+  # username / password for the enstore instance
+  enstoreUsername: admin
+  enstorePassword: password
+
   # The secret for the short lived access JWT token
-  ACCESS_TOKEN_SECRET: secret_key
+  accessTokenSecret: secret_key
   # The secret for the long lived refresh JWT token
-  REFRESH_TOKEN_SECRET: secret_key
+  refreshTokenSecret: secret_key
 
   # Cookie secrets should be a comma separated list https://remix.run/docs/en/main/utils/cookies#signing-cookies
   # Can be changed to refresh the session cookies
-  COOKIE_SESSION_SECRET: s3cr3t
+  cookieSessionSecret: s3cr3t
 
   # A secure key allowing the dashboard to communicate with the workers
-  API_KEY: secret_key
+  apiKey: secret_key
 
   # Set the "Secure" attribute is set on the cookie
   # When true the browser needs an HTTPS connection for the dashboard login to work
-  HTTPS_ONLY_COOKIES: false
+  httpsOnlyCookies: false
 
   # Automatically create an admin account if this is present
-  ADMIN_ACCOUNT: "adm1n:s3cr3t"
+  adminAccount: "adm1n:s3cr3t"
 
 worker:
   replicaCount: 1
@@ -29,7 +37,7 @@ worker:
     repository: ghcr.io/ricsam/enschedule-worker
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "latest"
+    tag: "alpha"
 
   imagePullSecrets: []
   nameOverride: ""
@@ -155,7 +163,7 @@ dashboard:
     repository: ghcr.io/ricsam/enschedule-dashboard
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "latest"
+    tag: "alpha"
 
   imagePullSecrets: []
   nameOverride: ""
@@ -177,6 +185,70 @@ dashboard:
   service:
     type: ClusterIP
     port: 3000
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+storage:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/ricsam/enstore-server
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "latest"
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  service:
+    type: ClusterIP
+    port: 3456
 
   ingress:
     enabled: false

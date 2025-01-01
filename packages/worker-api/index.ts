@@ -3,6 +3,7 @@
 /* eslint-disable no-await-in-loop */
 import http from "node:http";
 import https from "node:https";
+import type { Readable } from "node:stream";
 import type {
   AuthHeader,
   ListRunsOptions,
@@ -76,19 +77,7 @@ export class WorkerAPI {
     this.apiVersion = options?.apiVersion ?? 1;
   }
 
-  private async request(
-    method: "POST" | "PUT",
-    path: string,
-    data?: unknown,
-    authHeader?: z.output<typeof AuthHeader>
-  ): Promise<unknown>;
-  private async request(
-    method: "GET" | "DELETE",
-    path: string,
-    data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: z.output<typeof AuthHeader>
-  ): Promise<unknown>;
-  private async request(
+  private getRequestOptions(
     method: "POST" | "DELETE" | "GET" | "PUT",
     path: string,
     data?: Record<string, string | number | boolean | undefined>,
@@ -120,7 +109,7 @@ export class WorkerAPI {
     if (authHeader) {
       headers.Authorization = authHeader;
     }
-    const delay = 1000;
+
     const requestLog = (...args: unknown[]) => {
       log("Req:", method, `${this.url}${decodeURI(options.path)}`, ...args);
     };
@@ -128,8 +117,36 @@ export class WorkerAPI {
     if (data) {
       requestLog("data:", JSON.stringify(data));
     }
+    return { data, bodyString, options, requestLog };
+  }
+
+  private async request(
+    method: "POST" | "PUT",
+    path: string,
+    data?: unknown,
+    authHeader?: z.output<typeof AuthHeader>
+  ): Promise<unknown>;
+  private async request(
+    method: "GET" | "DELETE",
+    path: string,
+    data?: Record<string, string | number | boolean | undefined>,
+    authHeader?: z.output<typeof AuthHeader>
+  ): Promise<unknown>;
+  private async request(
+    method: "POST" | "DELETE" | "GET" | "PUT",
+    path: string,
+    data?: Record<string, string | number | boolean | undefined>,
+    authHeader?: z.output<typeof AuthHeader>
+  ) {
+    const { options, bodyString, requestLog } = this.getRequestOptions(
+      method,
+      path,
+      data,
+      authHeader
+    );
 
     let attempt = 0;
+    const delay = 1000;
 
     const totalAttempts = this.retries + 1;
 
@@ -499,5 +516,29 @@ export class WorkerAPI {
 
   async logout(refreshToken: string, allDevices: boolean): Promise<void> {
     await this.request("POST", "/logout", { refreshToken, allDevices });
+  }
+
+  async streamLogs(
+    authHeader: z.output<typeof AuthHeader>,
+    runId: number
+  ): Promise<Readable | undefined> {
+    const { options } = this.getRequestOptions(
+      "GET",
+      `/logs/${runId}`,
+      undefined,
+      authHeader
+    );
+
+    const { response } = await new Promise<{
+      response: http.IncomingMessage;
+      request: http.ClientRequest;
+    }>((resolve) => {
+      const req = (this.ssl ? https : http).request(options, (res) => {
+        resolve({ response: res, request: req });
+      });
+      req.end();
+    });
+
+    return response;
   }
 }

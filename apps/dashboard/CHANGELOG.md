@@ -1,5 +1,15 @@
 # @enschedule/dashboard
 
+## 1.1.2
+
+### Patch Changes
+
+- use nafs for storing and reading logs
+- Updated dependencies
+  - @enschedule/worker-api@1.1.2
+  - @enschedule/worker@1.1.2
+  - @enschedule/types@1.1.1
+
 ## 1.1.1
 
 ### Patch Changes

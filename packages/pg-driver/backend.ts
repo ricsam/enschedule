@@ -1,7 +1,10 @@
 import * as cp from "node:child_process";
 import * as crypto from "node:crypto";
+import * as readline from "node:readline";
 import os from "node:os";
+import type { Readable } from "node:stream";
 import stream from "node:stream";
+import { nafs } from "nafs";
 import type {
   AuthHeader,
   FunctionAccess,
@@ -69,19 +72,26 @@ import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
 import { migrations as databaseMigrations } from "./migrations";
 
-export const getTokenEnvs = () => {
+export const getEnvs = () => {
   const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
   const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+  const NAFS_URI = process.env.NAFS_URI;
 
   if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
     throw new Error(
       "Missing required environment variables ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET. Please check your .env file."
     );
   }
-  return { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET };
+  if (!NAFS_URI) {
+    throw new Error(
+      'Please set the "NAFS_URI" environment variable. Please check your .env file.'
+    );
+  }
+
+  return { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI };
 };
 
-const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = getTokenEnvs();
+const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI } = getEnvs();
 
 function createWorkerHash({
   title,
@@ -194,8 +204,6 @@ export const createPublicJobDefinition = (
 export const serializeRun = (run: Run): SerializedRun => {
   return {
     id: Number(run.id),
-    stdout: run.stdout,
-    stderr: run.stderr,
     createdAt: run.createdAt,
     exitSignal: run.exitSignal ?? undefined,
     finishedAt: run.finishedAt ?? undefined,
@@ -303,8 +311,6 @@ export const createPublicJobRun = (
   const status = getRunStatus(run);
   return {
     id: Number(run.id),
-    stdout: run.stdout,
-    stderr: run.stderr,
     createdAt: run.createdAt,
     exitSignal: run.exitSignal ?? undefined,
     finishedAt: run.finishedAt ?? undefined,
@@ -324,7 +330,7 @@ export const createPublicJobRun = (
 export interface StreamHandle {
   stdout: stream.PassThrough;
   stderr: stream.PassThrough;
-  toggleBuffering: (on: boolean) => void;
+  toggleSaveOutput: (on: boolean) => void;
 }
 
 interface CreateJobScheduleOptions {
@@ -605,8 +611,9 @@ export class Schedule extends Model<
 
 class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare id: CreationOptional<number>;
-  declare stdout: CreationOptional<string>; // default ''
-  declare stderr: CreationOptional<string>; // default ''
+  declare logFile: CreationOptional<string>;
+  declare logFileSize: CreationOptional<number>;
+  declare logFileRowCount: CreationOptional<number>;
   declare data: string;
   declare createdAt: CreationOptional<Date>;
   declare finishedAt: CreationOptional<Date> | null;
@@ -1091,15 +1098,17 @@ export class PrivateBackend {
           primaryKey: true,
           allowNull: false,
         },
-        stdout: {
+        logFile: {
           type: DataTypes.TEXT,
-          allowNull: false,
-          defaultValue: "",
+          allowNull: true,
         },
-        stderr: {
-          type: DataTypes.TEXT,
-          allowNull: false,
-          defaultValue: "",
+        logFileSize: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
+        },
+        logFileRowCount: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
         },
         data: {
           type: DataTypes.TEXT,
@@ -2915,40 +2924,70 @@ export class PrivateBackend {
   }
 
   public async runDefinition(runMessage: RunHandlerInCp, run: Run) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output: { stderr: any[]; stdout: any[] } = { stderr: [], stdout: [] };
     const stdoutStream = new stream.PassThrough();
     const stderrStream = new stream.PassThrough();
-    let buffering = false;
-    const bufferStream = (
-      pipeStream: stream.PassThrough,
-      key: "stderr" | "stdout"
-    ) => {
-      const buffer = output[key];
-      let _resolve: undefined | ((data: string) => void);
-      pipeStream.on("data", (chunk) => {
-        if (buffering) {
-          buffer.push(chunk);
-        }
-      });
+
+    function getHighPrecisionISOString() {
+      const isoString = new Date().toJSON().replace(/\..*/, "");
+      const [, nanoseconds] = process.hrtime();
+      const highPrecisionString = `${isoString}.${String(nanoseconds).padStart(
+        6,
+        "0"
+      )}Z`;
+      return highPrecisionString;
+    }
+
+    const combinedStream = new stream.PassThrough();
+    stdoutStream.pipe(combinedStream);
+    stderrStream.pipe(combinedStream);
+
+    const rl = readline.createInterface({ input: combinedStream });
+    let rowCount = 0;
+    let fileSize = 0;
+
+    let saveOutput = false;
+    rl.on("line", (line) => {
+      if (!saveOutput) {
+        return;
+      }
+      const timestamp = getHighPrecisionISOString();
+      const logLine = `${timestamp} ${line}\n`;
+      logStream.write(logLine);
+      fileSize += Buffer.byteLength(logLine, "utf8");
+      rowCount += 1;
+    });
+
+    const nfs = await this.getNafs();
+
+    const logFile = `/${run.id}-${new Date().toISOString()}.log`;
+
+    const logStream = nfs.createWriteStream(logFile);
+
+    run.logFile = logFile;
+
+    const awaitStream = (pipeStream: stream.PassThrough) => {
+      let _resolve: undefined | (() => void);
+      let resolved = false;
       pipeStream.on("finish", () => {
         if (_resolve) {
-          _resolve(Buffer.concat(buffer).toString("utf8"));
+          _resolve();
+          resolved = true;
         }
       });
-      return new Promise<string>((resolve) => {
+      // in case the finish event is emitted synchronously
+      if (resolved) {
+        return Promise.resolve();
+      }
+      return new Promise<void>((resolve) => {
         _resolve = resolve;
       });
     };
 
-    const toggleBuffering = (newBuffering: boolean) => {
-      buffering = newBuffering;
+    const toggleSaveOutput = (newSaveOutput: boolean) => {
+      saveOutput = newSaveOutput;
     };
 
-    const promises = [
-      bufferStream(stdoutStream, "stdout"),
-      bufferStream(stderrStream, "stderr"),
-    ];
+    const promise = awaitStream(combinedStream);
 
     if (this.logJobs) {
       stdoutStream.pipe(process.stdout, { end: false });
@@ -2958,46 +2997,10 @@ export class PrivateBackend {
     const streamHandle: StreamHandle = {
       stdout: stdoutStream,
       stderr: stderrStream,
-      toggleBuffering,
+      toggleSaveOutput,
     };
 
     const _console = this.createConsole(stdoutStream, stderrStream);
-
-    let waitingForBufferingToBe = true;
-    let quickResolve: undefined | (() => void);
-
-    const saveOutput = async () => {
-      const stop = () => !buffering && !waitingForBufferingToBe;
-
-      if (!stop()) {
-        for (const key of ["stdout", "stderr"] as const) {
-          const buffer = output[key];
-          const currentOutput = Buffer.concat(buffer).toString("utf8");
-          run[key] = currentOutput;
-        }
-        await run.save();
-      }
-
-      if (stop()) {
-        return;
-      }
-      await new Promise<void>((resolve) => {
-        const t = setTimeout(() => {
-          resolve();
-        }, this.logStoreInterval);
-        quickResolve = () => {
-          clearTimeout(t);
-          resolve();
-        };
-      });
-
-      if (stop()) {
-        return;
-      }
-      await saveOutput();
-    };
-
-    const saveOutputPromise: Promise<void> = saveOutput();
 
     let exitSignal = "0";
     try {
@@ -3010,23 +3013,56 @@ export class PrivateBackend {
     stdoutStream.end();
     stderrStream.end();
 
-    const [stdout, stderr] = await Promise.all(promises);
+    await promise;
+    logStream.end();
     const finishedAt = new Date();
 
-    waitingForBufferingToBe = false;
-    if (quickResolve) {
-      quickResolve();
-    }
-    await saveOutputPromise;
-
-    run.stderr = stderr;
-    run.stdout = stdout;
     run.exitSignal = exitSignal;
     run.finishedAt = finishedAt;
+    run.logFileRowCount = rowCount;
+    run.logFileSize = fileSize;
 
     await run.save();
 
-    return { stdout, stderr, exitSignal, finishedAt };
+    return { exitSignal, finishedAt };
+  }
+
+  public async streamLogs(
+    authHeader: z.output<typeof AuthHeader>,
+    runId: number
+  ): Promise<Readable | undefined> {
+    try {
+      const nfs = await this.getNafs();
+      const run = await Run.findByPk(runId);
+      if (run?.logFile) {
+        return nfs.createReadStream(run.logFile);
+      }
+    } catch (err) {
+      log("Error reading log file", err);
+      return undefined;
+    }
+  }
+
+  public async getLogs(
+    authHeader: z.output<typeof AuthHeader>,
+    runId: number
+  ): Promise<string | undefined> {
+    const nfs = await this.getNafs();
+    const run = await Run.findByPk(runId);
+    try {
+      if (run?.logFile) {
+        const file = await nfs.promises.readFile(run.logFile, "utf-8");
+        return file.toString();
+      }
+    } catch (err) {
+      log("Error reading log file", err);
+      return undefined;
+    }
+  }
+
+  private async getNafs() {
+    const remoteFs = await nafs(NAFS_URI);
+    return remoteFs;
   }
 
   protected createConsole(
@@ -3043,7 +3079,7 @@ export class PrivateBackend {
 
   protected async fork(
     runMessage: RunHandlerInCp,
-    { stdout, stderr, toggleBuffering }: StreamHandle
+    { stdout, stderr, toggleSaveOutput }: StreamHandle
   ) {
     if (this.inlineWorker) {
       const definition = this.getLocalHandler(
@@ -3054,7 +3090,7 @@ export class PrivateBackend {
       global.console = this.createConsole(stdout, stderr);
       global.console.Console = console.Console;
       let exitSignal = "0";
-      toggleBuffering(true);
+      toggleSaveOutput(true);
       try {
         await definition.definition.job(
           definition.migrateData(runMessage.data)
@@ -3063,7 +3099,7 @@ export class PrivateBackend {
         console.error(err);
         exitSignal = "1";
       }
-      toggleBuffering(false);
+      toggleSaveOutput(false);
       global.console = origConsole;
       return exitSignal;
     }
@@ -3088,7 +3124,7 @@ export class PrivateBackend {
       child.stderr?.pipe(stderr);
       child.on("message", (msg) => {
         if (msg === "initialize") {
-          toggleBuffering(true);
+          toggleSaveOutput(true);
           child.send(runMessage, (err) => {
             if (err) {
               log(
@@ -3100,7 +3136,7 @@ export class PrivateBackend {
         }
         // optional
         if (msg === "done") {
-          toggleBuffering(false);
+          toggleSaveOutput(false);
           child.send("done", (err) => {
             if (err) {
               log(

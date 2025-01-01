@@ -13,7 +13,8 @@ import {
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { SerializeFrom } from "@remix-run/node";
-import { Link, useHref } from "@remix-run/react";
+import { Link, useFetcher, useHref } from "@remix-run/react";
+import React from "react";
 import { sentenceCase } from "sentence-case";
 import { ReadOnlyEditor } from "~/components/Editor";
 import { formatDate, formatDuration } from "~/utils/formatDate";
@@ -133,14 +134,6 @@ export default function RunPage({
                 </Typography>
                 <Typography color="text.secondary">Exit signal</Typography>
                 <Typography color="text.primary">{run.exitSignal}</Typography>
-                <Typography color="text.secondary">Has stdout</Typography>
-                <Typography color="text.primary">
-                  {String(!!run.stdout)}
-                </Typography>
-                <Typography color="text.secondary">Has stderr</Typography>
-                <Typography color="text.primary">
-                  {String(!!run.stderr)}
-                </Typography>
               </Box>
             </CardContent>
           </Card>
@@ -197,41 +190,8 @@ export default function RunPage({
               <Typography variant="h5" gutterBottom>
                 stdout
               </Typography>
-              {run.stdout ? (
-                <ReadOnlyEditor
-                  example={run.stdout}
-                  lang="text"
-                  withLineNumbers
-                ></ReadOnlyEditor>
-              ) : (
-                "Job did not emit anything to stdout"
-              )}
-            </CardContent>
-            <CardActions>
-              <Button>Copy</Button>
-            </CardActions>
-          </Card>
-          <Card
-            sx={{
-              flex: 1,
-              minWidth: "fit-content",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <CardContent sx={{ flex: 1 }}>
-              <Typography variant="h5" gutterBottom>
-                stderr
-              </Typography>
-              {run.stderr ? (
-                <ReadOnlyEditor
-                  example={run.stderr}
-                  lang="text"
-                  withLineNumbers
-                ></ReadOnlyEditor>
-              ) : (
-                "Job did not emit anything to stderr"
-              )}
+
+              <Logs id={run.id} />
             </CardContent>
             <CardActions>
               <Button>Copy</Button>
@@ -242,3 +202,23 @@ export default function RunPage({
     </>
   );
 }
+
+const Logs = React.memo(function Logs({ id }: { id: number }) {
+  const fetcher = useFetcher({
+    key: String(id),
+  });
+  React.useEffect(() => {
+    fetcher.load("/logs/" + id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  if (fetcher.state !== "idle" || typeof fetcher.data !== "string") {
+    return null;
+  }
+  return (
+    <ReadOnlyEditor
+      example={fetcher.data}
+      lang="text"
+      withLineNumbers
+    ></ReadOnlyEditor>
+  );
+});

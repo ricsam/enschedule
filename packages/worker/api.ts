@@ -429,6 +429,23 @@ export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
       .catch(next);
   });
 
+  router.get("/logs/:runId", (req, res, next) => {
+    const authHeader = AuthHeader.safeParse(req.headers.authorization);
+    if (!authHeader.success) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    worker
+      .streamLogs(authHeader.data, Number(req.params.runId))
+      .then((logsStream) => {
+        if (!logsStream) {
+          return res.status(404).json({ error: "Not found" });
+        }
+        res.setHeader("Content-Type", "text/plain");
+        logsStream.pipe(res);
+      })
+      .catch(next);
+  });
+
   return router;
 };
 

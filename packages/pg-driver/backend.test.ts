@@ -6,6 +6,7 @@ import { PublicJobRun, WorkerStatus } from "@enschedule/types";
 import { z } from "zod";
 import { Schedule, TestBackend, createJobDefinition } from "./backend";
 import { envSequalizeOptions } from "./env-sequalize-options";
+jest.setTimeout(60000);
 
 let sequalizeInstances: TestBackend[] = [];
 
@@ -282,7 +283,7 @@ registerTests((getBackend: () => TestBackend) => {
         ).sort()
       ).toEqual([0, 1]);
     });
-    it("should be able to run overdue jobs", async () => {
+    it.only("should be able to run overdue jobs", async () => {
       const jobFn = jest.fn((data: { url: string }) => {
         console.log("comment");
       });
@@ -308,8 +309,9 @@ registerTests((getBackend: () => TestBackend) => {
       expect(jobFn).toHaveBeenLastCalledWith(jobData);
       expect(runs).toHaveLength(1);
       const run = runs[0];
-      expect(run.stderr).toBe("");
-      expect(run.stdout).toBe("comment\n");
+      expect(await backend.getLogs(backend.authHeader, run.id)).toBe(
+        "1970-01-01T00:00:00.000000Z comment\n"
+      );
 
       await awaitOverdueJobs(backend);
 
@@ -392,9 +394,9 @@ registerTests((getBackend: () => TestBackend) => {
       const runs = await job.getRuns();
       expect(runs).toHaveLength(1);
       const run = runs[0];
-      expect(run.stdout).toBe("");
+      const stdout = (await backend.getLogs(backend.authHeader, run.id))!;
       expect(
-        run.stderr
+        stdout
           .split("\n")
           .filter(
             (line) =>

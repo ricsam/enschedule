@@ -49,19 +49,36 @@ spec:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           env:
             - name: COOKIE_SESSION_SECRET
-              value: {{ .Values.config.COOKIE_SESSION_SECRET | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: cookieSessionSecret
             - name: API_KEY
-              value: {{ .Values.config.API_KEY | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: apiKey
             - name: ACCESS_TOKEN_SECRET
-              value: {{ .Values.config.ACCESS_TOKEN_SECRET | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: accessTokenSecret
             - name: REFRESH_TOKEN_SECRET
-              value: {{ .Values.config.REFRESH_TOKEN_SECRET | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: refreshTokenSecret
             - name: HTTPS_ONLY_COOKIES
-              value: {{ .Values.config.HTTPS_ONLY_COOKIES | quote }}
+              value: {{ .Values.config.httpsOnlyCookies | quote }}
             - name: WORKER_URL
               value: "http://worker-service:{{ .Values.worker.service.port }}"
             - name: DEBUG
               value: worker-api
+            - name: NAFS_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: nafsUri
       {{- with .Values.dashboard.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

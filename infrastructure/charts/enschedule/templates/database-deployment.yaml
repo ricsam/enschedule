@@ -56,7 +56,10 @@ spec:
             {{- toYaml .Values.database.resources | nindent 12 }}
           env:
             - name: POSTGRES_PASSWORD
-              value: postgres
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
       {{- with .Values.database.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

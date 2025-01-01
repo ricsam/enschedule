@@ -6,6 +6,8 @@ cd $SCRIPT_DIR
 
 minikube start
 
+npm run build
+node ./release-package.js
 ./build-images.sh
 
 helm uninstall enschedule
@@ -14,11 +16,11 @@ while [[ $(kubectl get pods | wc -l) -gt 0 ]]; do
   sleep 5
 done
 
-minikube image rm 'ghcr.io/ricsam/enschedule-worker:latest'
-minikube image rm 'ghcr.io/ricsam/enschedule-dashboard:latest'
+minikube image rm --force 'ghcr.io/ricsam/enschedule-worker:alpha'
+minikube image rm --force 'ghcr.io/ricsam/enschedule-dashboard:alpha'
 
-minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:latest'
-minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:latest'
+minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:alpha'
+minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:alpha'
 
 helm upgrade --install enschedule ./charts/enschedule \
   --set worker.image.pullPolicy=Never \

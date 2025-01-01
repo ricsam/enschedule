@@ -103,7 +103,7 @@ function EditorLoading() {
   return <div data-testid="monaco-loading"></div>;
 }
 
-export function ReadOnlyEditor({
+export const ReadOnlyEditor = React.memo(function ReadOnlyEditor({
   example,
   lang,
   wordWrap,
@@ -204,4 +204,4 @@ export function ReadOnlyEditor({
       />
     </Box>
   );
-}
+});

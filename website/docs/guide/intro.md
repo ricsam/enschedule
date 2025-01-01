@@ -12,9 +12,10 @@ You can test it out by running everything in a single container:
 docker container run -it --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \
+  -e LOGS="/var/logs/enschedule" \
   -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \
-  -e ADMIN_ACCOUNT=admin:password \
-  -p 3000:3000 \
+  -e ADMIN_ACCOUNT=adm1n:s3cr3t \
+  -p 3333:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
 ```
 

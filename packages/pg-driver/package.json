@@ -1,6 +1,6 @@
 {
   "name": "@enschedule/pg-driver",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "module": "./index.ts",
   "main": "./index.ts",
   "types": "./index.ts",
@@ -31,6 +31,12 @@
     "sequelize": "6.37.4",
     "sqlite3": "^5.1.6",
     "umzug": "^3.8.2",
+    "nafs": "^0.1.8",
+    "@enstore/fs": "^0.0.8",
+    "@aws-sdk/lib-storage": "^3.717.0",
+    "@aws-sdk/client-s3": "^3.717.0",
+    "memfs": "^4.15.1",
+    "@ricsam/linkfs": "^2.0.8",
     "zod": "^3.22.2",
     "zod-to-json-schema": "3.23.2",
     "zod-to-ts": "1.2.0"

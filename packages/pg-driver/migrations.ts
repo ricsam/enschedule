@@ -870,4 +870,81 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
       });
     },
   },
+  {
+    name: "00004-modify-run-logging-columns",
+    up: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Add new logging-related columns
+        await queryInterface.addColumn(
+          "Runs",
+          "logFile",
+          {
+            type: DataTypes.TEXT,
+            allowNull: true,
+          },
+          { transaction }
+        );
+
+        await queryInterface.addColumn(
+          "Runs",
+          "logFileSize",
+          {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+          },
+          { transaction }
+        );
+
+        await queryInterface.addColumn(
+          "Runs",
+          "logFileRowCount",
+          {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+          },
+          { transaction }
+        );
+
+        // Remove stdout and stderr columns
+        await queryInterface.removeColumn("Runs", "stdout", { transaction });
+        await queryInterface.removeColumn("Runs", "stderr", { transaction });
+      });
+    },
+
+    down: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Re-add stdout and stderr columns
+        await queryInterface.addColumn(
+          "Runs",
+          "stdout",
+          {
+            type: DataTypes.TEXT,
+            allowNull: false,
+            defaultValue: "",
+          },
+          { transaction }
+        );
+
+        await queryInterface.addColumn(
+          "Runs",
+          "stderr",
+          {
+            type: DataTypes.TEXT,
+            allowNull: false,
+            defaultValue: "",
+          },
+          { transaction }
+        );
+
+        // Remove all new logging-related columns
+        await queryInterface.removeColumn("Runs", "logFile", { transaction });
+        await queryInterface.removeColumn("Runs", "logFileSize", {
+          transaction,
+        });
+        await queryInterface.removeColumn("Runs", "logFileRowCount", {
+          transaction,
+        });
+      });
+    },
+  },
 ];

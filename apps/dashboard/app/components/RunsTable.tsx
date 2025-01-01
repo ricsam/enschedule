@@ -143,20 +143,6 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Exit signal",
   }),
-  columnHelper.accessor("stdout", {
-    cell: (info) => {
-      const value = info.getValue();
-      return String(!!value);
-    },
-    header: "Has stdout",
-  }),
-  columnHelper.accessor("stderr", {
-    cell: (info) => {
-      const value = info.getValue();
-      return String(!!value);
-    },
-    header: "Has stderr",
-  }),
   {
     cell: (info) => {
       const text = info.getValue();

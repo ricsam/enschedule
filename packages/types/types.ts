@@ -63,8 +63,6 @@ export const OptionalDateSchema = z
 //#region Schemas
 export const serializedRunSchema = z.object({
   id: z.number(),
-  stdout: z.string(),
-  stderr: z.string(),
   createdAt: DateSchema,
   exitSignal: z.string().optional(),
   finishedAt: OptionalDateSchema,
@@ -404,10 +402,15 @@ export const ListRunsOptionsSerialize = (
 };
 
 /**
- * rename to handler
+ * rename to function definition
  */
 export interface JobDefinition<T extends ZodType = ZodType> {
   dataSchema: T;
+  /**
+   * This is a user provided ID that is used to "identify" the the job code.
+   * If the same function is be deployed on multiple workers then they should have the same id,
+   * so that any of the workers can pick up the job corresponding to the id when it is scheduled.
+   */
   id: string;
   title: string;
   description: string;

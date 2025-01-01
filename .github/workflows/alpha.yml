@@ -84,7 +84,8 @@ jobs:
             -e ACCESS_TOKEN_SECRET=secret_key \
             -e REFRESH_TOKEN_SECRET=secret_key \
             -e COOKIE_SESSION_SECRET=s3cr3t \
-            -e ADMIN_ACCOUNT=ricsam:password \
+            -e ADMIN_ACCOUNT=adm1n:s3cr3t \
+            -e NAFS_URI=file:///var/logs/enschedule \
             -p 3333:3000 \
             ghcr.io/ricsam/enschedule-dashboard:alpha
 
@@ -123,7 +124,7 @@ jobs:
             --set dashboard.service.port=3000 \
             --set worker.service.type=NodePort \
             --set worker.service.port=3000 \
-            --set config.ADMIN_ACCOUNT=ricsam:password
+            --set config.ADMIN_ACCOUNT=adm1n:s3cr3t
       - name: Test service URLs
         run: |
           minikube service list

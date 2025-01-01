@@ -325,8 +325,8 @@ async function login(
   if (await page.isVisible('[data-testid="login-link"]')) {
     await page.click('[data-testid="login-link"]');
     await page.waitForURL(/\/login/);
-    await page.getByLabel("Username").fill("ricsam");
-    await page.getByLabel("Password").fill("password");
+    await page.getByLabel("Username").fill("adm1n");
+    await page.getByLabel("Password").fill("s3cr3t");
     await page.click('#login-form [type="submit"]');
     await page.waitForURL(baseUrl.dashboardUrl);
     await page.waitForSelector('[data-testid="profile-link"]');

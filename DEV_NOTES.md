@@ -94,5 +94,5 @@ TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=h
 
 ## Debug playwright in the UI
 ```bash
-npm run playwright show-report "~/Downloads/playwright-report (1)"
+npm run playwright show-report "$HOME/Downloads/playwright-report (1)"
 ```

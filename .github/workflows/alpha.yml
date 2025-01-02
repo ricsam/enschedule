@@ -37,7 +37,7 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      - name: Start postgres for testing
+      - name: Start postgres and enstore for testing
         run: docker compose up -d
       - name: Wait for postgres to be up
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done

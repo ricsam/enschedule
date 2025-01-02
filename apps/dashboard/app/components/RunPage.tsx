@@ -13,7 +13,7 @@ import {
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { SerializeFrom } from "@remix-run/node";
-import { Link, useFetcher, useHref } from "@remix-run/react";
+import { Link, useHref } from "@remix-run/react";
 import React from "react";
 import { sentenceCase } from "sentence-case";
 import { ReadOnlyEditor } from "~/components/Editor";

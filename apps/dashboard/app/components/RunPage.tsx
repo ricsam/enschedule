@@ -204,21 +204,24 @@ export default function RunPage({
 }
 
 const Logs = React.memo(function Logs({ id }: { id: number }) {
-  const fetcher = useFetcher({
-    key: String(id),
-  });
+  const [data, setData] = React.useState<string | null>(null);
   React.useEffect(() => {
-    fetcher.load("/logs/" + id);
+    const controller = new AbortController();
+    fetch("/logs/" + id, { signal: controller.signal })
+      .then((res) => res.text())
+      .then((data) => {
+        setData(data);
+      });
+
+    return () => {
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-  if (fetcher.state !== "idle" || typeof fetcher.data !== "string") {
+  if (!data) {
     return null;
   }
   return (
-    <ReadOnlyEditor
-      example={fetcher.data}
-      lang="text"
-      withLineNumbers
-    ></ReadOnlyEditor>
+    <ReadOnlyEditor example={data} lang="text" withLineNumbers></ReadOnlyEditor>
   );
 });

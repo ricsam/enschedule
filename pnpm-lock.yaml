@@ -364,8 +364,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       '@enstore/fs':
-        specifier: ^0.0.8
-        version: 0.0.8(debug@4.3.4)
+        specifier: ^0.0.9
+        version: 0.0.9(debug@4.3.4)
       '@ricsam/linkfs':
         specifier: ^2.0.8
         version: 2.0.8
@@ -385,8 +385,8 @@ importers:
         specifier: ^4.15.1
         version: 4.15.1
       nafs:
-        specifier: ^0.1.8
-        version: 0.1.8(@aws-sdk/client-s3@3.717.0)(@aws-sdk/lib-storage@3.717.0(@aws-sdk/client-s3@3.717.0))(@enstore/fs@0.0.8(debug@4.3.4))(@ricsam/linkfs@2.0.8)(memfs@4.15.1)
+        specifier: ^0.1.10
+        version: 0.1.10(@aws-sdk/client-s3@3.717.0)(@aws-sdk/lib-storage@3.717.0(@aws-sdk/client-s3@3.717.0))(@enstore/fs@0.0.9(debug@4.3.4))(@ricsam/linkfs@2.0.8)(memfs@4.15.1)
       pascal-case:
         specifier: ~3.1.2
         version: 3.1.2
@@ -2593,8 +2593,8 @@ packages:
   '@emotion/weak-memoize@0.4.0':
     resolution: {integrity: sha512-snKqtPW01tN0ui7yu9rGv69aJXr/a/Ywvl11sUjNtEcRc+ng/mQriFL0wLXMef74iHa/EkftbDzU9F8iFbH+zg==}
 
-  '@enstore/fs@0.0.8':
-    resolution: {integrity: sha512-cRS+NaxwHzV2uPNVAft/NVyIhM3tS258iIYpUogwrMMvOqZKpNNIcML8dC1JsnV5ySjiK0Im6ISK0w2j1nwnVA==}
+  '@enstore/fs@0.0.9':
+    resolution: {integrity: sha512-XaM0nief33OnBym9vZFxes9CtlWQWFzCpDIE69UYDDrRD3V/87zFPHqqcfYa1f5Rq/BZxnP2+FJgdiFIFMhRMg==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -7959,8 +7959,8 @@ packages:
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
 
-  nafs@0.1.8:
-    resolution: {integrity: sha512-REAAhSgsZFZRjM+3FDyft+cBFvp55CxqK1TgbdDwQ7wp4SNiGGJU0TeiUb1T0mizLdXLzYdU2WG8RVmRF0RHVw==}
+  nafs@0.1.10:
+    resolution: {integrity: sha512-TI4p9p789U0lBfjb0E3A4LNB103Q8gwBH4O4zuQlUgB6rEgUIp9pNTrPrcRhqj4hawnxOWT/sAlMACO1sVoBew==}
     peerDependencies:
       '@aws-sdk/client-s3': '*'
       '@aws-sdk/lib-storage': '*'
@@ -15027,7 +15027,7 @@ snapshots:
 
   '@emotion/weak-memoize@0.4.0': {}
 
-  '@enstore/fs@0.0.8(debug@4.3.4)':
+  '@enstore/fs@0.0.9(debug@4.3.4)':
     dependencies:
       axios: 1.7.9(debug@4.3.4)
       form-data: 4.0.1
@@ -22246,11 +22246,11 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  nafs@0.1.8(@aws-sdk/client-s3@3.717.0)(@aws-sdk/lib-storage@3.717.0(@aws-sdk/client-s3@3.717.0))(@enstore/fs@0.0.8(debug@4.3.4))(@ricsam/linkfs@2.0.8)(memfs@4.15.1):
+  nafs@0.1.10(@aws-sdk/client-s3@3.717.0)(@aws-sdk/lib-storage@3.717.0(@aws-sdk/client-s3@3.717.0))(@enstore/fs@0.0.9(debug@4.3.4))(@ricsam/linkfs@2.0.8)(memfs@4.15.1):
     optionalDependencies:
       '@aws-sdk/client-s3': 3.717.0
       '@aws-sdk/lib-storage': 3.717.0(@aws-sdk/client-s3@3.717.0)
-      '@enstore/fs': 0.0.8(debug@4.3.4)
+      '@enstore/fs': 0.0.9(debug@4.3.4)
       '@ricsam/linkfs': 2.0.8
       memfs: 4.15.1
 

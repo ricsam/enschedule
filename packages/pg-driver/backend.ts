@@ -1613,50 +1613,45 @@ export class PrivateBackend {
       });
     }
 
-    const { count, rows } = await this.sequelize.transaction(
-      async (transaction) => {
-        return Run.findAndCountAll({
-          logging: logging ? console.log : undefined,
+    const { count, rows } = await Run.findAndCountAll({
+      logging: logging ? console.log : undefined,
+      include: [
+        {
+          model: Schedule,
+          as: "schedule",
           include: [
             {
-              model: Schedule,
-              as: "schedule",
+              model: Run,
+              as: "lastRun",
               include: [
                 {
-                  model: Run,
-                  as: "lastRun",
-                  include: [
-                    {
-                      model: Worker,
-                      as: "worker",
-                    },
-                  ],
+                  model: Worker,
+                  as: "worker",
                 },
               ],
             },
-            { model: Worker, as: "worker" },
-            {
-              model: User,
-              as: "userViewAccess",
-              attributes: ["id"],
-              through: { attributes: [] },
-            },
-            {
-              model: Group,
-              as: "groupViewAccess",
-              attributes: ["id"],
-              through: { attributes: [] },
-            },
           ],
-          where,
-          limit: limit ?? 25,
-          order,
-          subQuery: false,
-          offset: offset ?? 0,
-          transaction,
-        });
-      }
-    );
+        },
+        { model: Worker, as: "worker" },
+        {
+          model: User,
+          as: "userViewAccess",
+          attributes: ["id"],
+          through: { attributes: [] },
+        },
+        {
+          model: Group,
+          as: "groupViewAccess",
+          attributes: ["id"],
+          through: { attributes: [] },
+        },
+      ],
+      where,
+      limit: limit ?? 25,
+      order,
+      subQuery: false,
+      offset: offset ?? 0,
+    });
 
     const workers = await this.getWorkers(authHeader);
 
@@ -2941,29 +2936,37 @@ export class PrivateBackend {
     stdoutStream.pipe(combinedStream);
     stderrStream.pipe(combinedStream);
 
-    const rl = readline.createInterface({ input: combinedStream });
     let rowCount = 0;
     let fileSize = 0;
 
     let saveOutput = false;
-    rl.on("line", (line) => {
-      if (!saveOutput) {
-        return;
-      }
-      const timestamp = getHighPrecisionISOString();
-      const logLine = `${timestamp} ${line}\n`;
-      logStream.write(logLine);
-      fileSize += Buffer.byteLength(logLine, "utf8");
-      rowCount += 1;
-    });
 
     const nfs = await this.getNafs();
 
     const logFile = `/${run.id}-${new Date().toISOString()}.log`;
 
-    const logStream = nfs.createWriteStream(logFile);
+    let logStream: stream.Writable | undefined;
+    try {
+      logStream = nfs.createWriteStream(logFile);
+      run.logFile = logFile;
+    } catch (err) {
+      log("Error creating log file", err);
+    }
 
-    run.logFile = logFile;
+    if (logStream) {
+      const ls = logStream;
+      const rl = readline.createInterface({ input: combinedStream });
+      rl.on("line", (line) => {
+        if (!saveOutput) {
+          return;
+        }
+        const timestamp = getHighPrecisionISOString();
+        const logLine = `${timestamp} ${line}\n`;
+        ls.write(logLine);
+        fileSize += Buffer.byteLength(logLine, "utf8");
+        rowCount += 1;
+      });
+    }
 
     const awaitStream = (pipeStream: stream.PassThrough) => {
       let _resolve: undefined | (() => void);
@@ -3014,13 +3017,17 @@ export class PrivateBackend {
     stderrStream.end();
 
     await promise;
-    logStream.end();
+    if (logStream) {
+      logStream.end();
+    }
     const finishedAt = new Date();
 
     run.exitSignal = exitSignal;
     run.finishedAt = finishedAt;
-    run.logFileRowCount = rowCount;
-    run.logFileSize = fileSize;
+    if (logStream) {
+      run.logFileRowCount = rowCount;
+      run.logFileSize = fileSize;
+    }
 
     await run.save();
 
@@ -3060,8 +3067,15 @@ export class PrivateBackend {
     }
   }
 
+  private nafsIntance: Awaited<ReturnType<typeof nafs>> | undefined;
+
   private async getNafs() {
+    if (this.nafsIntance) {
+      return this.nafsIntance;
+    }
     const remoteFs = await nafs(NAFS_URI);
+    await remoteFs.promises.mkdir("/", { recursive: true });
+    this.nafsIntance = remoteFs;
     return remoteFs;
   }
 

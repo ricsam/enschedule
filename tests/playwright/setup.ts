@@ -88,6 +88,7 @@ export class Setup {
       API_KEY: "secret_key",
       ACCESS_TOKEN_SECRET: "secret_key",
       REFRESH_TOKEN_SECRET: "secret_key",
+      NAFS_URI: "NAFS_URI=enstore://admin:password?endpoint=http://localhost:3456",
     };
   }
 

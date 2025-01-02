@@ -11,7 +11,6 @@ export const migrate = async () => {
   await worker.migrateDatabase();
   await worker.register({
     username: "adm1n",
-    email: "oss@ricsam.dev",
     name: "Admin",
     password: "s3cr3t",
     admin: true,

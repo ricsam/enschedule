@@ -1,6 +1,6 @@
 import type { PublicWorkerSchema } from "@enschedule/types";
 import { WorkerStatus } from "@enschedule/types";
-import { Tooltip, Typography } from "@mui/material";
+import { Tooltip, Typography, TypographyProps } from "@mui/material";
 import Box from "@mui/material/Box";
 import MuiLink from "@mui/material/Link";
 import type { SerializeFrom } from "@remix-run/node";
@@ -26,7 +26,10 @@ const getWorkerStatusIcon = (status: WorkerStatus) => {
   return icons[status];
 };
 
-export const WorkerStatusIcon = ({ status }: { status: WorkerStatus }) => {
+export const WorkerStatusIcon = ({
+  status,
+  ...props
+}: { status: WorkerStatus } & TypographyProps) => {
   return (
     <Tooltip title={sentenceCase(status)} disableInteractive>
       <Typography
@@ -34,6 +37,7 @@ export const WorkerStatusIcon = ({ status }: { status: WorkerStatus }) => {
         data-testid="status"
         data-status={status}
         sx={{ cursor: "default" }}
+        {...props}
       >
         {getWorkerStatusIcon(status)}
       </Typography>

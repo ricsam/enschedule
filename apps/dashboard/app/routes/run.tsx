@@ -1,6 +1,7 @@
 import type {
   PublicJobDefinition,
   PublicJobSchedule,
+  PublicWorker,
   ScheduleJobResult,
 } from "@enschedule/types";
 import {
@@ -9,7 +10,7 @@ import {
   WorkerStatus,
 } from "@enschedule/types";
 import Send from "@mui/icons-material/Send";
-import type { SxProps } from "@mui/material";
+import type { BoxProps, SxProps } from "@mui/material";
 import {
   Avatar,
   CardHeader,
@@ -684,6 +685,51 @@ export default function Run() {
     workerDict[worker.workerId].push(worker);
   });
 
+  const dataDefinedAnswer = (
+    <>
+      {selectedDef && (
+        <>
+          <EnscheduleBotMessage
+            message={
+              <div>
+                The <LightB>{selectedDef.title}</LightB> function is described
+                as <i>{selectedDef.description}</i>
+                {workerId ? (
+                  <>
+                    and will run on the following{" "}
+                    {workerDict[workerId].length > 1
+                      ? "selected workers"
+                      : "worker"}
+                    :
+                    <WorkerOption workers={workerDict[workerId]} />
+                  </>
+                ) : null}
+              </div>
+            }
+          />
+
+          <EnscheduleBotMessage
+            message={
+              <div>
+                <div>
+                  Let's create a schedule for the{" "}
+                  <LightB>{selectedDef.title}</LightB> definition, please
+                  provide the data according to the following schema:
+                </div>
+                <Box pt={1}>
+                  <ReadOnlyEditor
+                    example={selectedDef.codeBlock}
+                    lang="typescript"
+                  />
+                </Box>
+              </div>
+            }
+          />
+        </>
+      )}
+    </>
+  );
+
   return (
     <RootLayout breadcrumbs={[{ title: "Run", href: "/run" }]}>
       <Box
@@ -779,24 +825,11 @@ export default function Run() {
                       const { accessKey, ...optionProps } = props;
                       const workers = workerDict[workerId];
                       return (
-                        <Box key={accessKey} component="li" {...optionProps}>
-                          <Box component="span" sx={{ mr: 1 }}>
-                            {workers[0].title} ({workerId})
-                          </Box>
-                          <Tooltip
-                            title={workers
-                              .map(({ hostname }) => hostname)
-                              .join(", ")}
-                          >
-                            <Box
-                              component="span"
-                              sx={{ mr: 1, fontWeight: "bold" }}
-                            >
-                              ({workers.length})
-                            </Box>
-                          </Tooltip>
-                          <WorkerStatusIcon status={WorkerStatus.UP} />
-                        </Box>
+                        <WorkerOption
+                          workers={workers}
+                          key={accessKey}
+                          {...optionProps}
+                        />
                       );
                     }}
                     value={workerId ?? null}
@@ -831,9 +864,12 @@ export default function Run() {
                 <EnscheduleBotMessage
                   message={`Which worker would you like to run this job on?`}
                 />
-                <MyMessage message={workerDict[workerId][0].title} />
+                <MyMessage
+                  message={<WorkerOption workers={workerDict[workerId]} />}
+                />
               </>
             )}
+            {dataDefinedAnswer}
             {selectedDef && (
               <>
                 {data && (
@@ -853,7 +889,7 @@ export default function Run() {
                       }}
                     />
 
-                    <EnscheduleBotMessage message="Congratulations, we have not defined a job, a definition + data = job" />
+                    <EnscheduleBotMessage message="Congratulations, we have now defined a job, a definition + data = job" />
                     <EnscheduleBotMessage message="Do you want to run this job now, later or manually?" />
                     {whenToSend === undefined ? (
                       <InputArea>
@@ -1079,38 +1115,6 @@ the last Wednesday of the month:
                 )}
               </>
             )}
-
-            {selectedDef && (
-              <>
-                <EnscheduleBotMessage
-                  message={
-                    <div>
-                      The <LightB>{selectedDef.title}</LightB> definition is
-                      described as <i>{selectedDef.description}</i>
-                    </div>
-                  }
-                />
-
-                <EnscheduleBotMessage
-                  message={
-                    <div>
-                      <div>
-                        Let's create a schedule for the{" "}
-                        <LightB>{selectedDef.title}</LightB> definition, please
-                        provide the data according to the following schema:
-                      </div>
-                      <Box pt={1}>
-                        <ReadOnlyEditor
-                          example={selectedDef.codeBlock}
-                          lang="typescript"
-                        />
-                      </Box>
-                    </div>
-                  }
-                />
-              </>
-            )}
-
             {selectedDef && !data && (
               <InputArea>
                 <Box
@@ -1145,5 +1149,35 @@ the last Wednesday of the month:
         )}
       </Box>
     </RootLayout>
+  );
+}
+
+function WorkerOption({
+  workers,
+  ...optionProps
+}: {
+  workers: SerializeFrom<PublicWorker[]>;
+} & BoxProps<"li">) {
+  const workerId = workers[0].workerId;
+  return (
+    <Box
+      component="li"
+      {...optionProps}
+      sx={{ display: "flex", alignItem: "flex-end" }}
+    >
+      {'•'}
+      <Box component="span" sx={{ mx: 1 }}>
+        {workers[0].title} ({workerId})
+      </Box>
+      <Tooltip title={workers.map(({ hostname }) => hostname).join(", ")}>
+        <Box component="span" sx={{ mr: 1, fontWeight: "bold" }}>
+          ({workers.length})
+        </Box>
+      </Tooltip>
+      <WorkerStatusIcon
+        status={WorkerStatus.UP}
+        sx={{ display: "flex", alignItems: "center", lineHeight: 1 }}
+      />
+    </Box>
   );
 }

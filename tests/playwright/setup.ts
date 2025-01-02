@@ -332,6 +332,7 @@ export class Setup {
         ACCESS_TOKEN_SECRET: "secret_key",
         REFRESH_TOKEN_SECRET: "secret_key",
         COOKIE_SESSION_SECRET: "s3cr3t",
+        NAFS_URI: "NAFS_URI=enstore://admin:password?endpoint=http://localhost:3456",
       }),
       dashboardPwd,
       (stdout) => stdout.includes("[remix-serve] http"),

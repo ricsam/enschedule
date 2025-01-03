@@ -144,7 +144,7 @@ function printSchedules(
       time,
     ];
     if (options.output === "wide") {
-      cols.splice(2, 0, schedule.description, schedule.handlerId);
+      cols.splice(2, 0, schedule.description, schedule.functionId);
     }
 
     table.push(cols);

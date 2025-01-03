@@ -23,8 +23,8 @@ describe("apply", () => {
           description: "This is a test schedule",
           cronExpression: "0 0 * * *", // Run every day at midnight
         },
-        handlerId: "log-job",
-        handlerVersion: 1,
+        functionId: "log-job",
+        functionVersion: 1,
         data: { message: "foo bar" },
       },
     };

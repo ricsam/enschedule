@@ -1086,7 +1086,7 @@ registerTests((getBackend: () => TestBackend) => {
       spyA.mockReset();
       expect(oldSchedule.id).toBe(2);
       expect(oldSchedule.data).toBe('{"url":"http://other_url:1234"}');
-      expect(oldSchedule.handlerVersion).toBe(1);
+      expect(oldSchedule.functionVersion).toBe(1);
       const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://other_url:1234" });
     });
@@ -1159,7 +1159,7 @@ registerTests((getBackend: () => TestBackend) => {
       spyA.mockReset();
       spyB.mockReset();
       expect(oldSchedule.id).toBe(2);
-      expect(oldSchedule.handlerVersion).toBe(2);
+      expect(oldSchedule.functionVersion).toBe(2);
       expect(oldSchedule.data).toBe('"http://other_url:1234"');
       const runC = await awaitRunSchedule(backend, oldSchedule.id);
       expect(spyA).not.toHaveBeenCalled();
@@ -1204,7 +1204,7 @@ registerTests((getBackend: () => TestBackend) => {
       expect(claimed).toHaveLength(0);
 
       // we change the version to 2 and the job should now be claimed
-      schedule.handlerVersion = 2;
+      schedule.functionVersion = 2;
       await schedule.save();
       claimed = await backend.claimUnclaimedOverdueJobs();
       expect(claimed).toHaveLength(1);

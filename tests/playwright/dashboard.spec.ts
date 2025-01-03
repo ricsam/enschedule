@@ -50,7 +50,7 @@ test.describe("Single-Run", () => {
     // test delete on each of these urls
     // /runs/$runId
     // /schedules/$scheduleId/runs/$runId
-    // /definitions/$handlerId/schedules/$scheduleId/runs/$runId
+    // /definitions/$functionId/schedules/$scheduleId/runs/$runId
     for (let i = 0; i < 3; i += 1) {
       const runPageVisit = await visitRunPages(page);
 
@@ -62,7 +62,7 @@ test.describe("Single-Run", () => {
       expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
       expect(await numRows(page)).toBe(1);
 
-      await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$handlerId/schedules/$scheduleId/runs
+      await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$functionId/schedules/$scheduleId/runs
       expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
       expect(await numRows(page)).toBe(1);
 
@@ -494,7 +494,7 @@ test.describe("Can update a single schedule", () => {
     );
   });
   test.describe("Can update on /schedules/$scheduleId", updateScheduleTests);
-  test.describe("Can update on /definitions/$handlerId/schedules/$scheduleId", () => {
+  test.describe("Can update on /definitions/$functionId/schedules/$scheduleId", () => {
     test.beforeEach(async ({ page }) => {
       await navigate(
         setup.dashboardUrl,
@@ -590,7 +590,7 @@ test.describe("Can do schedule multi actions", () => {
   test("Can multi delete schedule on /schedules", testMsDelete);
   test("Can multi run schedule on /schedules", testMsRun);
   test("Can multi unschedule on /schedules", testUnschedule);
-  test.describe("/definitions/$handlerId/schedules", () => {
+  test.describe("/definitions/$functionId/schedules", () => {
     test.beforeEach(async ({ page }) => {
       await navigate(
         setup.dashboardUrl,

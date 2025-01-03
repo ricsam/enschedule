@@ -2,10 +2,10 @@
 * schedule status should technically not be determined by the "lastRun" but rather "by any of its runs"
 * add global poll interval information
 * write docs about eventId on schedules (and maybe rename eventId to scheduleName)
-* write docs about handlerVersion and migrations
+* write docs about functionVersion and migrations
 * highlight when schedule doesn't have an associated handler registered
 * rename definitions to handlers
-* runs the jobDef can be string. That one is parsed in the front-end now. This one does not include the handler version, see `this.definedJobs[schedule.target]?.[schedule.handlerVersion] ?? schedule.target`.
+* runs the jobDef can be string. That one is parsed in the front-end now. This one does not include the handler version, see `this.definedJobs[schedule.target]?.[schedule.functionVersion] ?? schedule.target`.
 * add UI to select specific worker to run on
 * test when there are 2 versions of a handler up and running
 * test the @enschedule/hub

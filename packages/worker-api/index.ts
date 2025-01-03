@@ -296,8 +296,8 @@ export class WorkerAPI {
 
   async scheduleJob(
     authHeader: z.output<typeof AuthHeader>,
-    handlerId: string,
-    handlerVersion: number,
+    functionId: string,
+    functionVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult> {
@@ -305,8 +305,8 @@ export class WorkerAPI {
       "POST",
       "/schedules",
       {
-        handlerId,
-        handlerVersion,
+        functionId,
+        functionVersion,
         data,
         options,
       },

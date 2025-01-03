@@ -32,8 +32,8 @@ export const apply = async (
     try {
       const { status } = await worker.scheduleJob(
         authHeader,
-        config.spec.handlerId,
-        config.spec.handlerVersion,
+        config.spec.functionId,
+        config.spec.functionVersion,
         config.spec.data,
         { ...config.spec.options, eventId: config.metadata.name }
       );

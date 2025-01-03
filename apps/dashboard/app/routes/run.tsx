@@ -58,8 +58,8 @@ import { getLoaderData } from "./runLoader.server";
 const SerializedJobEventSchema = z.intersection(
   z.object({
     data: z.string(),
-    handlerId: z.string(),
-    handlerVersion: z.number(),
+    functionId: z.string(),
+    functionVersion: z.number(),
     runAt: z.string().optional(),
   }),
   ScheduleJobOptionsSchema.omit({ runAt: true })
@@ -76,15 +76,15 @@ export const action: ActionFunction = async ({ request, context }) => {
   const serializedEv = SerializedJobEventSchema.parse(jsonValue);
 
   const data = JSON.parse(serializedEv.data);
-  const handlerId = serializedEv.handlerId;
-  const handlerVersion = serializedEv.handlerVersion;
+  const functionId = serializedEv.functionId;
+  const functionVersion = serializedEv.functionVersion;
 
   const response = await (
     await getWorker(context.worker)
   ).scheduleJob(
     authHeader,
-    handlerId,
-    handlerVersion,
+    functionId,
+    functionVersion,
     data,
     ScheduleJobOptionsSchema.parse(serializedEv)
   );
@@ -308,11 +308,11 @@ export default function Run() {
                 const job: z.input<typeof SerializedJobEventSchema> = {
                   title,
                   description,
-                  handlerId: selectedDef.id,
+                  functionId: selectedDef.id,
                   data: JSON.stringify(data),
                   retryFailedJobs,
                   maxRetries,
-                  handlerVersion: selectedDef.version,
+                  functionVersion: selectedDef.version,
                   failureTrigger: selectedSchedule
                     ? selectedSchedule.id
                     : undefined,

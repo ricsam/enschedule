@@ -258,7 +258,7 @@ export const createPublicJobSchedule = (
     runNow: schedule.runNow,
     cronExpression: schedule.cronExpression || undefined,
     lastRun: schedule.lastRun ? serializeRun(schedule.lastRun) : undefined,
-    handlerId: schedule.handlerId,
+    functionId: schedule.functionId,
     createdAt: schedule.createdAt,
     jobDefinition: jobDef,
     numRuns: schedule.numRuns,
@@ -536,8 +536,8 @@ export class Schedule extends Model<
 
   declare title: string;
   declare description: string;
-  /** job handlerId, i.e. the handler the schedule executes */
-  declare handlerId: string;
+  /** job functionId, i.e. the handler the schedule executes */
+  declare functionId: string;
   declare cronExpression?: CreationOptional<string> | null;
   declare eventId?: CreationOptional<string> | null;
   declare retryFailedJobs: CreationOptional<boolean>;
@@ -552,7 +552,7 @@ export class Schedule extends Model<
   declare claimed: CreationOptional<boolean>;
 
   // related to the handler
-  declare handlerVersion: number;
+  declare functionVersion: number;
   declare data: string;
 
   declare numRuns: CreationOptional<number>;
@@ -608,8 +608,8 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare setSchedule: HasOneSetAssociationMixin<Schedule, number>;
   declare createSchedule: HasOneCreateAssociationMixin<Schedule>;
 
-  declare handlerId: string; // same as schedule.handlerId, but in case schedule is deleted the handlerId can still be found
-  declare handlerVersion: number; // same as schedule.handlerVersion, but in case schedule is deleted the handlerVersion can still be found
+  declare functionId: string; // same as schedule.functionId, but in case schedule is deleted the functionId can still be found
+  declare functionVersion: number; // same as schedule.functionVersion, but in case schedule is deleted the functionVersion can still be found
   declare scheduleTitle: string; // same as `${schedule.title}, #${schedule.id}`, but in case schedule is deleted a scheduleTitle can still be found
   declare schedule?: NonAttribute<Schedule> | null;
 
@@ -994,7 +994,7 @@ export class PrivateBackend {
           type: DataTypes.STRING,
           allowNull: true,
         },
-        handlerVersion: {
+        functionVersion: {
           type: DataTypes.INTEGER,
           allowNull: false,
         },
@@ -1054,7 +1054,7 @@ export class PrivateBackend {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
         },
-        handlerId: {
+        functionId: {
           type: DataTypes.STRING(),
           allowNull: false,
         },
@@ -1126,11 +1126,11 @@ export class PrivateBackend {
           type: DataTypes.DATE,
           allowNull: false,
         },
-        handlerId: {
+        functionId: {
           type: DataTypes.STRING(),
           allowNull: false,
         },
-        handlerVersion: {
+        functionVersion: {
           type: DataTypes.INTEGER,
           allowNull: false,
         },
@@ -1652,7 +1652,7 @@ export class PrivateBackend {
       return createPublicJobRun(
         run,
         jobSchedule ?? run.scheduleTitle,
-        this.getHandler(run.handlerId, run.handlerVersion, workers)
+        this.getHandler(run.functionId, run.functionVersion, workers)
       );
     });
 
@@ -1688,8 +1688,8 @@ export class PrivateBackend {
       run,
       schedule ?? run.scheduleTitle,
       this.getHandler(
-        run.handlerId,
-        run.handlerVersion,
+        run.functionId,
+        run.functionVersion,
         await this.getWorkers(authHeader)
       )
     );
@@ -1760,19 +1760,19 @@ export class PrivateBackend {
       return;
     }
     const handler = this.getHandler(
-      schedule.handlerId,
-      schedule.handlerVersion,
+      schedule.functionId,
+      schedule.functionVersion,
       await this.getWorkers(authHeader)
     );
     return createPublicJobSchedule(schedule, handler);
   }
 
   private getHandler(
-    handlerId: string,
+    functionId: string,
     version: number,
     workers: PublicWorker[]
   ): string | PublicJobDefinition {
-    const onServerHandler = this.definedJobs[handlerId]?.[version];
+    const onServerHandler = this.definedJobs[functionId]?.[version];
     if (onServerHandler) {
       return createPublicJobDefinition(onServerHandler);
     }
@@ -1782,23 +1782,23 @@ export class PrivateBackend {
     });
     for (const worker of [...workersThatAreUp, ...workers]) {
       const handler = worker.definitions.find((def) => {
-        return def.id === handlerId && def.version === version;
+        return def.id === functionId && def.version === version;
       });
       if (handler) {
         return handler;
       }
     }
-    return `${handlerId} v${version}`;
+    return `${functionId} v${version}`;
   }
 
   public async getLatestHandler(
-    handlerId: string,
+    functionId: string,
     authHeader: z.output<typeof AuthHeader>
   ): Promise<PublicJobDefinition> {
     const handlers = await this.getLatestHandlers(authHeader);
-    const handler = handlers.find((h) => h.id === handlerId);
+    const handler = handlers.find((h) => h.id === functionId);
     if (!handler) {
-      throw new Error("invalid handlerId or the worker is not online");
+      throw new Error("invalid functionId or the worker is not online");
     }
     return handler;
   }
@@ -2001,7 +2001,7 @@ export class PrivateBackend {
       dbSchedules.map((schedule) => {
         return createPublicJobSchedule(
           schedule,
-          this.getHandler(schedule.handlerId, schedule.handlerVersion, workers)
+          this.getHandler(schedule.functionId, schedule.functionVersion, workers)
         );
       })
     );
@@ -2122,7 +2122,7 @@ export class PrivateBackend {
   }
 
   protected createSignature(
-    handlerId: string,
+    functionId: string,
     runAt: Date | undefined,
     data: unknown,
     cronExpression: string | undefined
@@ -2130,7 +2130,7 @@ export class PrivateBackend {
     const rounded = runAt
       ? Math.floor(runAt.getTime() / 1000) * 1000
       : "manual";
-    let signature = `${handlerId}-${rounded}-${JSON.stringify(data)}`;
+    let signature = `${functionId}-${rounded}-${JSON.stringify(data)}`;
     if (cronExpression) {
       signature += `-${parseExpression(cronExpression).stringify(true)}`;
     }
@@ -2140,11 +2140,11 @@ export class PrivateBackend {
     defId: string,
     title: string,
     description: string,
-    handlerVersion: number,
+    functionVersion: number,
     data: unknown,
     options: CreateJobScheduleOptions = {}
   ) {
-    let migratedVersion = handlerVersion;
+    let migratedVersion = functionVersion;
     let migratedData = data;
     while (true) {
       const migration = this.migrations[defId]?.[migratedVersion];
@@ -2199,11 +2199,11 @@ export class PrivateBackend {
       | "claimed"
       | "numRuns"
     > = {
-      handlerVersion: migratedVersion,
+      functionVersion: migratedVersion,
       retryFailedJobs,
       workerId,
       maxRetries,
-      handlerId: defId,
+      functionId: defId,
       cronExpression: normalizedCronExpression,
       runAt,
       data: serializedData,
@@ -2280,15 +2280,15 @@ export class PrivateBackend {
 
   public async scheduleJob(
     authHeader: z.output<typeof AuthHeader>,
-    handlerId: string,
-    handlerVersion: number,
+    functionId: string,
+    functionVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult>;
   public async scheduleJob<T extends ZodType = ZodType>(
     authHeader: z.output<typeof AuthHeader>,
     job: JobDefinition<T>,
-    handlerVersion: number,
+    functionVersion: number,
     data: z.infer<T>,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult>;
@@ -2296,7 +2296,7 @@ export class PrivateBackend {
     authHeader: z.output<typeof AuthHeader>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     def: string | JobDefinition<any>,
-    handlerVersion: number,
+    functionVersion: number,
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult> {
@@ -2315,7 +2315,7 @@ export class PrivateBackend {
       defId,
       options.title,
       options.description,
-      handlerVersion,
+      functionVersion,
       data,
       {
         eventId: options.eventId,
@@ -2334,8 +2334,8 @@ export class PrivateBackend {
       schedule: createPublicJobSchedule(
         dbSchedule,
         this.getHandler(
-          dbSchedule.handlerId,
-          dbSchedule.handlerVersion,
+          dbSchedule.functionId,
+          dbSchedule.functionVersion,
           await this.getWorkers(authHeader)
         )
       ),
@@ -2406,7 +2406,7 @@ export class PrivateBackend {
   }
 
   protected async claimUnclaimedOverdueJobs() {
-    // only fetch jobs for a server that has a job definition for the schedule handlerId
+    // only fetch jobs for a server that has a job definition for the schedule functionId
     const jobKeys = Object.keys(this.definedJobs);
     if (jobKeys.length === 0) {
       return [];
@@ -2455,8 +2455,8 @@ export class PrivateBackend {
                   }
                   return [
                     {
-                      handlerId: key,
-                      handlerVersion: {
+                      functionId: key,
+                      functionVersion: {
                         [Op.in]: Array.from(eligibleVersions).map(Number),
                       },
                     },
@@ -2601,7 +2601,7 @@ export class PrivateBackend {
   }
 
   /**
-   * e.g. `{ "handlerId": { "1": { targetVersion: 2, migrateFn: (data) => data } }`
+   * e.g. `{ "functionId": { "1": { targetVersion: 2, migrateFn: (data) => data } }`
    */
   private migrations: Record<
     string,
@@ -2649,10 +2649,10 @@ export class PrivateBackend {
       where: {
         [Op.and]: [
           {
-            handlerId: id,
+            functionId: id,
           },
           {
-            handlerVersion: from.version,
+            functionVersion: from.version,
           },
         ],
       },
@@ -2665,7 +2665,7 @@ export class PrivateBackend {
         ) as z.infer<T>;
         const newData = to.dataSchema.parse(migrateFn(data)) as z.infer<U>;
         schedule.data = JSON.stringify(newData);
-        schedule.handlerVersion = to.version;
+        schedule.functionVersion = to.version;
         await schedule.save();
       })
     );
@@ -2827,8 +2827,8 @@ export class PrivateBackend {
       run,
       schedule,
       this.getHandler(
-        schedule.handlerId,
-        schedule.handlerVersion,
+        schedule.functionId,
+        schedule.functionVersion,
         await this.getWorkers(authHeader)
       )
     );
@@ -2888,8 +2888,8 @@ export class PrivateBackend {
     return createPublicJobSchedule(
       schedule,
       this.getHandler(
-        schedule.handlerId,
-        schedule.handlerVersion,
+        schedule.functionId,
+        schedule.functionVersion,
         await this.getWorkers(authHeader)
       )
     );
@@ -2898,15 +2898,15 @@ export class PrivateBackend {
   private async runDbSchedule(schedule: Schedule, run: Run) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
     const definition = this.getLocalHandler(
-      schedule.handlerId,
-      schedule.handlerVersion
+      schedule.functionId,
+      schedule.functionVersion
     );
     const data: any = definition.definition.dataSchema.parse(
       definition.migrateData(JSON.parse(schedule.data))
     );
     return this.runDefinition(
       {
-        handlerId: schedule.handlerId,
+        functionId: schedule.functionId,
         data,
         version: definition.version,
       },
@@ -3004,7 +3004,7 @@ export class PrivateBackend {
 
     let exitSignal = "0";
     try {
-      log("Creating a worker process to run", runMessage.handlerId);
+      log("Creating a worker process to run", runMessage.functionId);
       exitSignal = await this.fork(runMessage, streamHandle);
     } catch (err) {
       _console.error(err);
@@ -3094,7 +3094,7 @@ export class PrivateBackend {
   ) {
     if (this.inlineWorker) {
       const definition = this.getLocalHandler(
-        runMessage.handlerId,
+        runMessage.functionId,
         runMessage.version
       );
       const origConsole = console;
@@ -3170,9 +3170,9 @@ export class PrivateBackend {
     if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
       return new Promise<boolean>((resolve) => {
         process.once("message", (message) => {
-          const { handlerId, data, version } =
+          const { functionId, data, version } =
             RunHandlerInCpSchema.parse(message);
-          const definition = this.getLocalHandler(handlerId, version);
+          const definition = this.getLocalHandler(functionId, version);
           (async () => {
             try {
               await definition.definition.job(definition.migrateData(data));
@@ -3218,16 +3218,16 @@ export class PrivateBackend {
 
   private async scheduleSingleRun(schedule: Schedule) {
     const definition = this.getLocalHandler(
-      schedule.handlerId,
-      schedule.handlerVersion
+      schedule.functionId,
+      schedule.functionVersion
     );
     log(
       "Will run",
       definition.definition.title,
       "version",
-      definition.version === schedule.handlerVersion
+      definition.version === schedule.functionVersion
         ? definition.version
-        : `${definition.version} (migrated from ${schedule.handlerVersion})`,
+        : `${definition.version} (migrated from ${schedule.functionVersion})`,
       "according to the",
       schedule.title,
       "schedule"
@@ -3247,8 +3247,8 @@ export class PrivateBackend {
           startedAt,
           data: schedule.data,
           workerId: worker.id,
-          handlerId: definition.definition.id,
-          handlerVersion: definition.version,
+          functionId: definition.definition.id,
+          functionVersion: definition.version,
           scheduleTitle: `${schedule.title}, #${schedule.id}`,
           workerTitle: `${worker.title}, #${worker.id}`,
         },
@@ -3324,9 +3324,9 @@ export class PrivateBackend {
       "Finished running",
       definition.definition.title,
       "version",
-      definition.version === schedule.handlerVersion
+      definition.version === schedule.functionVersion
         ? definition.version
-        : `${definition.version} (migrated from ${schedule.handlerVersion})`,
+        : `${definition.version} (migrated from ${schedule.functionVersion})`,
       "according to the",
       schedule.title,
       "schedule",
@@ -3364,8 +3364,8 @@ export class PrivateBackend {
             (schedule) =>
               `${
                 this.getLocalHandler(
-                  schedule.handlerId,
-                  schedule.handlerVersion
+                  schedule.functionId,
+                  schedule.functionVersion
                 ).definition.title
               }${schedule.title}`
           )
@@ -3394,8 +3394,8 @@ export class PrivateBackend {
                   schedule,
                   createPublicJobDefinition(
                     this.getLocalHandler(
-                      schedule.handlerId,
-                      schedule.handlerVersion
+                      schedule.functionId,
+                      schedule.functionVersion
                     ).definition
                   )
                 )
@@ -3462,8 +3462,8 @@ export class PrivateBackend {
       throw new Error("invalid scheduleId");
     }
     const jobDef = this.getHandler(
-      schedule.handlerId,
-      schedule.handlerVersion,
+      schedule.functionId,
+      schedule.functionVersion,
       await this.getWorkers(authHeader)
     );
     const publicSchedule = createPublicJobSchedule(schedule, jobDef);
@@ -3738,18 +3738,18 @@ export class TestBackend extends PrivateBackend {
   }
 
   public async createJobSchedule(
-    handlerId: string,
+    functionId: string,
     title: string,
     description: string,
-    handlerVersion: number,
+    functionVersion: number,
     data: unknown,
     options: CreateJobScheduleOptions = {}
   ) {
     return super.createJobSchedule(
-      handlerId,
+      functionId,
       title,
       description,
-      handlerVersion,
+      functionVersion,
       data,
       options
     );
@@ -3790,12 +3790,12 @@ export class TestBackend extends PrivateBackend {
     return super.runOverdueJobs();
   }
   public createSignature(
-    handlerId: string,
+    functionId: string,
     runAt: Date,
     data: unknown,
     cronExpression?: string
   ): string {
-    return super.createSignature(handlerId, runAt, data, cronExpression);
+    return super.createSignature(functionId, runAt, data, cronExpression);
   }
 
   public async tick() {

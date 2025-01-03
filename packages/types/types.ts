@@ -190,8 +190,8 @@ export const publicJobScheduleSchema = z.object({
   runNow: z.boolean(),
   lastRun: serializedRunSchema.optional(),
   createdAt: DateSchema,
-  /** job definition handlerId */
-  handlerId: z.string(),
+  /** job definition functionId */
+  functionId: z.string(),
   jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
   numRuns: z.number(),
   data: z.string(),
@@ -305,7 +305,7 @@ export type ScheduleUpdatePayload = z.infer<typeof ScheduleUpdatePayloadSchema>;
 //#region Interfaces
 
 export const RunHandlerInCpSchema = z.object({
-  handlerId: z.string(),
+  functionId: z.string(),
   data: z.unknown(),
   version: z.number(),
 });
@@ -438,13 +438,13 @@ typeAssert<keyof z.output<typeof JobDefinitionSchema>, keyof JobDefinition>();
 
 //#region API types
 export const ScheduleSchema = z.object({
-  handlerId: z.string(),
-  handlerVersion: z.number().int().positive(),
+  functionId: z.string(),
+  functionVersion: z.number().int().positive(),
   data: z.unknown(),
   options: ScheduleJobOptionsSchema,
 });
 export const SchedulesFilterSchema = z.object({
-  handlerId: z.string().optional(),
+  functionId: z.string().optional(),
   eventId: z.string().optional(),
 });
 //#endregion

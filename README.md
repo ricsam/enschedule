@@ -10,7 +10,7 @@ Enschedule is an open-source project that combines a UI dashboard with a databas
 docker container run -it --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \ # Use in-memory sqlite
-  -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \ # Load included handlers
+  -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \ # Load included functions
   -e ADMIN_ACCOUNT=adm1n:s3cret_pw \
   -p 3000:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
@@ -20,22 +20,22 @@ Test [here](https://enschedule-demo.onrender.com/) (the server has a cold startu
 
 ## Overview
 
-Enschedule is structured for straightforward task automation and scheduling. It integrates a UI dashboard with a backend database, facilitating task management and scheduling. The architecture is centered around three core elements: workers, handlers, and scheduling mechanisms. Workers connect the system logic with the database, while handlers, defined within workers, execute specific javascript functions. Schedules can be created via the UI or programmatically, triggering handler functions based on cron jobs or scheduled jobs. This structure is designed to offer a flexible and direct way to handle task automation.
+Enschedule is structured for straightforward task automation and scheduling. It integrates a UI dashboard with a backend database, facilitating task management and scheduling. The architecture is centered around three core elements: workers, functions, and scheduling mechanisms. Workers connect the system logic with the database, while functions, defined within workers, execute specific javascript functions. Schedules can be created via the UI or programmatically, triggering functions based on cron jobs or scheduled jobs. This structure is designed to offer a flexible and direct way to handle task automation.
 
 ### Key Components:
 
-1. **Workers and Handlers:**
+1. **Workers and Functions:**
 
    - **Workers:** These components connect the operational logic of the system with the database. Each worker is registered in the database to facilitate organized functioning.
-   - **Handlers:** Defined within workers, handlers are essentially functions that execute specific pieces of code. Every handler is registered in the database for tracking and execution purposes.
+   - **Functions:** Defined within workers, functions are essentially functions that execute specific pieces of code. Every function is registered in the database for tracking and execution purposes.
 
 2. **Scheduling Mechanism:**
 
-   - **User-Defined Scheduling:** Schedules can be created either programmatically or through the UI dashboard. These schedules trigger handlers at predetermined times, using either cron jobs or scheduled jobs.
+   - **User-Defined Scheduling:** Schedules can be created either programmatically or through the UI dashboard. These schedules trigger functions at predetermined times, using either cron jobs or scheduled jobs.
    - **Database Integration:** Schedules are stored in the database, which helps in managing and tracking the execution timeline and task details.
 
 3. **Execution Tracking and Output Management:**
-   - **Run Records:** When a handler executes, a 'run' is created. This run acts as a log for the execution, capturing outputs such as stdout and stderr.
+   - **Run Records:** When a function executes, a 'run' is created. This run acts as a log for the execution, capturing outputs such as stdout and stderr.
    - **Output Storage:** The outputs from job executions are stored in the database. This allows for efficient tracking and retrieval of execution logs for analysis and debugging.
 
 ## Running Enschedule
@@ -64,7 +64,7 @@ Only a `WORKER_URL` or database connection variables are required to run `@ensch
 | `DB_DATABASE`      | The name of the database to connect to. Not used if `WORKER_URL` is provided.                                                                               | `string`                 |
 | `DB_PORT`          | The port number on which the database server is running. Not used if `WORKER_URL` is provided.                                                              | `integer`                |
 | `ORM_LOGGING`      | Enables or disables ORM logging. Not used if `WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
-| `IMPORT_FUNCTIONS` | Comma separated list of node modules that are imported to define handlers or schedules                                                                      | `string`                 |
+| `IMPORT_FUNCTIONS` | Comma separated list of node modules that are imported to define functions or schedules                                                                      | `string`                 |
 
 ##### Database dialect options
 
@@ -104,9 +104,9 @@ e.g.
 POSTGRES=postgres://postgres:postgres@127.0.0.1:6543/dev
 ```
 
-##### Import handlers
+##### Import functions
 
-A handler module is just a javascript file that looks like this:
+A function module is just a javascript file that looks like this:
 
 ```js
 const { z } = require("zod");
@@ -164,14 +164,14 @@ import { z } from "zod";
 const app = await enschedule({
   api: true, // enable the worker REST API, see http://localhost:3000/api/v1/healthz
   dashboard: true, // enable the enschedule dashboard
-  logJobs: true, // log the output from the handlers to stdout / stderr
+  logJobs: true, // log the output from the functions to stdout / stderr
   retryStrategy: () => 5000, // if a job should retry, it will retry after 5 seconds
   worker: {
     // the worker will run in the same process as the dashboard, see worker types
     type: "inline",
   },
   handlers: [
-    // define handler functions
+    // define functions
     createHandler({
       id: "log-job",
       version: 1,
@@ -190,8 +190,8 @@ const app = await enschedule({
   ],
 });
 // The returned app is an express app.
-// When the worker claims a job and will execute a handler it must execute this file again
-// to get the handler. In that scenario you don't want to run the http server from this file and app will be undefined.
+// When the worker claims a job and will execute a function it must execute this file again
+// to get the function. In that scenario you don't want to run the http server from this file and app will be undefined.
 if (app) {
   const PORT = process.env.PORT ?? 3000;
   app.listen(PORT, () => {
@@ -255,24 +255,26 @@ docker compose up
 
 # Creating schedules
 
-A schedule defines when a handler runs. The easiest way to create a new schedule is to use the UI.
+A schedule defines when a function runs. The easiest way to create a new schedule is to use the UI.
 
 ## Deploy schedules using schedule files
 
-You can create schedule handler files:
+You can create schedule function files:
 
 ```yml
 apiVersion: v1
 kind: schedule
-spec:
+metadata:
   name: ping
-  handler: fetch
+spec:
+  options:
+    title: ping
+    description: ping our website
+    cronExpression: "0 * * * * *" # run at midnight
+  functionId: fetch
   data:
     url: https://www.google.com
     method: get
-  description: ping our website
-  schedule: "every day at 2 am"
-  id: ping
 ```
 
 ```bash
@@ -301,7 +303,7 @@ Fields
 - `instance ID` - a unique ID that is generated for each instance that runs. Every time a server is booted up the a new worker instance is created, and it gets a unique ID
 - `version hash` - if the hash changes the version is bumped
 
-# Definitions / Functions / Handlers
+# Definitions / Functions / (Handlers)
 
 If anything else on a function updates, such as title, job, example, access then you must bumb the version key for it to be updated. This is your responsibility as a developer to make sure versions is bumped as Enschedule CAN NOT serialize the code in e.g. the job and thus detect newer versions.
 

@@ -22,11 +22,11 @@ export async function getLoaderData(
   schedules: PublicJobSchedule[];
   jobDefinition: PublicJobDefinition;
 }> {
-  const handlerId = params.handlerId;
-  assert(handlerId, "You must have a handlerId");
+  const functionId = params.functionId;
+  assert(functionId, "You must have a functionId");
   const authHeader = await getAuthHeader(request);
-  const jobDefinition = await worker.getLatestHandler(handlerId, authHeader);
-  const schedules = await worker.getSchedules(authHeader, { handlerId });
+  const jobDefinition = await worker.getLatestHandler(functionId, authHeader);
+  const schedules = await worker.getSchedules(authHeader, { functionId });
   return { schedules, jobDefinition };
 }
 

@@ -32,7 +32,7 @@ export const getLoaderData = async (
   const activeWorkers = workers.filter(
     (worker) =>
       worker.status === WorkerStatus.UP &&
-      !!worker.definitions.find((handler) => handler.id === schedule.handlerId)
+      !!worker.definitions.find((handler) => handler.id === schedule.functionId)
   );
 
   return { schedule, activeWorkers };

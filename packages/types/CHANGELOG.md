@@ -1,5 +1,11 @@
 # @enschedule/types
 
+## 1.1.3
+
+### Patch Changes
+
+- change handlerVersion/handlerId to functionVersion/functionId
+
 ## 1.1.2
 
 ### Patch Changes

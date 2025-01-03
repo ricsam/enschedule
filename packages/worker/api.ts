@@ -150,15 +150,15 @@ export const expressRouter = (
     if (!authHeader.success) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    const { handlerId, data, options, handlerVersion } = ScheduleSchema.parse(
+    const { functionId, data, options, functionVersion } = ScheduleSchema.parse(
       req.body
     );
     worker
       /* eslint-disable @typescript-eslint/no-explicit-any */
       .scheduleJob(
         authHeader.data,
-        handlerId,
-        handlerVersion,
+        functionId,
+        functionVersion,
         data as any,
         options
       )

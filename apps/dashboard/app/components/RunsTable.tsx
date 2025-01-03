@@ -178,7 +178,7 @@ const columns: ColumnDef<RowData, any>[] = [
       const text = info.getValue();
       const val = info.row.original.jobDefinition;
       if (typeof val === "string") {
-        return `Handler could not be found (${text})`;
+        return `Function could not be found (${text})`;
       }
       return (
         <MuiLink
@@ -194,7 +194,7 @@ const columns: ColumnDef<RowData, any>[] = [
       );
     },
     enableSorting: true,
-    header: "Handler",
+    header: "Function",
     id: "handler",
     accessorFn: (run) => {
       if (typeof run.jobDefinition === "string") {

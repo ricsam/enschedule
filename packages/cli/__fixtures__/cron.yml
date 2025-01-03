@@ -7,8 +7,8 @@ spec:
     title: "Test Schedule"
     description: "This is a test schedule"
     cronExpression: "0 0 * * *"
-  handlerId: "log-job"
-  handlerVersion: 1
+  functionId: "log-job"
+  functionVersion: 1
   data:
     message: "foo bar"
 
@@ -23,8 +23,8 @@ spec:
     title: "Other yaml Schedule"
     description: "This is a test schedule, from a yaml file"
     cronExpression: "0 0 * * *"
-  handlerId: "log-job"
-  handlerVersion: 1
+  functionId: "log-job"
+  functionVersion: 1
   data:
     message: "foo bar again"
 
@@ -40,7 +40,7 @@ spec:
     title: "Other yaml Schedule"
     description: "This is a test schedule, from a yaml file"
     cronExpression: "0 0 * * *"
-  handlerId: "log-job-not-existing"
-  handlerVersion: 1
+  functionId: "log-job-not-existing"
+  functionVersion: 1
   data:
     message: "foo bar again"

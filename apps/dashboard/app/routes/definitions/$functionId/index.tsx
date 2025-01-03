@@ -40,11 +40,11 @@ export async function getLoaderData(
 }
 
 export const getDefinitionId = (params: Params<string>): string => {
-  const handlerId = params.handlerId;
-  if (!handlerId) {
+  const functionId = params.functionId;
+  if (!functionId) {
     throw new Error("invalid id");
   }
-  return handlerId;
+  return functionId;
 };
 
 export type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;

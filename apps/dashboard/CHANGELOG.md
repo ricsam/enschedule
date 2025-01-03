@@ -1,5 +1,15 @@
 # @enschedule/dashboard
 
+## 1.1.5
+
+### Patch Changes
+
+- change handlerVersion/handlerId to functionVersion/functionId
+- Updated dependencies
+  - @enschedule/worker-api@1.1.4
+  - @enschedule/worker@1.1.4
+  - @enschedule/types@1.1.3
+
 ## 1.1.4
 
 ### Patch Changes

@@ -28,7 +28,7 @@ export const useNavbar = (action: string) => {
 
   const def = data.schedule.jobDefinition;
 
-  const handlerId = typeof def === "string" ? def : def.id;
+  const functionId = typeof def === "string" ? def : def.id;
 
   return {
     title: data.schedule.title,
@@ -36,11 +36,11 @@ export const useNavbar = (action: string) => {
     tabs: [
       {
         label: "Details",
-        to: `/definitions/${handlerId}/schedules/${data.schedule.id}`,
+        to: `/definitions/${functionId}/schedules/${data.schedule.id}`,
       },
       {
         label: "Runs",
-        to: `/definitions/${handlerId}/schedules/${data.schedule.id}/runs`,
+        to: `/definitions/${functionId}/schedules/${data.schedule.id}/runs`,
       },
     ],
     actions: (

@@ -64,7 +64,7 @@ test.describe("Single-Run", () => {
     // test delete on each of these urls
     // /runs/$runId
     // /schedules/$scheduleId/runs/$runId
-    // /definitions/$handlerId/schedules/$scheduleId/runs/$runId
+    // /definitions/$functionId/schedules/$scheduleId/runs/$runId
     const runPageVisit = await visitRunPages(page);
 
     await page.goto(runPageVisit.runsTableUrls[0]); // /runs
@@ -75,7 +75,7 @@ test.describe("Single-Run", () => {
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
     expect(await numRows(page)).toBe(1);
 
-    await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$handlerId/schedules/$scheduleId/runs
+    await page.goto(runPageVisit.runsTableUrls[2]); // /definitions/$functionId/schedules/$scheduleId/runs
     expect(await page.waitForSelector("#RunsTable")).toBeTruthy();
     expect(await numRows(page)).toBe(1);
 

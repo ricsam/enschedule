@@ -20,12 +20,12 @@ export async function getLoaderData(
   schedules: PublicJobSchedule[];
   definition?: PublicJobDefinition;
 }> {
-  const handlerId = params.handlerId;
+  const functionId = params.functionId;
   const authHeader = await getAuthHeader(request);
-  const definition = handlerId
-    ? await worker.getLatestHandler(handlerId, authHeader)
+  const definition = functionId
+    ? await worker.getLatestHandler(functionId, authHeader)
     : undefined;
-  const schedules = await worker.getSchedules(authHeader, { handlerId });
+  const schedules = await worker.getSchedules(authHeader, { functionId });
   return { schedules, definition };
 }
 

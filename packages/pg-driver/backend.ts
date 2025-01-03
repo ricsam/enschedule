@@ -1164,6 +1164,7 @@ export class PrivateBackend {
         allowNull: true, // on schedule deletion, runs are not deleted
       },
       as: "runs",
+      onDelete: "SET NULL",
     });
     // foreign key on Run, run.scheduleId, run.schedule
     Run.belongsTo(Schedule, {
@@ -1172,6 +1173,7 @@ export class PrivateBackend {
         allowNull: true, // on schedule deletion, runs are not deleted
       },
       as: "schedule",
+      onDelete: "SET NULL",
     });
     //#endregion
 
@@ -1186,6 +1188,7 @@ export class PrivateBackend {
         allowNull: true,
       },
       as: "runs",
+      onDelete: "SET NULL",
     });
     // foreign key on Run, run.workerId
     Run.belongsTo(Worker, {
@@ -1194,6 +1197,7 @@ export class PrivateBackend {
         name: "workerId",
         allowNull: true,
       },
+      onDelete: "SET NULL",
     });
     //#endregion
 
@@ -1210,6 +1214,7 @@ export class PrivateBackend {
         name: "lastRunId", // schedule.lastRunId
         allowNull: true,
       },
+      onDelete: "SET NULL",
       as: "lastRun",
     });
 
@@ -1221,6 +1226,7 @@ export class PrivateBackend {
         name: "lastRunId", // worker.lastRunId
         allowNull: true,
       },
+      onDelete: "SET NULL",
       as: "lastRun",
     });
     //#endregion
@@ -1231,6 +1237,7 @@ export class PrivateBackend {
         allowNull: true,
       },
       as: "failureTrigger",
+      onDelete: "SET NULL",
     });
 
     //#region user.groups / group.users
@@ -1242,8 +1249,13 @@ export class PrivateBackend {
     User.belongsToMany(Group, {
       through: "UserGroupAssociation",
       as: "groups",
+      onDelete: "CASCADE",
     });
-    Group.belongsToMany(User, { through: "UserGroupAssociation", as: "users" });
+    Group.belongsToMany(User, {
+      through: "UserGroupAssociation",
+      as: "users",
+      onDelete: "CASCADE",
+    });
     //#endregion
 
     //#region user.sessions / session.user
@@ -1257,6 +1269,7 @@ export class PrivateBackend {
         allowNull: false,
       },
       as: "sessions",
+      onDelete: "CASCADE",
     });
     Session.belongsTo(User, {
       foreignKey: {
@@ -1279,6 +1292,7 @@ export class PrivateBackend {
         allowNull: false,
       },
       as: "apiKeys",
+      onDelete: "CASCADE",
     });
     // foreign key on ApiKey, apiKey.userId
     ApiKey.belongsTo(User, {
@@ -1301,10 +1315,12 @@ export class PrivateBackend {
     Run.belongsToMany(User, {
       through: "RunUserViewAccess",
       as: "userViewAccess",
+      onDelete: "CASCADE",
     });
     User.belongsToMany(Run, {
       through: "RunUserViewAccess",
       as: "runViewAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1317,10 +1333,12 @@ export class PrivateBackend {
     Run.belongsToMany(Group, {
       through: "RunGroupViewAccess",
       as: "groupViewAccess",
+      onDelete: "CASCADE",
     });
     Group.belongsToMany(Run, {
       through: "RunGroupViewAccess",
       as: "runViewAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1333,10 +1351,12 @@ export class PrivateBackend {
     Run.belongsToMany(User, {
       through: "RunUserViewLogsAccess",
       as: "userViewLogsAccess",
+      onDelete: "CASCADE",
     });
     User.belongsToMany(Run, {
       through: "RunUserViewLogsAccess",
       as: "runViewLogsAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1349,10 +1369,12 @@ export class PrivateBackend {
     Run.belongsToMany(Group, {
       through: "RunGroupViewLogsAccess",
       as: "groupViewLogsAccess",
+      onDelete: "CASCADE",
     });
     Group.belongsToMany(Run, {
       through: "RunGroupViewLogsAccess",
       as: "runViewLogsAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1365,10 +1387,12 @@ export class PrivateBackend {
     Run.belongsToMany(User, {
       through: "RunUserDeleteAccess",
       as: "userDeleteAccess",
+      onDelete: "CASCADE",
     });
     User.belongsToMany(Run, {
       through: "RunUserDeleteAccess",
       as: "runDeleteAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1381,10 +1405,12 @@ export class PrivateBackend {
     Run.belongsToMany(Group, {
       through: "RunGroupDeleteAccess",
       as: "groupDeleteAccess",
+      onDelete: "CASCADE",
     });
     Group.belongsToMany(Run, {
       through: "RunGroupDeleteAccess",
       as: "runDeleteAccess",
+      onDelete: "CASCADE",
     });
     //#endregion
 
@@ -1726,7 +1752,9 @@ export class PrivateBackend {
     }
     const publicRun = await this.getRun(authHeader, runId);
 
-    await run.destroy();
+    await run.destroy({
+      logging: console.log,
+    });
 
     return publicRun;
   }
@@ -2001,7 +2029,11 @@ export class PrivateBackend {
       dbSchedules.map((schedule) => {
         return createPublicJobSchedule(
           schedule,
-          this.getHandler(schedule.functionId, schedule.functionVersion, workers)
+          this.getHandler(
+            schedule.functionId,
+            schedule.functionVersion,
+            workers
+          )
         );
       })
     );
@@ -2047,7 +2079,7 @@ export class PrivateBackend {
         // Therefore the version will be incremented.
 
         const workers = await this.Worker.findAll({
-          where: { workerId: this.workerInstance.workerId, },
+          where: { workerId: this.workerInstance.workerId },
           transaction,
         });
 

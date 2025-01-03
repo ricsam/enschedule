@@ -56,6 +56,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             lastRunId: {
               type: DataTypes.INTEGER,
               allowNull: true,
+              onDelete: "SET NULL",
             },
             createdAt: {
               type: DataTypes.DATE,
@@ -82,7 +83,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
               type: DataTypes.STRING,
               allowNull: true,
             },
-            handlerVersion: {
+            functionVersion: {
               type: DataTypes.INTEGER,
               allowNull: false,
             },
@@ -137,7 +138,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
               type: DataTypes.BOOLEAN,
               defaultValue: false,
             },
-            handlerId: {
+            functionId: {
               type: DataTypes.STRING,
               allowNull: false,
             },
@@ -153,10 +154,12 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             lastRunId: {
               type: DataTypes.INTEGER,
               allowNull: true,
+              onDelete: "SET NULL",
             },
             failureTriggerId: {
               type: DataTypes.INTEGER,
               allowNull: true,
+              onDelete: "SET NULL",
             },
             createdAt: {
               type: DataTypes.DATE,
@@ -209,11 +212,11 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
               type: DataTypes.DATE,
               allowNull: false,
             },
-            handlerId: {
+            functionId: {
               type: DataTypes.STRING,
               allowNull: false,
             },
-            handlerVersion: {
+            functionVersion: {
               type: DataTypes.INTEGER,
               allowNull: false,
             },
@@ -228,10 +231,12 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             scheduleId: {
               type: DataTypes.INTEGER,
               allowNull: true,
+              onDelete: "SET NULL",
             },
             workerId: {
               type: DataTypes.INTEGER,
               allowNull: true,
+              onDelete: "SET NULL",
             },
             createdAt: {
               type: DataTypes.DATE,
@@ -944,66 +949,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
         await queryInterface.removeColumn("Runs", "logFileRowCount", {
           transaction,
         });
-      });
-    },
-  },
-  {
-    name: "00005-rename-handler-to-function",
-    up: async ({ context: queryInterface }) => {
-      return queryInterface.sequelize.transaction(async (transaction) => {
-        // Rename columns in Runs table
-        await queryInterface.renameColumn("Runs", "handlerId", "functionId", {
-          transaction,
-        });
-        await queryInterface.renameColumn(
-          "Runs",
-          "handlerVersion",
-          "functionVersion",
-          { transaction }
-        );
-
-        // Rename columns in Schedules table
-        await queryInterface.renameColumn(
-          "Schedules",
-          "handlerId",
-          "functionId",
-          { transaction }
-        );
-        await queryInterface.renameColumn(
-          "Schedules",
-          "handlerVersion",
-          "functionVersion",
-          { transaction }
-        );
-      });
-    },
-
-    down: async ({ context: queryInterface }) => {
-      return queryInterface.sequelize.transaction(async (transaction) => {
-        // Revert column names in Runs table
-        await queryInterface.renameColumn("Runs", "functionId", "handlerId", {
-          transaction,
-        });
-        await queryInterface.renameColumn(
-          "Runs",
-          "functionVersion",
-          "handlerVersion",
-          { transaction }
-        );
-
-        // Revert column names in Schedules table
-        await queryInterface.renameColumn(
-          "Schedules",
-          "functionId",
-          "handlerId",
-          { transaction }
-        );
-        await queryInterface.renameColumn(
-          "Schedules",
-          "functionVersion",
-          "handlerVersion",
-          { transaction }
-        );
       });
     },
   },

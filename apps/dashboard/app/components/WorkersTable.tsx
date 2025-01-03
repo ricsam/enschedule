@@ -159,7 +159,7 @@ const columns: ColumnDef<RowData, any>[] = [
       cell: (info) => {
         return info.getValue();
       },
-      header: "Handlers",
+      header: "Functions",
       id: "rumHandlers",
     }
   ),

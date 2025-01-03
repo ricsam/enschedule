@@ -3,7 +3,13 @@
   "private": true,
   "main": "./index.tsx",
   "types": "./index.tsx",
+  "author": "Ricsam <oss@ricsam.dev>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "packages/ui"
+  },
   "scripts": {
     "lint": "eslint -f visualstudio .",
     "generate:component": "turbo gen react-component"

@@ -1,5 +1,11 @@
 # @enschedule/worker-api
 
+## 1.1.3
+
+### Patch Changes
+
+- update package json and add worker-cli
+
 ## 1.1.2
 
 ### Patch Changes

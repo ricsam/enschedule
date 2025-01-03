@@ -1,5 +1,17 @@
 # @enschedule/hub
 
+## 1.0.5
+
+### Patch Changes
+
+- update package json and add worker-cli
+- Updated dependencies
+  - @enschedule/worker-api@1.1.3
+  - @enschedule/pg-driver@1.1.3
+  - @enschedule/worker@1.1.3
+  - @enschedule/dashboard@1.1.4
+  - @enschedule/types@1.1.2
+
 ## 1.0.4
 
 ### Patch Changes

@@ -1,10 +1,21 @@
 {
   "name": "@enschedule/dashboard",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "private": true,
   "sideEffects": false,
   "main": "./index.js",
   "types": "./index.d.ts",
+  "keywords": [
+    "dashboard",
+    "enschedule"
+  ],
+  "author": "Ricsam <oss@ricsam.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "apps/dashboard"
+  },
   "scripts": {
     "build": "remix build && cp ./build.d.ts ./build/index.d.ts",
     "dev": "remix dev",

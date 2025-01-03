@@ -286,7 +286,7 @@ test.describe("Single schedule", () => {
     expect(await numRows(page)).toBe(2);
 
     const response = await fetch(
-      `${setup.workerUrl}/test/set-poll-interval?pollInterval=${3600 * 1000}`
+      `${setup.workerUrl}/test/set-poll-interval?pollInterval=${3600}`
     );
     const data = await response.body?.getReader().read();
     console.log(new TextDecoder().decode(data?.value));
@@ -294,7 +294,7 @@ test.describe("Single schedule", () => {
     await page.getByTestId("run-now").click();
     await page.getByTestId("run-now-snackbar").isVisible();
     await expect(page.getByTestId("run-now-snackbar")).toContainText(
-      "Polling every 3600000 ms"
+      "Polling every 3600 s"
     );
 
     expect(page.getByTestId("run-now")).toBeDisabled();

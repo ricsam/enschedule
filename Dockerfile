@@ -22,6 +22,7 @@ COPY . .
 RUN ./release-package.sh
 RUN turbo prune \
   --scope="@enschedule/worker" \
+  --scope="@enschedule/worker-cli" \
   --scope="@enschedule/dashboard" \
   --scope="@enschedule-fns/log" \
   --scope="@enschedule-fns/fetch" \
@@ -58,6 +59,10 @@ COPY --from=build /app/packages/types/dist /app/packages/types/dist
 RUN rm -rf /app/packages/worker/node_modules
 COPY --from=prod-deps /app/packages/worker/node_modules/ /app/packages/worker/node_modules
 COPY --from=build /app/packages/worker/dist /app/packages/worker/dist
+# Install worker-cli
+RUN rm -rf /app/packages/worker-cli/node_modules
+COPY --from=prod-deps /app/packages/worker-cli/node_modules/ /app/packages/worker-cli/node_modules
+COPY --from=build /app/packages/worker-cli/dist /app/packages/worker-cli/dist
 
 # Install functions
 ## fetch-fn
@@ -77,15 +82,25 @@ WORKDIR /app/packages/worker
 
 RUN cp -r /app/functions/* ./node_modules/@enschedule/
 
+RUN cd /app/packages/worker-cli && \
+    npm link
+
+RUN mkdir -p /enschedule-functions
+
+WORKDIR /enschedule-functions
+
+RUN ln -s /app/packages/worker/node_modules /enschedule-functions/node_modules
+
 RUN echo '#!/bin/bash' > docker-entry.sh && \
     echo 'API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
     echo 'ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
     echo 'REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-$(/app/random-token.sh REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET:-$(/app/random-token.sh COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
-    echo 'node dist/docker-entry.js' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_FUNCTIONS=${ENSCHEDULE_FUNCTIONS:-/enschedule-functions/functions.js} \\' >> docker-entry.sh && \
+    echo 'enschedule-worker start "$@"' >> docker-entry.sh && \
     chmod +x docker-entry.sh
 
-CMD ["sh", "docker-entry.sh"]
+ENTRYPOINT ["sh", "docker-entry.sh"]
+CMD []
 
 # Dashboard image
 FROM base AS dashboard

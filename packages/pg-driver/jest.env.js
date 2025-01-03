@@ -11,10 +11,10 @@ Object.assign(process.env, {
   DB_PASSWORD: "postgres",
   DB_DATABASE: "postgres",
   DB_PORT: "6543",
-  ACCESS_TOKEN_SECRET: "secret",
-  REFRESH_TOKEN_SECRET: "secret",
-  API_KEY: "secret",
-  NAFS_URI: `file://${__dirname}/test-data/nafs`,
+  // ACCESS_TOKEN_SECRET: "secret",
+  // REFRESH_TOKEN_SECRET: "secret",
+  // API_KEY: "secret",
+  // NAFS_URI: `file://${__dirname}/test-data/nafs`,
 });
 
 fs.mkdirSync(`${__dirname}/test-data/nafs`, { recursive: true });

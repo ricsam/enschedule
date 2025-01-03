@@ -72,27 +72,6 @@ import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
 import { migrations as databaseMigrations } from "./migrations";
 
-export const getEnvs = () => {
-  const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
-  const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
-  const NAFS_URI = process.env.NAFS_URI;
-
-  if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
-    throw new Error(
-      "Missing required environment variables ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET. Please check your .env file."
-    );
-  }
-  if (!NAFS_URI) {
-    throw new Error(
-      'Please set the "NAFS_URI" environment variable. Please check your .env file.'
-    );
-  }
-
-  return { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI };
-};
-
-const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI } = getEnvs();
-
 function createWorkerHash({
   title,
   description,
@@ -134,8 +113,8 @@ const getWorkerStatus = (dbWorker: Worker): WorkerStatus => {
   const pollInterval = dbWorker.pollInterval;
   const currentTime = Date.now();
   const lastReached = currentTime - dbWorker.lastReached.getTime();
-  const pendingThreshold = pollInterval + 5 * 1000;
-  const downThreshold = 2 * pollInterval + 5 * 1000;
+  const pendingThreshold = pollInterval * 1000 + 5 * 1000;
+  const downThreshold = 2 * pollInterval * 1000 + 5 * 1000;
 
   let status: WorkerStatus = WorkerStatus.UP;
 
@@ -711,6 +690,10 @@ export interface BackendOptions {
   defaultFunctionAccess?: FunctionAccess;
   defaultScheduleAccess?: ScheduleAccess;
   defaultRunAccess?: RunAccess;
+  accessTokenSecret: string;
+  refreshTokenSecret: string;
+  nafsUri: string;
+  apiKey?: string;
 }
 
 interface WorkerInstance {
@@ -735,8 +718,7 @@ interface Access {
 
 export class PrivateBackend {
   protected maxJobsPerTick = 4;
-  public tickDuration = 5000;
-  public logStoreInterval = 5000;
+  public pollInterval = 5;
   public logJobs = false;
   protected sequelize: Sequelize;
   protected Run: typeof Run;
@@ -753,6 +735,11 @@ export class PrivateBackend {
   private defaultScheduleAccess?: ScheduleAccess;
   private defaultRunAccess?: RunAccess;
 
+  private accessTokenSecret: string;
+  private refreshTokenSecret: string;
+  private nafsUri: string;
+  private apiKey?: string;
+
   constructor(backendOptions: BackendOptions) {
     const {
       database: passedDatabaseOptions,
@@ -765,6 +752,11 @@ export class PrivateBackend {
       defaultScheduleAccess,
       defaultRunAccess,
     } = backendOptions;
+
+    this.accessTokenSecret = backendOptions.accessTokenSecret;
+    this.refreshTokenSecret = backendOptions.refreshTokenSecret;
+    this.nafsUri = backendOptions.nafsUri;
+    this.apiKey = backendOptions.apiKey;
 
     this.defaultFunctionAccess = defaultFunctionAccess;
     this.defaultScheduleAccess = defaultScheduleAccess;
@@ -1408,14 +1400,14 @@ export class PrivateBackend {
   }
 
   async updatePollInterval(pollInterval: number) {
-    if (this.tickDuration === pollInterval) {
+    if (this.pollInterval === pollInterval) {
       return;
     }
     const isPolling = this.isPolling;
     if (isPolling) {
       this.stopPolling();
     }
-    this.tickDuration = pollInterval;
+    this.pollInterval = pollInterval;
     // create a new worker
     this.registeredWorker = undefined;
     this.workerInstance.instanceId = createShortShaHash(String(Math.random()));
@@ -1885,7 +1877,7 @@ export class PrivateBackend {
       try {
         const decoded = await new Promise<{ userId: number }>(
           (resolve, reject) => {
-            jwt.verify(token, ACCESS_TOKEN_SECRET, (err, d) => {
+            jwt.verify(token, this.accessTokenSecret, (err, d) => {
               if (err) {
                 reject(err);
               }
@@ -1914,7 +1906,7 @@ export class PrivateBackend {
       }
     }
     if (type === "Api-Key") {
-      if (token === process.env.API_KEY) {
+      if (token === this.apiKey) {
         return {
           admin: true,
           groups: [],
@@ -2035,12 +2027,16 @@ export class PrivateBackend {
     log(`Registering this worker (attempt: ${attempt})`);
     try {
       if (this.registeredWorker) {
-        const worker = this.registeredWorker;
-        await worker.reload();
-        worker.lastReached = new Date();
-        await worker.save();
+        try {
+          const worker = this.registeredWorker;
+          await worker.reload();
+          worker.lastReached = new Date();
+          await worker.save();
 
-        return this.registeredWorker;
+          return this.registeredWorker;
+        } catch (err) {
+          this.registeredWorker = undefined;
+        }
       }
       return this.sequelize.transaction(async (transaction) => {
         // As a user I have 3 server running.
@@ -2051,7 +2047,7 @@ export class PrivateBackend {
         // Therefore the version will be incremented.
 
         const workers = await this.Worker.findAll({
-          where: { workerId: this.workerInstance.workerId },
+          where: { workerId: this.workerInstance.workerId, },
           transaction,
         });
 
@@ -2065,7 +2061,7 @@ export class PrivateBackend {
         const thisWorkerHash = createWorkerHash({
           title: this.workerInstance.title,
           description: this.workerInstance.description,
-          pollInterval: this.tickDuration,
+          pollInterval: this.pollInterval,
           definitions: this.getPublicHandlers(),
           defaultFunctionAccess: this.defaultFunctionAccess,
           defaultScheduleAccess: this.defaultScheduleAccess,
@@ -2077,6 +2073,7 @@ export class PrivateBackend {
         }
 
         const [worker] = await this.Worker.findOrCreate({
+          lock: true,
           where: {
             workerId: this.workerInstance.workerId,
             // instance id is random, so every time the server is booted up and new worker is created
@@ -2091,7 +2088,7 @@ export class PrivateBackend {
             lastReached: new Date(),
             title: this.workerInstance.title,
             hostname: os.hostname(),
-            pollInterval: this.tickDuration,
+            pollInterval: this.pollInterval,
             defaultFunctionAccess: this.defaultFunctionAccess,
             defaultScheduleAccess: this.defaultScheduleAccess,
             defaultRunAccess: this.defaultRunAccess,
@@ -2752,8 +2749,8 @@ export class PrivateBackend {
     }
   }
 
-  pollingStartTimer: NodeJS.Timeout | undefined;
-  pollingInterval: NodeJS.Timeout | undefined;
+  pollingStartTimerId: NodeJS.Timeout | undefined;
+  pollingIntervalId: NodeJS.Timeout | undefined;
   isPolling = false;
 
   public async startPolling(
@@ -2772,21 +2769,21 @@ export class PrivateBackend {
     await this.registerWorker();
     log("Polling the database for jobs");
     const now = Date.now();
-    this.pollingStartTimer = setTimeout(() => {
-      this.pollingInterval = setInterval(() => {
+    this.pollingStartTimerId = setTimeout(() => {
+      this.pollingIntervalId = setInterval(() => {
         log("Tick", String(new Date()));
         void this.tick();
-      }, this.tickDuration);
+      }, this.pollInterval * 1000);
     }, 1000 - (now - Math.floor(now / 1000) * 1000));
   }
 
   public stopPolling() {
     this.isPolling = false;
-    if (this.pollingStartTimer) {
-      clearTimeout(this.pollingStartTimer);
+    if (this.pollingStartTimerId) {
+      clearTimeout(this.pollingStartTimerId);
     }
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId);
     }
   }
 
@@ -3073,7 +3070,7 @@ export class PrivateBackend {
     if (this.nafsIntance) {
       return this.nafsIntance;
     }
-    const remoteFs = await nafs(NAFS_URI);
+    const remoteFs = await nafs(this.nafsUri);
     await remoteFs.promises.mkdir("/", { recursive: true });
     this.nafsIntance = remoteFs;
     return remoteFs;
@@ -3581,10 +3578,14 @@ export class PrivateBackend {
     if (allDevices) {
       const decoded = await new Promise<{ userId: number }>(
         (resolve, reject) => {
-          jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, rawDecoded) => {
-            if (err) reject(err);
-            resolve(z.object({ userId: z.number() }).parse(rawDecoded));
-          });
+          jwt.verify(
+            refreshToken,
+            this.refreshTokenSecret,
+            (err, rawDecoded) => {
+              if (err) reject(err);
+              resolve(z.object({ userId: z.number() }).parse(rawDecoded));
+            }
+          );
         }
       );
       where = { userId: decoded.userId };
@@ -3594,14 +3595,14 @@ export class PrivateBackend {
   }
 
   private createAccessToken(userId: number, admin: boolean) {
-    return jwt.sign({ userId, admin }, ACCESS_TOKEN_SECRET, {
+    return jwt.sign({ userId, admin }, this.accessTokenSecret, {
       expiresIn: "30s",
     });
   }
   private refreshTokenDuration = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   private createRefreshToken(userId: number) {
-    return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, {
+    return jwt.sign({ userId }, this.refreshTokenSecret, {
       expiresIn: this.refreshTokenDuration,
     });
   }
@@ -3616,7 +3617,7 @@ export class PrivateBackend {
     }>((resolve, reject) => {
       jwt.verify(
         refreshToken,
-        REFRESH_TOKEN_SECRET,
+        this.refreshTokenSecret,
         { ignoreExpiration: true },
         (err, rawDecoded) => {
           if (err) reject(err);
@@ -3700,8 +3701,7 @@ export class PrivateBackend {
 
 export class TestBackend extends PrivateBackend {
   public maxJobsPerTick = 4;
-  public tickDuration = 5000;
-  public logStoreInterval = 1000;
+  public pollInterval = 5;
 
   public getDefinedJobs() {
     return this.definedJobs;

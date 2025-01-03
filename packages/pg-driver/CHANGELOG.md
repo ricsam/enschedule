@@ -1,5 +1,13 @@
 # @enschedule/pg-driver
 
+## 1.1.3
+
+### Patch Changes
+
+- update package json and add worker-cli
+- Updated dependencies
+  - @enschedule/types@1.1.2
+
 ## 1.1.2
 
 ### Patch Changes

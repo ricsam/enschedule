@@ -1,14 +1,23 @@
 {
   "name": "@enschedule-fns/fetch",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "fetch",
+    "enschedule",
+    "enschedule-function"
+  ],
+  "author": "Ricsam <oss@ricsam.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "functions/fetch"
+  },
   "dependencies": {
     "zod": "^3.22.2"
   }

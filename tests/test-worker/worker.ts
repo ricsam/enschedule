@@ -11,6 +11,15 @@ if (!apiKey) {
   throw new Error('Please set the "API_KEY" environment variable');
 }
 
+const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+const nafsUri = process.env.NAFS_URI;
+if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
+  throw new Error(
+    'Please set the "ACCESS_TOKEN_SECRET / REFRESH_TOKEN_SECRET / NAFS_URI" environment variables'
+  );
+}
+
 const worker = new Worker({
   name: process.env.SPECIAL_HANDLERS ? "Special worker" : "Test worker",
   workerId: process.env.SPECIAL_HANDLERS
@@ -23,6 +32,10 @@ const worker = new Worker({
     : process.env.ENSCHEDULE_API
     ? "With REST API"
     : "No API",
+  accessTokenSecret,
+  refreshTokenSecret,
+  apiKey,
+  nafsUri,
 });
 worker.logJobs = true;
 worker.retryStrategy = () => 5000;
@@ -186,6 +199,7 @@ if (!process.env.SPECIAL_HANDLERS) {
       .serve(
         {
           port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+          apiKey,
         },
         app
       )

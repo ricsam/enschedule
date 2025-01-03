@@ -49,9 +49,11 @@ export const getConfig = async () => {
     configFile = configFileSchema.parse(
       JSON.parse(await fs.promises.readFile(configPath, "utf8"))
     );
-  } catch (err) {}
+  } catch (err) {
+    //
+  }
   try {
-    let config: z.output<typeof configSchema> = configSchema.parse({
+    const config: z.output<typeof configSchema> = configSchema.parse({
       apiKey: process.env.ENSCHEDULE_API_KEY ?? configFile.apiKey,
       apiEndpoint:
         process.env.ENSCHEDULE_API_ENDPOINT ?? configFile.apiEndpoint,

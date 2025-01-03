@@ -1,0 +1,40 @@
+{
+  "name": "@enschedule/worker-cli",
+  "version": "0.0.1",
+  "description": "A CLI for the Enschedule Worker",
+  "main": "dist/cli.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && chmod +x dist/cli.js"
+  },
+  "bin": {
+    "enschedule-worker": "dist/cli.js"
+  },
+  "keywords": [
+    "cli",
+    "worker",
+    "enschedule"
+  ],
+  "author": "Ricsam <oss@ricsam.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "packages/worker-cli"
+  },
+  "dependencies": {
+    "@enschedule/worker": "workspace:*",
+    "commander": "^12.1.0",
+    "debug": "^4.4.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.4",
+    "@types/node": "^20.5.2",
+    "eslint-config-custom": "workspace:*",
+    "tsconfig": "workspace:*",
+    "typescript": "^5.1.0"
+  }
+}

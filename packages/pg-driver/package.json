@@ -1,11 +1,21 @@
 {
   "name": "@enschedule/pg-driver",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "module": "./index.ts",
   "main": "./index.ts",
   "types": "./index.ts",
   "dist-entry": "./dist/index.js",
+  "keywords": [
+    "worker",
+    "enschedule"
+  ],
+  "author": "Ricsam <oss@ricsam.dev>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "packages/pg-driver"
+  },
   "scripts": {
     "lint": "eslint -f visualstudio .",
     "test": "jest",

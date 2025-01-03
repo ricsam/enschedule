@@ -18,8 +18,18 @@ const pgBackend = () => {
       database: {
         ...envSequalizeOptions(),
         logging: false,
+        pool: {
+          max: 200,
+          min: 0,
+          acquire: 60000,
+          idle: 10000,
+        },
       },
       inlineWorker: true,
+      accessTokenSecret: "secret",
+      refreshTokenSecret: "secret",
+      nafsUri: `file://${__dirname}/test-data/nafs`,
+      apiKey: "secret",
     },
     "Api-Key secret"
   );
@@ -33,6 +43,10 @@ const sqliteBackend = () => {
       workerId: "test-worker",
       database: { dialect: "sqlite", storage: ":memory:", logging: false },
       inlineWorker: true,
+      accessTokenSecret: "secret",
+      refreshTokenSecret: "secret",
+      nafsUri: `file://${__dirname}/test-data/nafs`,
+      apiKey: "secret",
     },
     "Api-Key secret"
   );
@@ -283,7 +297,7 @@ registerTests((getBackend: () => TestBackend) => {
         ).sort()
       ).toEqual([0, 1]);
     });
-    it.only("should be able to run overdue jobs", async () => {
+    it("should be able to run overdue jobs", async () => {
       const jobFn = jest.fn((data: { url: string }) => {
         console.log("comment");
       });
@@ -408,9 +422,9 @@ registerTests((getBackend: () => TestBackend) => {
           .slice(0, 3)
           .join("\n")
       ).toMatchInlineSnapshot(`
-        "Error: Error
-            at Object.<anonymous> (backend.test.ts)
-            at awaitOverdueJobs (backend.test.ts)"
+        "1970-01-01T00:00:00.000000Z Error: Error
+        1970-01-01T00:00:00.000000Z     at Object.<anonymous> (backend.test.ts)
+        1970-01-01T00:00:00.000000Z     at awaitOverdueJobs (backend.test.ts)"
       `);
     });
     it("should create a signature", () => {
@@ -507,7 +521,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       expect(result.schedule.runAt!.getTime()).toBe(1000);
 
-      jest.useFakeTimers().setSystemTime(backend.tickDuration);
+      jest.useFakeTimers().setSystemTime(backend.pollInterval * 1000);
 
       await awaitTick(backend);
 
@@ -516,9 +530,11 @@ registerTests((getBackend: () => TestBackend) => {
       expect(schedules).toHaveLength(1);
       expect(runs).toHaveLength(1);
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(schedules[0].runAt!.getTime()).toBe(backend.tickDuration + 1000);
+      expect(schedules[0].runAt!.getTime()).toBe(
+        backend.pollInterval * 1000 + 1000
+      );
 
-      jest.useFakeTimers().setSystemTime(backend.tickDuration * 2);
+      jest.useFakeTimers().setSystemTime(backend.pollInterval * 1000 * 2);
 
       await awaitTick(backend);
 
@@ -528,12 +544,12 @@ registerTests((getBackend: () => TestBackend) => {
       expect(spy).toHaveBeenCalledTimes(2);
       expect(schedules.filter((schedule) => !schedule.claimed)).toHaveLength(1);
       expect(schedules[0].runAt!.getTime()).toBe(
-        backend.tickDuration * 2 + 1000
+        backend.pollInterval * 1000 * 2 + 1000
       );
       const lastRun = await schedules[0].getLastRun();
       expect(lastRun).toBeTruthy();
       expect(schedules[0].lastRun?.startedAt.getTime()).toBe(
-        backend.tickDuration * 2
+        backend.pollInterval * 1000 * 2
       );
 
       expect(await backend.claimUnclaimedOverdueJobs()).toHaveLength(0);
@@ -797,7 +813,7 @@ registerTests((getBackend: () => TestBackend) => {
 
       expect(schedule.runAt!.getTime()).toBe(0);
 
-      jest.useFakeTimers().setSystemTime(backend.tickDuration);
+      jest.useFakeTimers().setSystemTime(backend.pollInterval * 1000);
 
       await awaitTick(backend);
 
@@ -806,12 +822,14 @@ registerTests((getBackend: () => TestBackend) => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(runs[0].exitSignal).toBe("1");
       await schedule.reload();
-      expect(schedule.runAt!.getTime()).toBe(backend.tickDuration + 5000);
+      expect(schedule.runAt!.getTime()).toBe(
+        backend.pollInterval * 1000 + 5000
+      );
 
       const tick = async (n: number) => {
         jest
           .useFakeTimers()
-          .setSystemTime((backend.tickDuration + 5000) * (n + 1));
+          .setSystemTime((backend.pollInterval * 1000 + 5000) * (n + 1));
         await awaitTick(backend);
         runs = await backend.getDbRuns();
       };

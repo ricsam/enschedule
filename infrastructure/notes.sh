@@ -7,8 +7,6 @@ cd $SCRIPT_DIR
 minikube start
 
 npm run build
-node ./release-package.js
-./build-images.sh
 
 helm uninstall enschedule
 
@@ -16,8 +14,8 @@ while [[ $(kubectl get pods | wc -l) -gt 0 ]]; do
   sleep 5
 done
 
-minikube image rm --force 'ghcr.io/ricsam/enschedule-worker:alpha'
-minikube image rm --force 'ghcr.io/ricsam/enschedule-dashboard:alpha'
+minikube image rm 'ghcr.io/ricsam/enschedule-worker:alpha'
+minikube image rm 'ghcr.io/ricsam/enschedule-dashboard:alpha'
 
 minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:alpha'
 minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:alpha'
@@ -45,8 +43,26 @@ kubectl --namespace default port-forward $POD_NAME 8888:$CONTAINER_PORT
 
 COOKIE_SESSION_SECRET=s3cr3t ACCESS_TOKEN_SECRET=secret_key REFRESH_TOKEN_SECRET=secret_key API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
 
-# docker container run --rm -e PORT=3000 -e POSTGRES=true -e DB_USER=postgres -e DB_HOST=postgres -e DB_PASSWORD=postgres -e DB_DATABASE=postgres -e DB_PORT=5432 -p 3030:3000 --network enschedule-2_default ghcr.io/ricsam/enschedule-worker:latest
-docker container run --rm -e COOKIE_SESSION_SECRET=s3cr3t -e ACCESS_TOKEN_SECRET=secret_key -e REFRESH_TOKEN_SECRET=secret_key -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:latest
+docker container run \
+  --name enschedule-worker \
+  --rm \
+  -e PORT=3000 \
+  -e POSTGRES=true \
+  -e DB_USER=postgres \
+  -e DB_HOST=postgres \
+  -e DB_PASSWORD=postgres \
+  -e DB_DATABASE=postgres \
+  -e DB_PORT=5432 \
+  -e "DEBUG:worker-cli,worker-api,pg-driver" \
+  -p 3030:3000 \
+  -it \
+  --network enschedule_default ghcr.io/ricsam/enschedule-worker:alpha \
+  -w docker_worker \
+  -n "A docker worker" \
+  --rest-api \
+  -k secret_key
+
+docker container run --rm -e COOKIE_SESSION_SECRET=s3cr3t -e ACCESS_TOKEN_SECRET=secret_key -e REFRESH_TOKEN_SECRET=secret_key -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:alpha
 
 
 # run dashboard

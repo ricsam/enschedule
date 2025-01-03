@@ -2,6 +2,13 @@
   "name": "@enschedule/hub-test",
   "version": "0.0.3",
   "private": true,
+  "author": "Ricsam <oss@ricsam.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/enschedule.git",
+    "directory": "tests/hub-tests"
+  },
   "scripts": {
     "dev": "ts-node index.ts",
     "build": "tsc",

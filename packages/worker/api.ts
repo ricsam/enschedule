@@ -18,29 +18,27 @@ const log = debug("worker");
 
 export interface ServeOptions {
   port: number;
+  apiKey: string;
   hostname?: string;
 }
 
-export const expressRouter = (worker: WorkerAPI | PrivateBackend): Router => {
-  if (!process.env.API_KEY) {
-    throw new Error(
-      "Environment variable API_KEY must be defined to start the API endpoint"
-    );
-  }
-
+export const expressRouter = (
+  worker: WorkerAPI | PrivateBackend,
+  apiKey: string
+): Router => {
   const apiKeyMiddleware = (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction
   ) => {
     let authHeader: z.infer<typeof AuthHeader> | undefined;
-    const apiKey = req.get("X-API-KEY");
+    const requestApiKey = req.get("X-API-KEY");
 
     const authHeaderParse = AuthHeader.safeParse(req.headers.authorization);
     if (authHeaderParse.success) {
       authHeader = authHeaderParse.data;
-    } else if (apiKey && apiKey === process.env.API_KEY) {
-      authHeader = `Api-Key ${apiKey}`;
+    } else if (requestApiKey && requestApiKey === apiKey) {
+      authHeader = `Api-Key ${requestApiKey}`;
     }
     if (!authHeader) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -454,7 +452,7 @@ export class Worker extends PrivateBackend {
     serveOptions: ServeOptions,
     app: express.Express = express()
   ): { listen: (cb?: (url: string) => void) => http.Server } {
-    const router = expressRouter(this);
+    const router = expressRouter(this, serveOptions.apiKey);
 
     app.use("/api/v1", router);
 

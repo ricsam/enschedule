@@ -2,10 +2,23 @@ import { Worker } from "@enschedule/worker";
 import { registerDemoFunctionsAndSchedules } from "./vercelDemo";
 
 export const inlineWorker = async () => {
+  const apiKey = process.env.API_KEY;
+  const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+  const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+  const nafsUri = process.env.NAFS_URI;
+  if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
+    throw new Error(
+      "Missing required environment variables (ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI)"
+    );
+  }
   const worker = new Worker({
     name: "Dashboard integrated worker",
     workerId: "dashboard-integrated-worker",
     forkArgv: [__filename, "launch"],
+    apiKey,
+    accessTokenSecret,
+    refreshTokenSecret,
+    nafsUri,
   });
   worker.logJobs = true;
   worker.retryStrategy = () => 5000;

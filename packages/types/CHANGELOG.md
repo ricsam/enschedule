@@ -1,5 +1,11 @@
 # @enschedule/types
 
+## 1.1.2
+
+### Patch Changes
+
+- update package json and add worker-cli
+
 ## 1.1.1
 
 ### Patch Changes

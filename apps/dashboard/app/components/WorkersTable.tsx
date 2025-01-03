@@ -1,6 +1,7 @@
 import type { PublicWorkerSchema } from "@enschedule/types";
 import { WorkerStatus } from "@enschedule/types";
-import { Tooltip, Typography, TypographyProps } from "@mui/material";
+import type { TypographyProps } from "@mui/material";
+import { Tooltip, Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import MuiLink from "@mui/material/Link";
 import type { SerializeFrom } from "@remix-run/node";

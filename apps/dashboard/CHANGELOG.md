@@ -1,5 +1,17 @@
 # @enschedule/dashboard
 
+## 1.1.4
+
+### Patch Changes
+
+- update package json and add worker-cli
+- Updated dependencies
+  - @enschedule/worker-api@1.1.3
+  - @enschedule-fns/fetch@0.0.3
+  - @enschedule/worker@1.1.3
+  - @enschedule/types@1.1.2
+  - @enschedule-fns/log@0.0.3
+
 ## 1.1.3
 
 ### Patch Changes

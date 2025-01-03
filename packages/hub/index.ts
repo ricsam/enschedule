@@ -144,13 +144,20 @@ async function sendRemixResponse(
 
 interface EnscheduleOptions {
   worker:
-    | {
-        type: "inline";
-      }
-    | {
-        type: "file";
-        filename: string;
-      }
+    | ((
+        | {
+            type: "inline";
+          }
+        | {
+            type: "file";
+            filename: string;
+          }
+      ) & {
+        accessTokenSecret?: string;
+        apiKey?: string;
+        refreshTokenSecret?: string;
+        nafsUri?: string;
+      })
     | {
         type: "external";
         url: string;
@@ -175,9 +182,20 @@ export const enschedule = async (
   options: EnscheduleOptions
 ): Promise<Express | undefined> => {
   let worker: undefined | WorkerAPI | PrivateBackend;
+  const apiKey = options.worker.apiKey ?? process.env.API_KEY;
   if (options.worker.type === "external") {
     worker = new WorkerAPI(options.worker.apiKey, options.worker.url);
   } else {
+    const accessTokenSecret =
+      options.worker.accessTokenSecret ?? process.env.ACCESS_TOKEN_SECRET;
+    const refreshTokenSecret =
+      options.worker.refreshTokenSecret ?? process.env.REFRESH_TOKEN_SECRET;
+    const nafsUri = options.worker.nafsUri ?? process.env.NAFS_URI;
+    if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
+      throw new Error(
+        "Missing required environment variables (ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI)"
+      );
+    }
     const iWorker = new PrivateBackend({
       name: "Dashboard integrated worker",
       workerId: "dashboard-integrated-worker",
@@ -186,6 +204,10 @@ export const enschedule = async (
           ? [options.worker.filename, "__enschedule_worker_launch__"]
           : undefined,
       inlineWorker: options.worker.type === "inline",
+      apiKey,
+      accessTokenSecret,
+      refreshTokenSecret,
+      nafsUri,
     });
     iWorker.logJobs = true;
     iWorker.retryStrategy = () => 5000;
@@ -209,8 +231,14 @@ export const enschedule = async (
 
   app.disable("x-powered-by");
 
+
   if (options.api) {
-    app.use("/api/v1", expressRouter(worker));
+    if (!apiKey) {
+      throw new Error(
+        "ApiKey must be defined to start the API endpoint"
+      );
+    }
+    app.use("/api/v1", expressRouter(worker, apiKey));
   }
 
   if (options.dashboard) {

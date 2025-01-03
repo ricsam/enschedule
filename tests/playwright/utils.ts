@@ -233,7 +233,7 @@ const reset = async (
 ) => {
   if (baseUrl.workerUrl) {
     await fetch(
-      `${baseUrl.workerUrl}/test/set-poll-interval?pollInterval=${1000}`
+      `${baseUrl.workerUrl}/test/set-poll-interval?pollInterval=${1}`
     );
   }
 

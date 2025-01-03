@@ -688,7 +688,7 @@ export function Actions({
                       <b>{worker.title}</b> ({worker.instanceId})
                     </MuiLink>
                     <Box component={"span"} sx={{ ml: 1 }}>
-                      <b>Polling every</b> {worker.pollInterval} ms
+                      <b>Polling every</b> {worker.pollInterval} s
                     </Box>
                   </Box>
                 );

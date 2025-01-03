@@ -34,8 +34,8 @@ spec:
         - name: worker
           volumeMounts:
             - name: worker-config
-              mountPath: /app/packages/worker/definitions/index.js
-              subPath: index.js
+              mountPath: /enschedule-functions/functions.js
+              subPath: functions.js
           securityContext:
             {{- toYaml .Values.worker.securityContext | nindent 12 }}
           image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"

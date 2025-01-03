@@ -5,5 +5,5 @@ metadata:
   labels:
     {{- include "enschedule.labels" . | nindent 4 }}
 data:
-  index.js: |
-    {{- .Files.Get "files/index.js" | nindent 4 }}
+  functions.js: |
+    {{- .Files.Get "files/functions.js" | nindent 4 }}

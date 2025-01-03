@@ -25,13 +25,29 @@ export const inlineWorker = async () => {
 
   await worker.migrateDatabase();
 
-  if (process.env.IMPORT_FUNCTIONS) {
-    const imports = process.env.IMPORT_FUNCTIONS.split(",");
-    for (const imp of imports) {
-      await require(imp)(worker);
+  if (process.env.ENSCHEDULE_FUNCTIONS) {
+    console.log("Loading functions:", process.env.ENSCHEDULE_FUNCTIONS);
+    const importFn = async (requirePath: string): Promise<void> => {
+      const parts = requirePath.split(/,| +/);
+      if (parts.length === 1) {
+        try {
+          await require(requirePath)(worker);
+        } catch (err) {
+          console.error("Error loading function", requirePath, err);
+        }
+      } else {
+        await Promise.all(parts.map(importFn));
+      }
+    };
+
+    if (process.env.ENSCHEDULE_FUNCTIONS) {
+      await importFn(process.env.ENSCHEDULE_FUNCTIONS);
     }
   }
-  if (process.env.VERCEL) {
+  if (
+    process.env.VERCEL &&
+    process.env.VERCEL_URL === "enschedule-dashboard.vercel.app"
+  ) {
     await registerDemoFunctionsAndSchedules(worker);
   }
   await worker.startPolling();

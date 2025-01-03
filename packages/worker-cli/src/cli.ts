@@ -144,14 +144,21 @@ const startCmd = new Command("start")
     worker.pollInterval = pollInterval.success ? pollInterval.data : 10;
 
     void (async () => {
-      let fileExists = false;
-      try {
-        fileExists = (await fs.promises.stat(options.functions)).isFile();
-      } catch (err) {
-        // ignore
-      }
-      if (fileExists) {
-        await require(options.functions)(worker);
+      const importFn = async (requirePath: string): Promise<void> => {
+        const parts = requirePath.split(/,| +/);
+        if (parts.length === 1) {
+          try {
+            await require(requirePath)(worker);
+          } catch (err) {
+            console.error("Error loading function", requirePath, err);
+          }
+        } else {
+          await Promise.all(parts.map(importFn));
+        }
+      };
+
+      if (options.functions) {
+        await Promise.all(options.functions.map(importFn));
       }
 
       const ranJob = await worker.listenForIncomingRuns();

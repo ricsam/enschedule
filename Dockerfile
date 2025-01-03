@@ -36,9 +36,10 @@ COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS build
-COPY --from=install-base /app/out/full/ .
+COPY --from=install-base /app/out/json/ .
 COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
 RUN NODE_ENV="development" pnpm install --frozen-lockfile
+COPY --from=install-base /app/out/full/ .
 RUN turbo build
 
 # Worker image

@@ -54,6 +54,7 @@ docker container run \
   -e DB_DATABASE=postgres \
   -e DB_PORT=5432 \
   -e "DEBUG:worker-cli,worker-api,pg-driver" \
+  -e ENSCHEDULE_FUNCTIONS="@enschedule-fns/fetch @enschedule-fns/log" \
   -p 3030:3000 \
   -it \
   --network enschedule_default ghcr.io/ricsam/enschedule-worker:alpha \

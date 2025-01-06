@@ -95,7 +95,7 @@ jobs:
           until [ "$(curl -s http://localhost:3000 | jq -r '.message')" == "Hello World" ]; do echo "Waiting for the test endpoint to become healthy..."; sleep 1; done
 
       - name: Test docker images, playwright
-        run: TEST_HELM=true DASHBOARD_URL=http://localhost:3333 pnpm run playwright test
+        run: docker container logs -f enschedule-dashboard & TEST_HELM=true DASHBOARD_URL=http://localhost:3333 pnpm run playwright test
 
       - name: Test docker images, stop container
         run: |

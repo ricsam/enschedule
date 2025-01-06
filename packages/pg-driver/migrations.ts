@@ -124,7 +124,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             },
             description: {
               type: DataTypes.STRING,
-              allowNull: false,
+              allowNull: true,
             },
             claimed: {
               type: DataTypes.BOOLEAN,
@@ -462,7 +462,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             },
             description: {
               type: DataTypes.STRING,
-              allowNull: false,
+              allowNull: true,
             },
             createdAt: {
               type: DataTypes.DATE,
@@ -949,60 +949,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
         await queryInterface.removeColumn("Runs", "logFileRowCount", {
           transaction,
         });
-      });
-    },
-  },
-  {
-    name: "00006-make-descriptions-nullable",
-    up: async ({ context: queryInterface }) => {
-      return queryInterface.sequelize.transaction(async (transaction) => {
-        // Make description nullable in Groups table
-        await queryInterface.changeColumn(
-          "Groups",
-          "description",
-          {
-            type: DataTypes.STRING,
-            allowNull: true,
-          },
-          { transaction }
-        );
-
-        // Make description nullable in Schedules table
-        await queryInterface.changeColumn(
-          "Schedules",
-          "description",
-          {
-            type: DataTypes.STRING,
-            allowNull: true,
-          },
-          { transaction }
-        );
-      });
-    },
-
-    down: async ({ context: queryInterface }) => {
-      return queryInterface.sequelize.transaction(async (transaction) => {
-        // Revert description to non-nullable in Groups table
-        await queryInterface.changeColumn(
-          "Groups",
-          "description",
-          {
-            type: DataTypes.STRING,
-            allowNull: false,
-          },
-          { transaction }
-        );
-
-        // Revert description to non-nullable in Schedules table
-        await queryInterface.changeColumn(
-          "Schedules",
-          "description",
-          {
-            type: DataTypes.STRING,
-            allowNull: false,
-          },
-          { transaction }
-        );
       });
     },
   },

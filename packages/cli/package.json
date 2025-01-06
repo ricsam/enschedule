@@ -1,10 +1,10 @@
 {
   "name": "@enschedule/cli",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "",
-  "module": "dist/src/index.ts",
-  "main": "dist/src/index.ts",
-  "types": "dist/src/index.ts",
+  "module": "dist/src/index.js",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.js",
   "dist-entry": "dist/src/index.js",
   "scripts": {
     "test": "jest",

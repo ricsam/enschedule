@@ -952,4 +952,58 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
       });
     },
   },
+  {
+    name: "00006-make-descriptions-nullable",
+    up: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Make description nullable in Groups table
+        await queryInterface.changeColumn(
+          "Groups",
+          "description",
+          {
+            type: DataTypes.STRING,
+            allowNull: true,
+          },
+          { transaction }
+        );
+
+        // Make description nullable in Schedules table
+        await queryInterface.changeColumn(
+          "Schedules",
+          "description",
+          {
+            type: DataTypes.STRING,
+            allowNull: true,
+          },
+          { transaction }
+        );
+      });
+    },
+
+    down: async ({ context: queryInterface }) => {
+      return queryInterface.sequelize.transaction(async (transaction) => {
+        // Revert description to non-nullable in Groups table
+        await queryInterface.changeColumn(
+          "Groups",
+          "description",
+          {
+            type: DataTypes.STRING,
+            allowNull: false,
+          },
+          { transaction }
+        );
+
+        // Revert description to non-nullable in Schedules table
+        await queryInterface.changeColumn(
+          "Schedules",
+          "description",
+          {
+            type: DataTypes.STRING,
+            allowNull: false,
+          },
+          { transaction }
+        );
+      });
+    },
+  },
 ];

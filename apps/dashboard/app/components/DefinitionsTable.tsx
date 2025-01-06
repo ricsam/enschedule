@@ -39,7 +39,7 @@ const columns: ColumnDef<DefinitionRowData, any>[] = [
   }),
   columnHelper.accessor("description", {
     cell: (info) => {
-      return info.getValue();
+      return info.getValue() || "-";
     },
     header: "Description",
   }),

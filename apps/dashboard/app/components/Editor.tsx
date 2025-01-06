@@ -143,7 +143,7 @@ export const ReadOnlyEditor = React.memo(function ReadOnlyEditor({
               dataSchema: ZodType;
               id: string;
               title: string;
-              description: string;
+              description?: string;
               job: (data: { url: string }) => Promise<void> | void;
               example: { url: string };
             };

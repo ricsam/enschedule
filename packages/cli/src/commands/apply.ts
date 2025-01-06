@@ -1,9 +1,9 @@
-import { ScheduleSchema } from "@enschedule/types";
+import fs from "node:fs";
+import { ScheduleJobOptionsSchema, ScheduleSchema } from "@enschedule/types";
 import { NetworkError } from "@enschedule/worker-api";
 import { Command } from "commander";
 import { glob } from "glob";
 import yaml from "js-yaml";
-import fs from "node:fs";
 import { z } from "zod";
 import { ConfigError, getAuthHeader, getWorker } from "../get-worker";
 
@@ -20,7 +20,12 @@ export const ScheduleYamlSchema = z.object({
   metadata: z.object({
     name: z.string(),
   }),
-  spec: ScheduleSchema,
+  spec: z.intersection(
+    ScheduleSchema.omit({ options: true }),
+    z.object({
+      options: ScheduleJobOptionsSchema.omit({ eventId: true }),
+    })
+  ),
 });
 
 export const apply = async (
@@ -118,6 +123,6 @@ applyCommand
     }
     if (!hasApplied) {
       console.error("No schedules found in the provided file or folder");
-      process.exit(1)
+      process.exit(1);
     }
   });

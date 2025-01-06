@@ -64,7 +64,7 @@ export const editDetailsAction: ActionFunction = async ({
   };
   const init = {
     runAt: schedule.runAt ? normalizeDate(schedule.runAt.toJSON()) : "",
-    description: schedule.description,
+    description: schedule.description || "",
     runNow: schedule.runNow,
     title: schedule.title,
     data: schedule.data,
@@ -97,7 +97,7 @@ export const editDetailsAction: ActionFunction = async ({
     }
   }
   if (description !== null && init.description !== description) {
-    scheduleUpdatePayload.description = description;
+    scheduleUpdatePayload.description = description || null;
     updated = true;
   }
   if (data !== null && init.data !== data) {
@@ -158,7 +158,9 @@ function EditForm({
   onClose: () => void;
 }) {
   const [title, setTitle] = React.useState(schedule.title);
-  const [description, setDescription] = React.useState(schedule.description);
+  const [description, setDescription] = React.useState(
+    schedule.description || ""
+  );
   const initScheduledFor = schedule.runAt
     ? normalizeDate(schedule.runAt)
     : undefined;
@@ -172,11 +174,12 @@ function EditForm({
   );
   const dateInputValue = scheduledFor ? dateToLocal(scheduledFor) : "";
 
+  // use formValues just to track if it has updated or not
   const formValues: Record<string, string | null> = {};
   if (title !== schedule.title) {
     formValues.title = title;
   }
-  if (description !== schedule.description) {
+  if (description !== (schedule.description || "")) {
     formValues.description = description;
   }
   if (scheduledFor !== initScheduledFor) {
@@ -222,6 +225,9 @@ function EditForm({
           value={description}
           onChange={(ev) => setDescription(ev.target.value)}
           name="description"
+          inputProps={{
+            "data-testid": "description-field",
+          }}
         ></TextField>
 
         <Box sx={{ display: "flex", alignItems: "flex-end" }} gap={0.5}>
@@ -391,8 +397,11 @@ export default function SchedulePage({
                 {schedule.title}
               </Typography>
               <Typography color="text.secondary">Description</Typography>
-              <Typography color="text.primary">
-                {schedule.description}
+              <Typography
+                color="text.primary"
+                data-testid="schedule-description"
+              >
+                {schedule.description || '-'}
               </Typography>
               <Typography color="text.secondary">Definition</Typography>
               {typeof schedule.jobDefinition === "string" ? (

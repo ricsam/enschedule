@@ -395,6 +395,33 @@ test.describe("Can update a single schedule", () => {
         "hello"
       );
     });
+    test("Update description", async ({ page }) => {
+      expect(await page.getByTestId("schedule-title").innerText()).toBe(
+        "Test Title"
+      );
+      await page.getByTestId("edit-details").click();
+      await page
+        .getByTestId("edit-details-form")
+        .getByTestId("description-field")
+        .clear();
+      // await page
+      //   .getByTestId("edit-details-form")
+      //   .getByTestId("title-field")
+      //   .click();
+      // await page
+      //   .getByTestId("edit-details-form")
+      //   .getByTestId("title-field")
+      //   .type("hello");
+
+      await page.click(
+        `[data-testid="edit-details-form"] [data-testid="submit"]:not(:disabled)`
+      );
+      await page.waitForURL(/\/\d+\/?$/);
+      await page.reload();
+      expect(await page.getByTestId("schedule-description").innerText()).toBe(
+        "-"
+      );
+    });
     test("Update runAt", async ({ page }) => {
       let i = 0;
       while (

@@ -66,7 +66,7 @@ const columns: ColumnDef<RowData, any>[] = [
   }),
   columnHelper.accessor("description", {
     cell: (info) => {
-      return info.getValue();
+      return info.getValue() || '-';
     },
     header: "Description",
   }),

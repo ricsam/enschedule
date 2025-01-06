@@ -37,7 +37,7 @@ export const DateStringSchema = z.string().refine((dateString) => {
     dateString.includes("−") || // https://en.wikipedia.org/wiki/Minus_sign
     dateString.includes("-") //    https://en.wikipedia.org/wiki/Hyphen-minus
   );
-});
+}, "Date string should include timezone information");
 
 export const DateSchema = z
   .union([DateStringSchema, z.date()])
@@ -162,7 +162,7 @@ export type RunAccess = z.output<typeof RunAccessSchema>;
 export const publicJobDefinitionSchema = z.object({
   id: z.string(),
   version: z.number(),
-  description: z.string(),
+  description: z.string().optional(),
   title: z.string(),
   example: z.unknown(),
   codeBlock: z.string(),
@@ -177,7 +177,7 @@ export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>;
 //#region PublicJobSchedule
 export const publicJobScheduleSchema = z.object({
   id: z.number(),
-  description: z.string(),
+  description: z.string().optional(),
   title: z.string(),
   retryFailedJobs: z.boolean(),
   retries: z.number(),
@@ -264,7 +264,7 @@ export const ScheduleJobOptionsSchema = z.object({
   runAt: OptionalDateSchema,
   eventId: z.string().optional(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   retryFailedJobs: z.boolean().optional(),
   maxRetries: z.number().optional(),
   failureTrigger: z.number().optional(),
@@ -294,7 +294,7 @@ export const ScheduleUpdatePayloadSchema = z.object({
     }),
   title: z.string().optional(),
   data: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(), // set to null to clear, set to undefined to not update
   retryFailedJobs: z.boolean().optional(),
   maxRetries: z.number().optional(),
   runNow: z.boolean().optional(),
@@ -425,7 +425,7 @@ export const JobDefinitionSchema = z.object({
   dataSchema: z.any(),
   id: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   job: z.any(),
   example: z.any(),
   version: z.number().int().positive(),

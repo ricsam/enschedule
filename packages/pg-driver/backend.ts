@@ -250,7 +250,7 @@ export const createPublicJobSchedule = (
   return {
     id: schedule.id,
     title: schedule.title,
-    description: schedule.description,
+    description: schedule.description ?? undefined,
     retryFailedJobs: schedule.retryFailedJobs,
     retries: schedule.retries,
     maxRetries: schedule.maxRetries,
@@ -535,7 +535,7 @@ export class Schedule extends Model<
   declare claimId: CreationOptional<string>;
 
   declare title: string;
-  declare description: string;
+  declare description?: string | null;
   /** job functionId, i.e. the handler the schedule executes */
   declare functionId: string;
   declare cronExpression?: CreationOptional<string> | null;
@@ -911,7 +911,7 @@ export class PrivateBackend {
         },
         description: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         createdAt: {
           type: DataTypes.DATE,
@@ -1040,7 +1040,7 @@ export class PrivateBackend {
         },
         description: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         claimed: {
           type: DataTypes.BOOLEAN,
@@ -2168,18 +2168,25 @@ export class PrivateBackend {
     }
     return signature;
   }
-  protected async createJobSchedule(
-    defId: string,
-    title: string,
-    description: string,
-    functionVersion: number,
-    data: unknown,
-    options: CreateJobScheduleOptions = {}
-  ) {
+  protected async createJobSchedule({
+    functionId,
+    title,
+    description,
+    functionVersion,
+    data,
+    options = {},
+  }: {
+    functionId: string;
+    title: string;
+    description?: string;
+    functionVersion: number;
+    data: unknown;
+    options?: CreateJobScheduleOptions;
+  }) {
     let migratedVersion = functionVersion;
     let migratedData = data;
     while (true) {
-      const migration = this.migrations[defId]?.[migratedVersion];
+      const migration = this.migrations[functionId]?.[migratedVersion];
       if (migration) {
         migratedVersion = migration.targetVersion;
         migratedData = migration.migrateFn(migratedData);
@@ -2201,7 +2208,7 @@ export class PrivateBackend {
       runNow,
     } = options;
     const signature = this.createSignature(
-      defId,
+      functionId,
       runAt,
       migratedData,
       cronExpression
@@ -2235,7 +2242,7 @@ export class PrivateBackend {
       retryFailedJobs,
       workerId,
       maxRetries,
-      functionId: defId,
+      functionId,
       cronExpression: normalizedCronExpression,
       runAt,
       data: serializedData,
@@ -2332,7 +2339,7 @@ export class PrivateBackend {
     data: unknown,
     options: ScheduleJobOptions
   ): Promise<ScheduleJobResult> {
-    const defId = typeof def === "string" ? def : def.id;
+    const functionId = typeof def === "string" ? def : def.id;
 
     let runAt: Date | undefined = options.runAt;
     const cronExpression: string | undefined = options.cronExpression;
@@ -2343,13 +2350,13 @@ export class PrivateBackend {
 
     const { retryFailedJobs, maxRetries, failureTrigger } = options;
 
-    const [dbSchedule, status] = await this.createJobSchedule(
-      defId,
-      options.title,
-      options.description,
+    const [dbSchedule, status] = await this.createJobSchedule({
+      functionId,
+      title: options.title,
+      description: options.description,
       functionVersion,
       data,
-      {
+      options: {
         eventId: options.eventId,
         runAt,
         cronExpression,
@@ -2360,8 +2367,8 @@ export class PrivateBackend {
         access: options.access,
         workerId: options.workerId,
         runNow: options.runNow,
-      }
-    );
+      },
+    });
     return {
       schedule: createPublicJobSchedule(
         dbSchedule,
@@ -2890,13 +2897,13 @@ export class PrivateBackend {
     if (!schedule) {
       throw new Error("invalid id in ScheduleUpdatePayload");
     }
-    if (typeof updatePayload.description === "string") {
+    if (typeof updatePayload.description !== "undefined") {
       schedule.description = updatePayload.description;
     }
-    if (typeof updatePayload.title === "string") {
+    if (typeof updatePayload.title !== "undefined") {
       schedule.title = updatePayload.title;
     }
-    if (typeof updatePayload.data === "string") {
+    if (typeof updatePayload.data !== "undefined") {
       schedule.data = updatePayload.data;
     }
     if (updatePayload.runAt === null) {
@@ -3769,22 +3776,29 @@ export class TestBackend extends PrivateBackend {
     this.authHeader = authHeader;
   }
 
-  public async createJobSchedule(
-    functionId: string,
-    title: string,
-    description: string,
-    functionVersion: number,
-    data: unknown,
-    options: CreateJobScheduleOptions = {}
-  ) {
-    return super.createJobSchedule(
+  public async createJobSchedule({
+    functionId,
+    title,
+    description,
+    functionVersion,
+    data,
+    options = {},
+  }: {
+    functionId: string;
+    title: string;
+    description: string;
+    functionVersion: number;
+    data: unknown;
+    options?: CreateJobScheduleOptions;
+  }) {
+    return super.createJobSchedule({
       functionId,
       title,
       description,
       functionVersion,
       data,
-      options
-    );
+      options,
+    });
   }
 
   public setRegisteredWorker(worker: Worker | undefined) {

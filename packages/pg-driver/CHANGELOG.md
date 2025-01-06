@@ -1,5 +1,13 @@
 # @enschedule/pg-driver
 
+## 1.1.5
+
+### Patch Changes
+
+- Make description optional
+- Updated dependencies
+  - @enschedule/types@1.1.4
+
 ## 1.1.4
 
 ### Patch Changes

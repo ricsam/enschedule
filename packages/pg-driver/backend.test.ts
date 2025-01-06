@@ -199,16 +199,16 @@ registerTests((getBackend: () => TestBackend) => {
     backend.registerJob(httpJobDeclaration());
     await backend.registerWorker();
 
-    const [job] = await backend.createJobSchedule(
-      "http_request",
-      "title",
-      "desc",
-      1,
-      jobData,
-      {
+    const [job] = await backend.createJobSchedule({
+      functionId: "http_request",
+      title: "title",
+      description: "desc",
+      functionVersion: 1,
+      data: jobData,
+      options: {
         runAt: new Date(0),
-      }
-    );
+      },
+    });
     const jobs = await backend.getDbSchedules();
     expect(jobs.length).toBe(1);
   });
@@ -223,16 +223,16 @@ registerTests((getBackend: () => TestBackend) => {
         backend.registerJob(httpJobDeclaration());
 
         await backend.registerWorker();
-        const [job] = await backend.createJobSchedule(
-          "http_request",
-          "title",
-          "desc",
-          1,
-          jobData,
-          {
+        const [job] = await backend.createJobSchedule({
+          functionId: "http_request",
+          title: "title",
+          description: "desc",
+          functionVersion: 1,
+          data: jobData,
+          options: {
             runAt: new Date(0),
-          }
-        );
+          },
+        });
         const jobs = await backend.getDbSchedules();
         expect(jobs.length).toBe(1);
       } catch (err) {
@@ -243,16 +243,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should not update jobs in the future", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [job] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [job] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(10),
-        }
-      );
+        },
+      });
       jest.useFakeTimers().setSystemTime(0);
 
       expect(await backend.claimUnclaimedOverdueJobs()).toHaveLength(0);
@@ -260,32 +260,32 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to get a job by climing a job that is overdue", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [job] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [job] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(10),
-        }
-      );
+        },
+      });
       jest.useFakeTimers().setSystemTime(10);
       expect(await backend.claimUnclaimedOverdueJobs()).toHaveLength(1);
     });
     it("should be able to claim in parallel", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [job] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [job] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(10),
-        }
-      );
+        },
+      });
       jest.useFakeTimers().setSystemTime(10);
       expect(
         (
@@ -304,16 +304,16 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(httpJobDeclaration(jobFn));
       await backend.registerWorker();
 
-      const [job] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [job] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(10),
-        }
-      );
+        },
+      });
       jest.useFakeTimers().setSystemTime(10);
 
       await awaitOverdueJobs(backend);
@@ -342,16 +342,16 @@ registerTests((getBackend: () => TestBackend) => {
       await backend.registerWorker();
 
       const createSchedule = async (id: string) => {
-        const [schedule] = await backend.createJobSchedule(
-          "http_request",
-          "title",
-          "description",
-          1,
-          jobData,
-          {
+        const [schedule] = await backend.createJobSchedule({
+          functionId: "http_request",
+          title: "title",
+          description: "description",
+          functionVersion: 1,
+          data: jobData,
+          options: {
             eventId: id,
-          }
-        );
+          },
+        });
         return schedule;
       };
       const schedule = await createSchedule("pre");
@@ -386,16 +386,16 @@ registerTests((getBackend: () => TestBackend) => {
       });
       backend.registerJob(httpJobDeclaration(spy));
       await backend.registerWorker();
-      const [job] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [job] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(10),
-        }
-      );
+        },
+      });
       jest.useFakeTimers().setSystemTime(10);
       await awaitOverdueJobs(backend);
       expect(spy).toHaveBeenCalledTimes(1);
@@ -441,56 +441,56 @@ registerTests((getBackend: () => TestBackend) => {
     it("should not create duplicated jobs", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        { runAt: new Date(0) }
-      );
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: { runAt: new Date(0) },
+      });
       expect((await backend.getDbSchedules()).length).toBe(1);
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        { runAt: new Date(0) }
-      );
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: { runAt: new Date(0) },
+      });
       expect((await backend.getDbSchedules()).length).toBe(1);
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(900),
-        }
-      );
+        },
+      });
       expect((await backend.getDbSchedules()).length).toBe(1);
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(15000 - 1),
-        }
-      );
+        },
+      });
       expect((await backend.getDbSchedules()).length).toBe(2);
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(15000),
-        }
-      );
+        },
+      });
       expect((await backend.getDbSchedules()).length).toBe(3);
     });
   });
@@ -560,55 +560,55 @@ registerTests((getBackend: () => TestBackend) => {
     it("should create duplicated events if an eventId is not provided", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
-      await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+        },
+      });
+      await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(1000),
-        }
-      );
+        },
+      });
       expect((await backend.getDbSchedules()).length).toBe(2);
     });
     it("should not create duplicated events if an eventId is provided", async () => {
       jest.useFakeTimers().setSystemTime(0);
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [, status1] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [, status1] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
           eventId: "superevent",
-        }
-      );
+        },
+      });
       expect(status1).toBe("created");
-      const [s2, status2] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [s2, status2] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           eventId: "superevent",
           runAt: new Date(1000),
-        }
-      );
+        },
+      });
       expect(status2).toBe("updated");
       expect(s2.runAt).toEqual(new Date(1000));
       expect((await backend.getDbSchedules()).length).toBe(1);
@@ -619,16 +619,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to run now and count", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       const schedules = await backend.getDbSchedules();
       expect(schedules.length).toBe(1);
       expect(await schedule.getRuns()).toHaveLength(0);
@@ -652,16 +652,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to delete schedules", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       const schedules = await backend.getDbSchedules();
       expect(schedules.length).toBe(1);
       await backend.deleteSchedules(schedules.map((s) => Number(s.id)));
@@ -673,16 +673,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to update a schedule", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       expect(schedule.title).toBe("title");
       await backend.updateSchedule(backend.authHeader, {
         id: schedule.id,
@@ -694,16 +694,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to unset the run now", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       expect(schedule.runAt?.getTime()).toBe(0);
       await backend.updateSchedule(backend.authHeader, {
         id: schedule.id,
@@ -724,16 +724,16 @@ registerTests((getBackend: () => TestBackend) => {
     it("should be able to get a single run", async () => {
       backend.registerJob(httpJobDeclaration());
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        jobData,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: jobData,
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       const run = await awaitRunSchedule(backend, schedule.id);
       const receivedSingleRun = await backend.getRun(
         backend.authHeader,
@@ -785,31 +785,31 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(httpJobDeclaration(spy));
       await backend.registerWorker();
 
-      const [notifySchedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [notifySchedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:4444",
-        }
-      );
+        },
+      });
 
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           retryFailedJobs: true,
           maxRetries: config.maxRetries,
           failureTrigger: config.notify ? notifySchedule.id : undefined,
-        }
-      );
+        },
+      });
 
       expect(schedule.runAt!.getTime()).toBe(0);
 
@@ -1008,18 +1008,18 @@ registerTests((getBackend: () => TestBackend) => {
       expect(worker.workerId).toBe("test-worker");
       expect(worker.lastReached.getTime()).toBe(0);
 
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       const run = await awaitRunSchedule(backend, schedule.id);
       expect(typeof run.worker !== "string" && run.worker.id).toBe(worker.id);
       expect((await backend.getWorkers("Api-Key secret"))[0].id).toBe(
@@ -1036,19 +1036,19 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(handler);
       const worker = await backend.registerWorker();
 
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           eventId: "default-1",
         }
-      );
+      });
       expect(schedule.id).toBe(1);
       const runA = await awaitRunSchedule(backend, schedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
@@ -1070,19 +1070,19 @@ registerTests((getBackend: () => TestBackend) => {
       expect(handlers).toHaveLength(1);
 
       // create a schedule using the old version
-      const [oldSchedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [oldSchedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://other_url:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           eventId: "other-1",
-        }
-      );
+        },
+      });
       spyA.mockReset();
       expect(oldSchedule.id).toBe(2);
       expect(oldSchedule.data).toBe('{"url":"http://other_url:1234"}');
@@ -1097,19 +1097,19 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(handler);
       const worker = await backend.registerWorker();
 
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           eventId: "default-1",
         }
-      );
+      });
       expect(schedule.id).toBe(1);
       const runA = await awaitRunSchedule(backend, schedule.id);
       expect(spyA).toHaveBeenCalledWith({ url: "http://localhost:1234" });
@@ -1143,19 +1143,19 @@ registerTests((getBackend: () => TestBackend) => {
       expect(handlers).toHaveLength(1);
 
       // create a schedule using the old version
-      const [oldSchedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [oldSchedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://other_url:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           eventId: "other-1",
-        }
-      );
+        },
+      });
       spyA.mockReset();
       spyB.mockReset();
       expect(oldSchedule.id).toBe(2);
@@ -1172,19 +1172,19 @@ registerTests((getBackend: () => TestBackend) => {
       backend.registerJob(handler);
       const worker = await backend.registerWorker();
 
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
           eventId: "default-1",
-        }
-      );
+        },
+      });
       expect(schedule.id).toBe(1);
 
       const runA = await awaitRunSchedule(backend, schedule.id);
@@ -1216,16 +1216,16 @@ registerTests((getBackend: () => TestBackend) => {
       const handler = httpJobDeclaration();
       backend.registerJob(handler);
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {}
-      );
+        options: {}
+      });
       const registration = await backend.register({
         admin: false,
         name: "test-user",
@@ -1252,22 +1252,22 @@ registerTests((getBackend: () => TestBackend) => {
         ).count
       ).toBe(0);
 
-      const [scheduleTwo] = await backend.createJobSchedule(
-        "http_request",
-        "hello",
-        "some description",
-        1,
-        {
+      const [scheduleTwo] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "hello",
+        description: "some description",
+        functionVersion: 1,
+        data: {
           url: "http://other_url:1234",
         },
-        {
+        options: {
           defaultRunAccess: {
-            view: {
-              users: [registration.user.id],
-            },
+        view: {
+          users: [registration.user.id],
+        },
           },
-        }
-      );
+        },
+      });
 
       await backend.runScheduleNow(scheduleTwo.id);
       await awaitOverdueJobs(backend);
@@ -1311,18 +1311,18 @@ registerTests((getBackend: () => TestBackend) => {
       const handler = httpJobDeclaration();
       backend.registerJob(handler);
       await backend.registerWorker();
-      const [schedule] = await backend.createJobSchedule(
-        "http_request",
-        "title",
-        "description",
-        1,
-        {
+      const [schedule] = await backend.createJobSchedule({
+        functionId: "http_request",
+        title: "title",
+        description: "description",
+        functionVersion: 1,
+        data: {
           url: "http://localhost:1234",
         },
-        {
+        options: {
           runAt: new Date(0),
-        }
-      );
+        },
+      });
       const registration = await backend.register({
         admin: false,
         name: "test-user",

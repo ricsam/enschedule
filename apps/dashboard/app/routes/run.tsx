@@ -490,7 +490,7 @@ export default function Run() {
             />
           </Box>
           <SendButton
-            disabled={!title || !description}
+            disabled={!title}
             onClick={() => {
               setSubmitTitleAndDescription(true);
             }}
@@ -511,10 +511,14 @@ export default function Run() {
                   Title:
                 </Box>{" "}
                 <span>{title}</span>
-                <Box component="span" sx={{ opacity: 0.87 }}>
-                  Description:
-                </Box>
-                <span>{description}</span>
+                {description && (
+                  <>
+                    <Box component="span" sx={{ opacity: 0.87 }}>
+                      Description:
+                    </Box>
+                    <span>{description}</span>
+                  </>
+                )}
               </Box>
             }
           />
@@ -530,7 +534,7 @@ export default function Run() {
               <Card variant="outlined">
                 <CardHeader
                   title={title}
-                  subheader={description}
+                  subheader={description || undefined}
                   sx={{ pb: 0.5 }}
                 />
                 <CardContent>
@@ -1165,7 +1169,7 @@ function WorkerOption({
       {...optionProps}
       sx={{ display: "flex", alignItem: "flex-end" }}
     >
-      {'•'}
+      {"•"}
       <Box component="span" sx={{ mx: 1 }}>
         {workers[0].title} ({workerId})
       </Box>

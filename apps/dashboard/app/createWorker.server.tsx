@@ -3,11 +3,11 @@ import { inlineWorker } from "./inlineWorker";
 import type { DashboardWorker } from "./types";
 
 export const createWorker = async () => {
-  if (process.env.WORKER_URL) {
-    if (!process.env.API_KEY) {
-      throw new Error("Environment variable API_KEY must be defined");
+  if (process.env.ENSCHEDULE_WORKER_URL) {
+    if (!process.env.ENSCHEDULE_API_KEY) {
+      throw new Error("Environment variable ENSCHEDULE_API_KEY must be defined");
     }
-    return new WorkerAPI(process.env.API_KEY, process.env.WORKER_URL);
+    return new WorkerAPI(process.env.ENSCHEDULE_API_KEY, process.env.ENSCHEDULE_WORKER_URL);
   }
 
   return await inlineWorker();

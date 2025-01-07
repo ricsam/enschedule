@@ -1,5 +1,15 @@
 # @enschedule/dashboard
 
+## 1.1.7
+
+### Patch Changes
+
+- Prefix env variables and fix bugs and make helm chart work with a migration job
+- Updated dependencies
+  - @enschedule/worker-api@1.1.5
+  - @enschedule-fns/fetch@0.0.4
+  - @enschedule/worker@1.1.6
+
 ## 1.1.6
 
 ### Patch Changes

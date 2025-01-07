@@ -1,0 +1,146 @@
+{{- if .Values.migrationJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrations
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: "migrations"
+      {{- with .Values.migrationJob.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/name: migrations
+    spec:
+      restartPolicy: Never
+
+      {{- with .Values.migrationJob.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "enschedule.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.migrationJob.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if .Values.migrationJob.extraVolumes }}
+        {{- toYaml .Values.migrationJob.extraVolumes | nindent 8 }}
+        {{- end }}
+      initContainers:
+        - name: wait-for-db
+          image: "{{ .Values.migrationJob.dbWaitImage.repository }}:{{ .Values.migrationJob.dbWaitImage.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.migrationJob.dbWaitImage.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Script started...";
+              echo "Using host: database-service, port: {{ .Values.database.service.port }}";
+              for i in $(seq 1 60); do
+                echo "Attempt $i: Checking database readiness...";
+                if pg_isready -h database-service -p {{ .Values.database.service.port }} -U postgres; then
+                  echo "Database is ready!";
+                  exit 0;
+                fi
+                echo "Database is not ready yet. Retrying in 2 seconds...";
+                sleep 2;
+              done
+              echo "Database is not ready after 120 seconds. Exiting.";
+              exit 1;
+          env:
+            - name: PGUSER
+              value: "postgres"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
+      containers:
+        - name: worker
+          volumeMounts:
+            {{- if .Values.migrationJob.extraVolumeMounts }}
+            {{- toYaml .Values.migrationJob.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+          securityContext:
+            {{- toYaml .Values.migrationJob.securityContext | nindent 12 }}
+          image: "{{ .Values.migrationJob.image.repository }}:{{ .Values.migrationJob.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.migrationJob.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.migrationJob.resources | nindent 12 }}
+          env:
+            - name: ENSCHEDULE_MIGRATE
+              value: "true"
+            - name: ENSCHEDULE_DISABLE_POLLING
+              value: "true"
+            - name: POSTGRES
+              value: "true"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_HOST
+              value: "database-service"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
+            - name: DB_DATABASE
+              value: "postgres"
+            - name: NAFS_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: nafsUri
+            - name: ENSCHEDULE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: apiKey
+            - name: ENSCHEDULE_ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: accessTokenSecret
+            - name: ENSCHEDULE_REFRESH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: refreshTokenSecret
+            - name: ADMIN_ACCOUNT
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: adminAccount
+            - name: DB_PORT
+              value: {{ .Values.database.service.port | quote }}
+            - name: DEBUG
+              value: "pg-driver,worker"
+            - name: ENSCHEDULE_WORKER_ID
+              value: "migrate-enschedule-db-worker"
+            - name: ENSCHEDULE_WORKER_NAME
+              value: "Enschedule db migrator"
+            - name: ENSCHEDULE_WORKER_DESCRIPTION
+              value: "This is created to migrate the database and will then shut down"
+            {{- if .Values.migrationJob.extraEnvs }}
+            {{- toYaml .Values.migrationJob.extraEnvs | nindent 12 }}
+            {{- end }}
+      {{- with .Values.migrationJob.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.migrationJob.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.migrationJob.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- end }}

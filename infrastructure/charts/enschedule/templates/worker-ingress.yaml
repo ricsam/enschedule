@@ -1,4 +1,4 @@
-{{- if .Values.worker }}
+{{- if .Values.worker.enabled }}
 {{- if .Values.worker.ingress.enabled -}}
 {{- $fullName := include "enschedule.fullname" . -}}
 {{- $svcPort := .Values.worker.service.port -}}

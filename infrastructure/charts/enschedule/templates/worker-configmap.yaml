@@ -1,9 +1,13 @@
+{{- if .Values.worker.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "enschedule.fullname" . }}-worker-config
   labels:
     {{- include "enschedule.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
 data:
   functions.js: |
     {{- .Files.Get "files/functions.js" | nindent 4 }}
+{{- end }}

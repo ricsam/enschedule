@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- include "enschedule.labels" . | nindent 4 }}
     app.kubernetes.io/name: dashboard
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "3"
 spec:
   replicas: {{ .Values.dashboard.replicaCount }}
   selector:
@@ -48,30 +51,35 @@ spec:
           resources:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           env:
-            - name: COOKIE_SESSION_SECRET
+            - name: ENSCHEDULE_COOKIE_SESSION_SECRET
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: cookieSessionSecret
-            - name: API_KEY
+            - name: ENSCHEDULE_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: apiKey
-            - name: ACCESS_TOKEN_SECRET
+            - name: ENSCHEDULE_ACCESS_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: accessTokenSecret
-            - name: REFRESH_TOKEN_SECRET
+            - name: ENSCHEDULE_REFRESH_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: refreshTokenSecret
-            - name: HTTPS_ONLY_COOKIES
+            - name: ENSCHEDULE_HTTPS_ONLY_COOKIES
               value: {{ .Values.config.httpsOnlyCookies | quote }}
-            - name: WORKER_URL
+          {{- if .Values.dashboard.workerUrl }}
+            - name: ENSCHEDULE_WORKER_URL
+              value: "{{ .Values.dashboard.workerUrl }}"
+          {{- else if and .Values.worker .Values.worker.enabled }}
+            - name: ENSCHEDULE_WORKER_URL
               value: "http://worker-service:{{ .Values.worker.service.port }}"
+          {{- end }}
             - name: DEBUG
               value: worker-api
             - name: NAFS_URI

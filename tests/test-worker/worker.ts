@@ -6,17 +6,17 @@ import add from "date-fns/add";
 import { z } from "zod";
 import express, { Router } from "express";
 
-const apiKey = process.env.API_KEY;
+const apiKey = process.env.ENSCHEDULE_API_KEY;
 if (!apiKey) {
-  throw new Error('Please set the "API_KEY" environment variable');
+  throw new Error('Please set the "ENSCHEDULE_API_KEY" environment variable');
 }
 
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+const accessTokenSecret = process.env.ENSCHEDULE_ACCESS_TOKEN_SECRET;
+const refreshTokenSecret = process.env.ENSCHEDULE_REFRESH_TOKEN_SECRET;
 const nafsUri = process.env.NAFS_URI;
 if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
   throw new Error(
-    'Please set the "ACCESS_TOKEN_SECRET / REFRESH_TOKEN_SECRET / NAFS_URI" environment variables'
+    'Please set the "ENSCHEDULE_ACCESS_TOKEN_SECRET / ENSCHEDULE_REFRESH_TOKEN_SECRET / NAFS_URI" environment variables'
   );
 }
 
@@ -198,7 +198,7 @@ if (!process.env.SPECIAL_HANDLERS) {
     worker
       .serve(
         {
-          port: process.env.API_PORT ? Number(process.env.API_PORT) : 8080,
+          port: process.env.ENSCHEDULE_API_PORT ? Number(process.env.ENSCHEDULE_API_PORT) : 8080,
           apiKey,
         },
         app

@@ -1,5 +1,15 @@
 # @enschedule/worker
 
+## 1.1.6
+
+### Patch Changes
+
+- Prefix env variables and fix bugs and make helm chart work with a migration job
+- Updated dependencies
+  - @enschedule/worker-api@1.1.5
+  - @enschedule/pg-driver@1.1.6
+  - @enschedule-fns/fetch@0.0.4
+
 ## 1.1.5
 
 ### Patch Changes

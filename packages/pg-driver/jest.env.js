@@ -11,9 +11,9 @@ Object.assign(process.env, {
   DB_PASSWORD: "postgres",
   DB_DATABASE: "postgres",
   DB_PORT: "6543",
-  // ACCESS_TOKEN_SECRET: "secret",
-  // REFRESH_TOKEN_SECRET: "secret",
-  // API_KEY: "secret",
+  // ENSCHEDULE_ACCESS_TOKEN_SECRET: "secret",
+  // ENSCHEDULE_REFRESH_TOKEN_SECRET: "secret",
+  // ENSCHEDULE_API_KEY: "secret",
   // NAFS_URI: `file://${__dirname}/test-data/nafs`,
 });
 

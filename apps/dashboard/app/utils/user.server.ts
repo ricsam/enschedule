@@ -8,17 +8,17 @@ import type { User } from "~/types";
 import { UserSchema } from "~/types";
 
 const getTokenEnvs = () => {
-  const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
+  const ENSCHEDULE_ACCESS_TOKEN_SECRET = process.env.ENSCHEDULE_ACCESS_TOKEN_SECRET;
 
-  if (!ACCESS_TOKEN_SECRET) {
+  if (!ENSCHEDULE_ACCESS_TOKEN_SECRET) {
     throw new Error(
-      "Missing required environment variable ACCESS_TOKEN_SECRET. Please check your .env file."
+      "Missing required environment variable ENSCHEDULE_ACCESS_TOKEN_SECRET. Please check your .env file."
     );
   }
-  return { ACCESS_TOKEN_SECRET };
+  return { ENSCHEDULE_ACCESS_TOKEN_SECRET };
 };
 
-const { ACCESS_TOKEN_SECRET } = getTokenEnvs();
+const { ENSCHEDULE_ACCESS_TOKEN_SECRET } = getTokenEnvs();
 
 export async function authenticate(
   request: Request
@@ -38,7 +38,7 @@ export async function authenticate(
   }
 
   const user = await new Promise<User>((resolve, reject) => {
-    jwt.verify(token, ACCESS_TOKEN_SECRET, (err, user) => {
+    jwt.verify(token, ENSCHEDULE_ACCESS_TOKEN_SECRET, (err, user) => {
       if (err) {
         reject(err);
       } else {

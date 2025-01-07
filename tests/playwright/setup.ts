@@ -49,12 +49,12 @@ export class Setup {
 
   get workerUrl() {
     if (process.env.SKIP_SETUP) {
-      if (!process.env.WORKER_URL) {
+      if (!process.env.ENSCHEDULE_WORKER_URL) {
         throw new Error(
-          "If SKIP_SETUP is enabled you must also provide process.env.WORKER_URL"
+          "If SKIP_SETUP is enabled you must also provide process.env.ENSCHEDULE_WORKER_URL"
         );
       }
-      return process.env.WORKER_URL;
+      return process.env.ENSCHEDULE_WORKER_URL;
     }
     if (!this._workerUrl) {
       throw new Error("Please call setup before accessing this property");
@@ -85,9 +85,9 @@ export class Setup {
       POSTGRES: "true",
       DEBUG: "pg-driver,worker",
       DB_DATABASE: this.TEST_DB,
-      API_KEY: "secret_key",
-      ACCESS_TOKEN_SECRET: "secret_key",
-      REFRESH_TOKEN_SECRET: "secret_key",
+      ENSCHEDULE_API_KEY: "secret_key",
+      ENSCHEDULE_ACCESS_TOKEN_SECRET: "secret_key",
+      ENSCHEDULE_REFRESH_TOKEN_SECRET: "secret_key",
       NAFS_URI: "enstore://admin:password?endpoint=http://localhost:3456",
     };
   }
@@ -288,7 +288,7 @@ export class Setup {
         ...process.env,
         ...this.workerEnvs,
         ENSCHEDULE_API: "true",
-        API_PORT: String(port),
+        ENSCHEDULE_API_PORT: String(port),
       }),
       this.workerPwd,
       (stdout) => stdout.includes("Worker up and running"),
@@ -325,13 +325,13 @@ export class Setup {
       (port) => ({
         ...process.env,
         PORT: String(port),
-        API_KEY: "secret_key",
+        ENSCHEDULE_API_KEY: "secret_key",
         NODE_ENV: "production",
         DEBUG: "worker-api",
-        WORKER_URL: `http://localhost:${workerApiPort}`,
-        ACCESS_TOKEN_SECRET: "secret_key",
-        REFRESH_TOKEN_SECRET: "secret_key",
-        COOKIE_SESSION_SECRET: "s3cr3t",
+        ENSCHEDULE_WORKER_URL: `http://localhost:${workerApiPort}`,
+        ENSCHEDULE_ACCESS_TOKEN_SECRET: "secret_key",
+        ENSCHEDULE_REFRESH_TOKEN_SECRET: "secret_key",
+        ENSCHEDULE_COOKIE_SESSION_SECRET: "s3cr3t",
         NAFS_URI: "enstore://admin:password?endpoint=http://localhost:3456",
       }),
       dashboardPwd,

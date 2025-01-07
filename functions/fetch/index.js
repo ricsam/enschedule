@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { text } = require('node:stream/consumers');
 
 module.exports = async (worker) => {
   worker.registerJob({
@@ -25,8 +26,8 @@ module.exports = async (worker) => {
         body: data.body,
       });
       console.log("status", result.status);
-      console.log("headers", result.headers);
-      const body = await result.body();
+      console.log("headers", Object.fromEntries(result.headers.entries()));
+      const body = await text(result.body);
       console.log("body", body);
     },
     description: "Provide HTTP parameters as data to send a request",

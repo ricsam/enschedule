@@ -93,10 +93,9 @@ WORKDIR /enschedule-functions
 RUN ln -s /app/packages/worker/node_modules /enschedule-functions/node_modules
 
 RUN echo '#!/bin/bash' > docker-entry.sh && \
-    echo 'API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
-    echo 'ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-$(/app/random-token.sh REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_FUNCTIONS=${ENSCHEDULE_FUNCTIONS:-/enschedule-functions/functions.js} \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_ACCESS_TOKEN_SECRET=${ENSCHEDULE_ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_REFRESH_TOKEN_SECRET=${ENSCHEDULE_REFRESH_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
     echo 'enschedule-worker start "$@"' >> docker-entry.sh && \
     chmod +x docker-entry.sh
 
@@ -143,9 +142,9 @@ RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
 
 RUN echo '#!/bin/bash' > docker-entry.sh && \
     echo 'HOST=0.0.0.0 \\' >> docker-entry.sh && \
-    echo 'ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-$(/app/random-token.sh REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET:-$(/app/random-token.sh COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_ACCESS_TOKEN_SECRET=${ENSCHEDULE_ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_REFRESH_TOKEN_SECRET=${ENSCHEDULE_REFRESH_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
+    echo 'ENSCHEDULE_COOKIE_SESSION_SECRET=${ENSCHEDULE_COOKIE_SESSION_SECRET:-$(/app/random-token.sh ENSCHEDULE_COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
     echo 'npm run docker:start' >> docker-entry.sh && \
     chmod +x docker-entry.sh
 

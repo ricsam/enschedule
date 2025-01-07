@@ -59,7 +59,7 @@ export class WorkerAPI {
   private apiVersion: number;
 
   /**
-   * @param apiKey - The API_KEY environment variable provided to the worker
+   * @param apiKey - The ENSCHEDULE_API_KEY environment variable provided to the worker
    * @param url - The URL of the worker e.g. https://localhost or http://my-worker.localdomain.localhost:8080
    */
   constructor(apiKey: string, url: string, options?: WorkerApiOptions) {

@@ -1,5 +1,16 @@
 # @enschedule/hub
 
+## 1.0.8
+
+### Patch Changes
+
+- Prefix env variables and fix bugs and make helm chart work with a migration job
+- Updated dependencies
+  - @enschedule/worker-api@1.1.5
+  - @enschedule/pg-driver@1.1.6
+  - @enschedule/worker@1.1.6
+  - @enschedule/dashboard@1.1.7
+
 ## 1.0.7
 
 ### Patch Changes

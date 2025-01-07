@@ -1,14 +1,14 @@
 import "dotenv/config";
 import { Worker } from "@enschedule/worker";
 
-const apiKey = process.env.API_KEY;
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+const apiKey = process.env.ENSCHEDULE_API_KEY;
+const accessTokenSecret = process.env.ENSCHEDULE_ACCESS_TOKEN_SECRET;
+const refreshTokenSecret = process.env.ENSCHEDULE_REFRESH_TOKEN_SECRET;
 const nafsUri = process.env.NAFS_URI;
 
 if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
   throw new Error(
-    "Missing required environment variables (ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI)"
+    "Missing required environment variables (ENSCHEDULE_ACCESS_TOKEN_SECRET, ENSCHEDULE_REFRESH_TOKEN_SECRET, NAFS_URI)"
   );
 }
 const worker = new Worker({

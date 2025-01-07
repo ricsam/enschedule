@@ -11,9 +11,9 @@ type SessionData = {
 };
 
 let httpsOnlyCookies = false;
-if (process.env.HTTPS_ONLY_COOKIES && process.env.HTTPS_ONLY_COOKIES.trim()) {
+if (process.env.ENSCHEDULE_HTTPS_ONLY_COOKIES && process.env.ENSCHEDULE_HTTPS_ONLY_COOKIES.trim()) {
   httpsOnlyCookies = true;
-  if (process.env.HTTPS_ONLY_COOKIES.toLowerCase().trim() === "false") {
+  if (process.env.ENSCHEDULE_HTTPS_ONLY_COOKIES.toLowerCase().trim() === "false") {
     httpsOnlyCookies = false;
   }
 }
@@ -21,12 +21,12 @@ if (process.env.HTTPS_ONLY_COOKIES && process.env.HTTPS_ONLY_COOKIES.trim()) {
 let sessionSecret: string[];
 const parsed = z
   .array(z.string())
-  .safeParse(process.env.COOKIE_SESSION_SECRET?.split(","));
+  .safeParse(process.env.ENSCHEDULE_COOKIE_SESSION_SECRET?.split(","));
 if (parsed.success) {
   sessionSecret = parsed.data;
 } else {
   throw new Error(
-    `Invalid value for environment variable "COOKIE_SESSION_SECRET". It must be assigned a comma-separated list of strings e.g. COOKIE_SESSION_SECRET=s3cr3t,0ldS3cr3t. See remix cookie session documentation for more information.`
+    `Invalid value for environment variable "ENSCHEDULE_COOKIE_SESSION_SECRET". It must be assigned a comma-separated list of strings e.g. ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t,0ldS3cr3t. See remix cookie session documentation for more information.`
   );
 }
 

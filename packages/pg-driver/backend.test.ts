@@ -79,7 +79,7 @@ const httpJobDeclaration = (
 const startInstance = async (backend: TestBackend) => {
   try {
     await backend.getSequelize().drop({});
-    await backend.getSequelize().sync({ force: true });
+    await backend.migrateDatabase();
   } catch (err) {}
 };
 const closeInstance = async (backend: TestBackend) => {

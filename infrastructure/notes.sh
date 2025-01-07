@@ -8,7 +8,9 @@ minikube start
 
 npm run build
 
-helm uninstall enschedule
+helm uninstall enschedule -n enschedule
+kubectl delete ns enschedule
+kubectl create ns enschedule
 
 while [[ $(kubectl get pods | wc -l) -gt 0 ]]; do
   sleep 5
@@ -21,6 +23,7 @@ minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-worker:alpha'
 minikube image load --overwrite=true 'ghcr.io/ricsam/enschedule-dashboard:alpha'
 
 helm upgrade --install enschedule ./charts/enschedule \
+  --namespace enschedule \
   --set worker.image.pullPolicy=Never \
   --set dashboard.image.pullPolicy=Never \
   --set dashboard.service.type=NodePort \
@@ -41,7 +44,7 @@ export CONTAINER_PORT=$(kubectl get pod --namespace default $POD_NAME -o jsonpat
 echo "Visit http://127.0.0.1:8888 to use your application"
 kubectl --namespace default port-forward $POD_NAME 8888:$CONTAINER_PORT
 
-COOKIE_SESSION_SECRET=s3cr3t ACCESS_TOKEN_SECRET=secret_key REFRESH_TOKEN_SECRET=secret_key API_KEY=secret_key WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
+ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key ENSCHEDULE_API_KEY=secret_key ENSCHEDULE_WORKER_URL=http://localhost:8888 DEBUG=worker-api yarn run docker:start
 
 docker container run \
   --name enschedule-worker \
@@ -63,13 +66,13 @@ docker container run \
   --rest-api \
   -k secret_key
 
-docker container run --rm -e COOKIE_SESSION_SECRET=s3cr3t -e ACCESS_TOKEN_SECRET=secret_key -e REFRESH_TOKEN_SECRET=secret_key -e API_KEY=secret_key -e WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:alpha
+docker container run --rm -e ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t -e ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key -e ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key -e ENSCHEDULE_API_KEY=secret_key -e ENSCHEDULE_WORKER_URL=http://localhost:3030 -e DEBUG=worker-api -p 8080:3000 ghcr.io/ricsam/enschedule-dashboard:alpha
 
 
 # run dashboard
-NODE_ENV=production PORT=3501 DEBUG=worker-api API_KEY=secret_key WORKER_URL="http://localhost:8080" yarn run docker:start
+NODE_ENV=production PORT=3501 DEBUG=worker-api ENSCHEDULE_API_KEY=secret_key ENSCHEDULE_WORKER_URL="http://localhost:8080" yarn run docker:start
 # run worker
-ENSCHEDULE_API=true API_PORT=8080 yarn run serve # in test-worker folder
+ENSCHEDULE_API=true ENSCHEDULE_API_PORT=8080 yarn run serve # in test-worker folder
 
 # run helm tests
 TEST_HELM=true DASHBOARD_URL=http://127.0.0.1:3000 pnpm run playwright test

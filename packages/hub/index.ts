@@ -182,18 +182,18 @@ export const enschedule = async (
   options: EnscheduleOptions
 ): Promise<Express | undefined> => {
   let worker: undefined | WorkerAPI | PrivateBackend;
-  const apiKey = options.worker.apiKey ?? process.env.API_KEY;
+  const apiKey = options.worker.apiKey ?? process.env.ENSCHEDULE_API_KEY;
   if (options.worker.type === "external") {
     worker = new WorkerAPI(options.worker.apiKey, options.worker.url);
   } else {
     const accessTokenSecret =
-      options.worker.accessTokenSecret ?? process.env.ACCESS_TOKEN_SECRET;
+      options.worker.accessTokenSecret ?? process.env.ENSCHEDULE_ACCESS_TOKEN_SECRET;
     const refreshTokenSecret =
-      options.worker.refreshTokenSecret ?? process.env.REFRESH_TOKEN_SECRET;
+      options.worker.refreshTokenSecret ?? process.env.ENSCHEDULE_REFRESH_TOKEN_SECRET;
     const nafsUri = options.worker.nafsUri ?? process.env.NAFS_URI;
     if (!accessTokenSecret || !refreshTokenSecret || !nafsUri) {
       throw new Error(
-        "Missing required environment variables (ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, NAFS_URI)"
+        "Missing required environment variables (ENSCHEDULE_ACCESS_TOKEN_SECRET, ENSCHEDULE_REFRESH_TOKEN_SECRET, NAFS_URI)"
       );
     }
     const iWorker = new PrivateBackend({

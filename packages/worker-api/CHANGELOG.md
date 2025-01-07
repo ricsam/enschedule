@@ -1,5 +1,11 @@
 # @enschedule/worker-api
 
+## 1.1.5
+
+### Patch Changes
+
+- Prefix env variables and fix bugs and make helm chart work with a migration job
+
 ## 1.1.4
 
 ### Patch Changes

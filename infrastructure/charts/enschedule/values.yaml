@@ -31,6 +31,9 @@ config:
   adminAccount: "adm1n:s3cr3t"
 
 worker:
+  # Disable the worker and set the workerUrl on the dashboard
+  enabled: true
+
   replicaCount: 1
 
   image:
@@ -93,6 +96,10 @@ worker:
   tolerations: []
 
   affinity: {}
+
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraEnvs: []
 
 database:
   replicaCount: 1
@@ -157,6 +164,9 @@ database:
   affinity: {}
 
 dashboard:
+
+  workerUrl: # if you have a custom worker set the url here.
+
   replicaCount: 1
 
   image:
@@ -292,3 +302,54 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+
+migrationJob:
+  # Disable the worker and set the workerUrl on the dashboard
+  enabled: true
+
+  image:
+    repository: ghcr.io/ricsam/enschedule-worker
+    pullPolicy: IfNotPresent
+    tag: "alpha"
+
+  dbWaitImage:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets: []
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  extraVolumes: []
+  extraVolumeMounts: []
+  extraEnvs: []

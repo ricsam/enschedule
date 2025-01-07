@@ -7,7 +7,7 @@ if (!dashboardUrl) {
     "You must provide the DASHBOARD_URL env pointing to the url of the deployed helm chart"
   );
 }
-export const workerUrl = process.env.WORKER_URL;
+export const workerUrl = process.env.ENSCHEDULE_WORKER_URL;
 
 test.describe.configure({ mode: "serial" });
 

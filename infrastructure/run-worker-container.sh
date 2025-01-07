@@ -6,8 +6,8 @@ cd $SCRIPT_DIR
 
 docker container run \
   --rm \
-  -e API_PORT=3000 \
-  -e API_KEY=secret_key \
+  -e ENSCHEDULE_API_PORT=3000 \
+  -e ENSCHEDULE_API_KEY=secret_key \
   -e ENSCHEDULE_API=true \
   -e POSTGRES=true \
   -e DB_USER=postgres \

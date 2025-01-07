@@ -40,7 +40,7 @@ helm upgrade --devel --install enschedule enschedule/enschedule --version v0.0.1
 
 Advanced options:
 ```bash
-ACCESS_TOKEN_SECRET=secret       # signs the short lived access JWT token
-REFRESH_TOKEN_SECRET=secret      # signs the long lived access JWT token
-COOKIE_SESSION_SECRET=secret     # signs the cookies
+ENSCHEDULE_ACCESS_TOKEN_SECRET=secret       # signs the short lived access JWT token
+ENSCHEDULE_REFRESH_TOKEN_SECRET=secret      # signs the long lived access JWT token
+ENSCHEDULE_COOKIE_SESSION_SECRET=secret     # signs the cookies
 ```

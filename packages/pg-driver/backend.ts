@@ -71,6 +71,7 @@ import type { SeqConstructorOptions } from "./env-sequalize-options";
 import { envSequalizeOptions } from "./env-sequalize-options";
 import { log } from "./log";
 import { migrations as databaseMigrations } from "./migrations";
+import { version as packageVersion } from "./version";
 
 function createWorkerHash({
   title,
@@ -347,6 +348,15 @@ type WorkerAttributes = InferAttributes<
     omit: "runs" | "lastRun";
   }
 >;
+
+export class EnscheduleMeta extends Model<
+  InferAttributes<EnscheduleMeta>,
+  InferCreationAttributes<EnscheduleMeta>
+> {
+  declare id: CreationOptional<number>;
+  declare driverVersion: number;
+  declare enscheduleVersion: string;
+}
 
 export class Worker extends Model<
   WorkerAttributes,
@@ -778,6 +788,30 @@ export class PrivateBackend {
       : new Sequelize(database);
 
     this.sequelize = sequelize;
+
+    EnscheduleMeta.init(
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
+          primaryKey: true,
+          allowNull: false,
+        },
+        driverVersion: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+        },
+        enscheduleVersion: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+      },
+      {
+        sequelize,
+        modelName: "EnscheduleMeta",
+        tableName: "EnscheduleMeta",
+      }
+    );
 
     Worker.init(
       {
@@ -2745,28 +2779,128 @@ export class PrivateBackend {
       .map(createPublicWorker);
   }
 
+  private driverVersion = 1;
+
   public async migrateDatabase() {
     log(
       `Migrating the database using the (${databaseMigrations.length}) saved migrations`
     );
 
-    // maybe for future
-    // 1 load migration files
-    // 2 check with database which migrations have been run
-    // 3 run the migrations that have not been run
+    const migrate = async () => {
+      const umzug = new Umzug({
+        migrations: databaseMigrations,
+        context: this.sequelize.getQueryInterface(),
+        storage: new SequelizeStorage({
+          sequelize: this.sequelize,
+        }),
+        logger: {
+          info: log,
+          error: log,
+          warn: log,
+          debug: log,
+        }
+      });
 
-    const umzug = new Umzug({
-      migrations: databaseMigrations,
-      context: this.sequelize.getQueryInterface(),
-      storage: new SequelizeStorage({
-        sequelize: this.sequelize,
-      }),
-      logger: console,
-    });
+      await umzug.up();
+    };
 
-    await umzug.up();
+    const migrateMeta = async () => {
+      const umzug = new Umzug({
+        migrations: [
+          {
+            name: "00000-meta-initial",
+            up: async ({ context: queryInterface }) => {
+              return queryInterface.sequelize.transaction(
+                async (transaction) => {
+                  await queryInterface.createTable(
+                    "EnscheduleMeta",
+                    {
+                      id: {
+                        type: DataTypes.INTEGER,
+                        autoIncrement: true,
+                        primaryKey: true,
+                        allowNull: false,
+                      },
+                      driverVersion: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                      },
+                      enscheduleVersion: {
+                        type: DataTypes.STRING,
+                        allowNull: false,
+                      },
+                      createdAt: {
+                        type: DataTypes.DATE,
+                        allowNull: false,
+                      },
+                      updatedAt: {
+                        type: DataTypes.DATE,
+                        allowNull: false,
+                      },
+                    },
+                    { transaction }
+                  );
+                }
+              );
+            },
 
-    // await this.sequelize.sync();
+            down: async ({ context: queryInterface }) => {
+              return queryInterface.sequelize.transaction(
+                async (transaction) => {
+                  await queryInterface.dropTable("EnscheduleMeta", {
+                    transaction,
+                  });
+                }
+              );
+            },
+          },
+        ],
+        context: this.sequelize.getQueryInterface(),
+        storage: new SequelizeStorage({
+          sequelize: this.sequelize,
+          modelName: "EnscheduleMetaMigrations",
+        }),
+        logger: {
+          info: log,
+          error: log,
+          warn: log,
+          debug: log,
+        }
+      });
+
+      await umzug.up();
+    };
+
+    let versionRow: EnscheduleMeta | null = null;
+    try {
+      versionRow = await EnscheduleMeta.findByPk(1);
+    } catch (err) {
+      // has not migrated the database yet
+      await migrateMeta();
+    }
+    if (!versionRow) {
+      versionRow = await EnscheduleMeta.create({
+        id: 1,
+        driverVersion: this.driverVersion,
+        enscheduleVersion: packageVersion,
+      });
+    }
+
+    const dbDriverVersion = versionRow.driverVersion;
+    const dbEnscheduleVer = versionRow.enscheduleVersion;
+
+    // the database has been migrated using a newer version of the worker. Therefore this worker will not work.
+    if (dbDriverVersion > this.driverVersion) {
+      throw new Error(
+        `This worker is outdated, please update to ${dbEnscheduleVer}`
+      );
+    }
+    // if (this.driverVersion >= dbDriverVersion) { // implied
+    await migrate();
+    versionRow.driverVersion = this.driverVersion;
+    versionRow.enscheduleVersion = packageVersion;
+    await versionRow.save();
+    // }
 
     if (process.env.ADMIN_ACCOUNT) {
       const result = z
@@ -2805,6 +2939,7 @@ export class PrivateBackend {
       // async check
       return;
     }
+    await this.checkVersion();
     await this.registerWorker();
     log("Polling the database for jobs");
     const now = Date.now();
@@ -2826,7 +2961,26 @@ export class PrivateBackend {
     }
   }
 
+  private async checkVersion() {
+    const versionRow = await EnscheduleMeta.findByPk(1);
+    if (!versionRow) {
+      throw new Error("Database not migrated");
+    }
+    if (versionRow.driverVersion !== this.driverVersion) {
+      if (versionRow.driverVersion > this.driverVersion) {
+        throw new Error(
+          `This worker is outdated, please update this worker to the following version: ${versionRow.enscheduleVersion}`
+        );
+      } else {
+        throw new Error(
+          `The database was migrated using a worker of version ${versionRow.enscheduleVersion} while this worker is of version ${packageVersion}. Please migrate the database`
+        );
+      }
+    }
+  }
+
   protected async tick() {
+    await this.checkVersion();
     await this.registerWorker();
     await this.runOverdueJobs();
   }

@@ -81,9 +81,10 @@ jobs:
             --network enschedule_docker_test \
             -e SQLITE=":memory:" \
             -e ENSCHEDULE_FUNCTIONS="@enschedule-fns/fetch @enschedule-fns/log" \
-            -e ACCESS_TOKEN_SECRET=secret_key \
-            -e REFRESH_TOKEN_SECRET=secret_key \
-            -e COOKIE_SESSION_SECRET=s3cr3t \
+            -e ENSCHEDULE_MIGRATE=true \
+            -e ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key \
+            -e ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key \
+            -e ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t \
             -e ADMIN_ACCOUNT=adm1n:s3cr3t \
             -e NAFS_URI=file:///var/logs/enschedule \
             -p 3333:3000 \

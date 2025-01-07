@@ -12,10 +12,10 @@ brew install pstree
 
 #### Develop UI
 ```
-echo 'WORKER_URL=http://localhost:3333\nAPI_KEY=secret_key' > apps/dashboard/.env
+echo 'ENSCHEDULE_WORKER_URL=http://localhost:3333\nAPI_KEY=secret_key' > apps/dashboard/.env
 
 npm run dev
-SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
+SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 ENSCHEDULE_WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
 ```
 
 #### Run all tests in parallel
@@ -77,7 +77,7 @@ pnpm run --filter test-worker seed
 pnpm run --filter @enschedule/dashboard build
 
 pnpm run dev
-SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
+SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 ENSCHEDULE_WORKER_URL=http://localhost:3333 pnpm run playwright test --ui
 ```
 
 ## Build images to test container locally
@@ -87,9 +87,9 @@ docker container run -itd --rm \
   --name enschedule-dashboard \
   -e SQLITE=":memory:" \
   -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \
-  -e ACCESS_TOKEN_SECRET=secret_key \
-  -e REFRESH_TOKEN_SECRET=secret_key \
-  -e COOKIE_SESSION_SECRET=s3cr3t \
+  -e ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key \
+  -e ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key \
+  -e ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t \
   -e ADMIN_ACCOUNT=adm1n:s3cr3t \
   -p 3333:3000 \
   ghcr.io/ricsam/enschedule-dashboard:alpha
@@ -97,7 +97,7 @@ docker container run -itd --rm \
 
 ## Utils
 ```
-TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 WORKER_URL=http://localhost:3333 pnpm run playwright test --grep create_many_runs
+TEST_UTILS=true SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 ENSCHEDULE_WORKER_URL=http://localhost:3333 pnpm run playwright test --grep create_many_runs
 ```
 
 ## Debug playwright in the UI

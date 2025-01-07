@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.6
+
+### Patch Changes
+
+- Prefix env variables and fix bugs and make helm chart work with a migration job
+
 ## 1.1.5
 
 ### Patch Changes

@@ -52,23 +52,23 @@ Configuration of the `@enschedule/dashboard` is primarily handled through enviro
 
 #### @enschedule/dashboard environment variables
 
-Only a `WORKER_URL` or database connection variables are required to run `@enschedule/dashboard`
+Only a `ENSCHEDULE_WORKER_URL` or database connection variables are required to run `@enschedule/dashboard`
 
 | Variable           | Description                                                                                                                                                 | Accepted Values          |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `WORKER_URL`       | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL                      |
-| `API_KEY`          | The API key for authenticating with the worker service.                                                                                                     | `string`                 |
-| `DB_USER`          | The username for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
-| `DB_HOST`          | The host address of the database. Not used if `WORKER_URL` is provided.                                                                                     | `string`                 |
-| `DB_PASSWORD`      | The password for the database. Not used if `WORKER_URL` is provided.                                                                                        | `string`                 |
-| `DB_DATABASE`      | The name of the database to connect to. Not used if `WORKER_URL` is provided.                                                                               | `string`                 |
-| `DB_PORT`          | The port number on which the database server is running. Not used if `WORKER_URL` is provided.                                                              | `integer`                |
-| `ORM_LOGGING`      | Enables or disables ORM logging. Not used if `WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
+| `ENSCHEDULE_WORKER_URL`       | The URL to a worker service. If provided, the application will use this worker for database operations instead of establishing its own database connection. | URL                      |
+| `ENSCHEDULE_API_KEY`          | The API key for authenticating with the worker service.                                                                                                     | `string`                 |
+| `DB_USER`          | The username for the database. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                                                        | `string`                 |
+| `DB_HOST`          | The host address of the database. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                                                     | `string`                 |
+| `DB_PASSWORD`      | The password for the database. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                                                        | `string`                 |
+| `DB_DATABASE`      | The name of the database to connect to. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                                               | `string`                 |
+| `DB_PORT`          | The port number on which the database server is running. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                              | `integer`                |
+| `ORM_LOGGING`      | Enables or disables ORM logging. Not used if `ENSCHEDULE_WORKER_URL` is provided.                                                                                      | `bool` default `"false"` |
 | `IMPORT_FUNCTIONS` | Comma separated list of node modules that are imported to define functions or schedules                                                                      | `string`                 |
 
 ##### Database dialect options
 
-You have to provide a valid database connection for enschedule to run OR a `WORKER_URL` that the dashboard connects to instead.
+You have to provide a valid database connection for enschedule to run OR a `ENSCHEDULE_WORKER_URL` that the dashboard connects to instead.
 
 Enschedule uses sequalize as the ORM. The dialects supported by sequalize v6 are supported by enschedule.
 
@@ -570,7 +570,7 @@ const cp = require("child_process");
 
 module.exports = async (worker, functions) => {
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     functions['@enschedule-fns/log'],
     1,
     {
@@ -594,7 +594,7 @@ const cp = require("child_process");
 
 module.exports = async (worker, functions) => {
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     'log-job'
     1,
     {

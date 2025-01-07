@@ -21,14 +21,14 @@ services:
       - DB_HOST=postgres
       - DB_PASSWORD=postgres
       - DB_DATABASE=postgres
-      - API_KEY=secret_key
+      - ENSCHEDULE_API_KEY=secret_key
       - ENSCHEDULE_API=true
-      - API_PORT=3000
-      - API_HOSTNAME=worker
+      - ENSCHEDULE_API_PORT=3000
+      - ENSCHEDULE_API_HOSTNAME=worker
       - DB_PORT=5432
       - DEBUG=pg-driver
-      - ACCESS_TOKEN_SECRET=secret_key
-      - REFRESH_TOKEN_SECRET=secret_key
+      - ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key
+      - ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key
     volumes:
       - "${PWD}/charts/enschedule/files:/app/packages/worker/definitions"
   dashboard:
@@ -41,10 +41,10 @@ services:
     ports:
       - "8008:3000"
     environment:
-      - COOKIE_SESSION_SECRET=s3cr3t
-      - API_KEY=secret_key
-      - WORKER_URL=http://worker:3000
+      - ENSCHEDULE_COOKIE_SESSION_SECRET=s3cr3t
+      - ENSCHEDULE_API_KEY=secret_key
+      - ENSCHEDULE_WORKER_URL=http://worker:3000
       - DEBUG=worker-api
       - NODE_ENV=production
-      - ACCESS_TOKEN_SECRET=secret_key
-      - REFRESH_TOKEN_SECRET=secret_key
+      - ENSCHEDULE_ACCESS_TOKEN_SECRET=secret_key
+      - ENSCHEDULE_REFRESH_TOKEN_SECRET=secret_key

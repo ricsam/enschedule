@@ -1,10 +1,13 @@
-{{- if .Values.worker }}
+{{- if .Values.worker.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker
   labels:
     {{- include "enschedule.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "2"
 spec:
   replicas: {{ .Values.worker.replicaCount }}
   selector:
@@ -30,12 +33,18 @@ spec:
         - name: worker-config
           configMap:
             name: {{ include "enschedule.fullname" . }}-worker-config
+        {{- if .Values.worker.extraVolumes }}
+        {{- toYaml .Values.worker.extraVolumes | nindent 8 }}
+        {{- end }}
       containers:
         - name: worker
           volumeMounts:
             - name: worker-config
               mountPath: /enschedule-functions/functions.js
               subPath: functions.js
+            {{- if .Values.worker.extraVolumeMounts }}
+            {{- toYaml .Values.worker.extraVolumeMounts | nindent 12 }}
+            {{- end }}
           securityContext:
             {{- toYaml .Values.worker.securityContext | nindent 12 }}
           image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
@@ -73,17 +82,17 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: nafsUri
-            - name: API_KEY
+            - name: ENSCHEDULE_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: apiKey
-            - name: ACCESS_TOKEN_SECRET
+            - name: ENSCHEDULE_ACCESS_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: secrets
                   key: accessTokenSecret
-            - name: REFRESH_TOKEN_SECRET
+            - name: ENSCHEDULE_REFRESH_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: secrets
@@ -95,18 +104,21 @@ spec:
                   key: adminAccount
             - name: ENSCHEDULE_API
               value: "true"
-            - name: API_PORT
+            - name: ENSCHEDULE_API_PORT
               value: "8000"
             - name: DB_PORT
               value: {{ .Values.database.service.port | quote }}
             - name: DEBUG
               value: "pg-driver,worker"
-            - name: WORKER_ID
+            - name: ENSCHEDULE_WORKER_ID
               value: "helm-deployed-worker"
-            - name: WORKER_NAME
+            - name: ENSCHEDULE_WORKER_NAME
               value: "Default worker"
-            - name: WORKER_DESCRIPTION
+            - name: ENSCHEDULE_WORKER_DESCRIPTION
               value: "Worker deplyed with the helm chart"
+            {{- if .Values.worker.extraEnvs }}
+            {{- toYaml .Values.worker.extraEnvs | nindent 12 }}
+            {{- end }}
       {{- with .Values.worker.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

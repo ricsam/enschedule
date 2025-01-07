@@ -1,6 +1,6 @@
 {
   "name": "@enschedule/pg-driver",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "module": "./index.ts",
   "main": "./index.ts",
   "types": "./index.ts",
@@ -19,7 +19,7 @@
   "scripts": {
     "lint": "eslint -f visualstudio .",
     "test": "jest",
-    "build": "tsc -p ./tsconfig.json"
+    "build": "node ./check-version.js && tsc -p ./tsconfig.json"
   },
   "files": [
     "index.ts",

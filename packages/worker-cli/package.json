@@ -1,11 +1,12 @@
 {
   "name": "@enschedule/worker-cli",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A CLI for the Enschedule Worker",
   "main": "dist/cli.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc && chmod +x dist/cli.js"
+    "build": "tsc && chmod +x dist/cli.js",
+    "lint": "eslint -f visualstudio ."
   },
   "bin": {
     "enschedule-worker": "dist/cli.js"

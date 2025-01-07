@@ -93,7 +93,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   });
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "long-running",
     1,
     {},
@@ -106,7 +106,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "send-http-request",
     1,
     { url: "http://localhost:3000" },
@@ -121,7 +121,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "send-http-request",
     10,
     { url: "http://localhost:3000" },
@@ -135,7 +135,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "log-job",
     1,
     { message: "Sending email" },
@@ -148,7 +148,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "log-job",
     1,
     { message: "Purging logs..." },
@@ -161,7 +161,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "error-job",
     1,
     { message: "Failed to copy data from postgres into elasticsearch" },
@@ -177,7 +177,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   const notify = await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "log-job",
     1,
     { message: "Will notify on slack..." },
@@ -189,7 +189,7 @@ export const registerDemoFunctionsAndSchedules = async (worker: Worker) => {
   );
 
   await worker.scheduleJob(
-    `Api-Key ${process.env.API_KEY}`,
+    `Api-Key ${process.env.ENSCHEDULE_API_KEY}`,
     "error-job",
     1,
     { message: "Failed to update ssl certs" },

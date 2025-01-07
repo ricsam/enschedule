@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { Command, Option } from "commander";
-import fs from "fs";
-
-import { Worker } from "@enschedule/worker";
-import { debug } from "debug";
-import path from "path";
-import os from "os";
+import fs from "node:fs";
 import type http from "node:http";
+import os from "node:os";
+import path from "node:path";
+import crypto from "node:crypto";
+import { debug } from "debug";
+import { Command, Option } from "commander";
+import { Worker } from "@enschedule/worker";
 import { z } from "zod";
 
 const log = debug("worker-cli");
@@ -18,15 +18,47 @@ function createSecretKey(envKey: string) {
   if (!fs.existsSync(tokenFile)) {
     fs.writeFileSync(tokenFile, JSON.stringify({}));
   }
-  const tokens: Record<string, string> = JSON.parse(
-    fs.readFileSync(tokenFile, "utf-8")
-  );
+  const tokens: Record<string, string> = z
+    .record(z.string())
+    .parse(JSON.parse(fs.readFileSync(tokenFile, "utf-8")));
   if (!tokens[envKey]) {
-    tokens[envKey] = require("crypto").randomBytes(64).toString("hex");
+    tokens[envKey] = crypto.randomBytes(64).toString("hex");
     fs.writeFileSync(tokenFile, JSON.stringify(tokens));
   }
   return tokens[envKey];
 }
+
+const parseBoolEnv = (_val: string) => {
+  const val = _val.toLowerCase();
+  if (val === "true") {
+    return true;
+  } else if (val === "false") {
+    return false;
+  } else if (val === "no") {
+    return false;
+  } else if (val === "yes") {
+    return true;
+  } else if (val === "0") {
+    return false;
+  } else if (val === "1") {
+    return true;
+  } else if (val === "") {
+    return true;
+  }
+  return Boolean(val);
+};
+const boolParser = (short: string, long: string, env: string) => () => {
+  if (
+    program.args.includes(`-${short}`) ||
+    program.args.includes(`--${long}`)
+  ) {
+    return true;
+  }
+  if (typeof process.env[env] === "string") {
+    return parseBoolEnv(process.env[env]);
+  }
+  return false;
+};
 
 const program = new Command();
 
@@ -41,19 +73,23 @@ program
 const startCmd = new Command("start")
   .description("Start the enschedule worker")
   .addOption(
-    new Option("-w, --worker-id <id>", "The id of the worker").env("WORKER_ID")
+    new Option("-w, --worker-id <id>", "The id of the worker").env(
+      "ENSCHEDULE_WORKER_ID"
+    )
   )
   .addOption(
-    new Option("-n, --name <name>", "The name of the worker").env("WORKER_NAME")
+    new Option("-n, --name <name>", "The name of the worker").env(
+      "ENSCHEDULE_WORKER_NAME"
+    )
   )
   .addOption(
     new Option("-d, --desc <description>", "The description of the worker").env(
-      "WORKER_DESCRIPTION"
+      "ENSCHEDULE_WORKER_DESCRIPTION"
     )
   )
   .addOption(
     new Option("-i, --poll-interval [number]", "The poll interval in seconds")
-      .env("POLL_INTERVAL")
+      .env("ENSCHEDULE_POLL_INTERVAL")
       .default(10)
   )
   .addOption(
@@ -66,15 +102,16 @@ const startCmd = new Command("start")
     new Option("-r, --rest-api", "Flag to disable or enable the REST API")
       .env("ENSCHEDULE_API")
       .default(false)
+      .argParser(boolParser("r", "rest-api", "ENSCHEDULE_API"))
   )
   .addOption(
     new Option("-h, --hostname [hostname]", "The hostname to listen on")
-      .env("API_HOSTNAME")
+      .env("ENSCHEDULE_API_HOSTNAME")
       .default("localhost")
   )
   .addOption(
     new Option("-p, --port <number>", "port number")
-      .env("API_PORT")
+      .env("ENSCHEDULE_API_PORT")
       .default(3000)
   )
   .option(
@@ -86,17 +123,56 @@ const startCmd = new Command("start")
     new Option(
       "-a, --access-token-secret [secret]",
       "The secret used to sign access tokens"
-    ).env("ACCESS_TOKEN_SECRET")
+    ).env("ENSCHEDULE_ACCESS_TOKEN_SECRET")
   )
   .addOption(
     new Option(
       "-t, --refresh-token-secret [secret]",
       "The secret used to sign refresh tokens"
-    ).env("REFRESH_TOKEN_SECRET")
+    ).env("ENSCHEDULE_REFRESH_TOKEN_SECRET")
   )
-  .addOption(new Option("-k, --api-key [key]", "The API key").env("API_KEY"))
+  .addOption(
+    new Option("-k, --api-key [key]", "The API key").env("ENSCHEDULE_API_KEY")
+  )
   .addOption(new Option("-u, --nafs-uri [uri]", "The NAFS URI").env("NAFS_URI"))
-  .action(async (options) => {
+  .addOption(
+    new Option("-m, --migrate", "Flag to enable migration")
+      .env("ENSCHEDULE_MIGRATE")
+      .default(false)
+      .argParser(boolParser("m", "migrate", "ENSCHEDULE_MIGRATE"))
+  )
+  .addOption(
+    new Option("-q, --disable-polling", "Flag to disable polling")
+      .env("ENSCHEDULE_DISABLE_POLLING")
+      .default(false)
+      .argParser(
+        boolParser("q", "disable-polling", "ENSCHEDULE_DISABLE_POLLING")
+      )
+  )
+  .action(async (_options) => {
+    const options = z
+      .object({
+        workerId: z.string({ message: "worker id is required" }),
+        name: z.string({ message: "worker name is required" }),
+        desc: z.string().optional(),
+        pollInterval: z.coerce.number().int().positive(),
+        functions: z.array(z.string()).optional(),
+        restApi: z.boolean(),
+        hostname: z.string().optional(),
+        port: z.coerce.number().int().positive(),
+        logJobs: z.boolean(),
+        accessTokenSecret: z
+          .string()
+          .default(() => createSecretKey("accessTokenSecret")),
+        refreshTokenSecret: z
+          .string()
+          .default(() => createSecretKey("refreshTokenSecret")),
+        apiKey: z.string().optional(),
+        nafsUri: z.string(),
+        migrate: z.boolean(),
+        disablePolling: z.boolean(),
+      })
+      .parse(_options);
     let server: http.Server | undefined;
 
     function shutdown() {
@@ -120,76 +196,73 @@ const startCmd = new Command("start")
     });
 
     const worker = new Worker({
-      workerId: z
-        .string({ message: "worker id is required" })
-        .parse(options.workerId),
-      name: z
-        .string({ message: "worker name is required" })
-        .parse(options.name),
-      description: z.string().optional().parse(options.desc),
-      accessTokenSecret:
-        options.accessTokenSecret ?? createSecretKey("accessTokenSecret"),
-      refreshTokenSecret:
-        options.refreshTokenSecret ?? createSecretKey("refreshTokenSecret"),
+      workerId: options.workerId,
+      name: options.name,
+      description: options.desc,
+      accessTokenSecret: options.accessTokenSecret,
+      refreshTokenSecret: options.refreshTokenSecret,
       apiKey: options.apiKey,
       nafsUri: options.nafsUri,
     });
     worker.logJobs = z.boolean().parse(options.logJobs);
-    const pollInterval = z.coerce
-      .number()
-      .int()
-      .positive()
-      .safeParse(Number(options.pollInterval));
 
-    worker.pollInterval = pollInterval.success ? pollInterval.data : 10;
+    worker.pollInterval = options.pollInterval;
 
-    void (async () => {
-      const importFn = async (requirePath: string): Promise<void> => {
-        const parts = requirePath.split(/,| +/);
-        if (parts.length === 1) {
-          try {
-            await require(requirePath)(worker);
-          } catch (err) {
-            console.error("Error loading function", requirePath, err);
-          }
-        } else {
-          await Promise.all(parts.map(importFn));
+    const importFn = async (requirePath: string): Promise<void> => {
+      const parts = requirePath.split(/,| +/);
+      if (parts.length === 1) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-var-requires
+          await require(requirePath)(worker);
+        } catch (err) {
+          console.error("Error loading function", requirePath, err);
         }
-      };
-
-      if (options.functions) {
-        await Promise.all(options.functions.map(importFn));
+      } else {
+        await Promise.all(parts.map(importFn));
       }
+    };
 
-      const ranJob = await worker.listenForIncomingRuns();
-      if (ranJob) {
-        return;
-      }
+    if (options.functions) {
+      await Promise.all(options.functions.map(importFn));
+    }
 
+    const ranJob = await worker.listenForIncomingRuns();
+    if (ranJob) {
+      return;
+    }
+
+    if (options.migrate) {
       await worker.migrateDatabase();
+    }
 
-      if (options.restApi) {
-        if (!options.apiKey) {
-          throw new Error("API key is required when enabling the REST API");
-        }
-        server = worker
-          .serve({
-            port: z.coerce
-              .number({ message: "port must be an int" })
-              .int()
-              .parse(options.port),
-            hostname: z.string().optional().parse(options.hostname),
-            apiKey: options.apiKey,
-          })
-          .listen();
+    if (options.restApi) {
+      if (!options.apiKey) {
+        throw new Error("API key is required when enabling the REST API");
       }
+      server = worker
+        .serve({
+          port: z.coerce
+            .number({ message: "port must be an int" })
+            .int()
+            .parse(options.port),
+          hostname: z.string().optional().parse(options.hostname),
+          apiKey: options.apiKey,
+        })
+        .listen();
+    }
 
+    if (!options.disablePolling) {
       await worker.startPolling({ dontMigrate: true });
-    })();
+    }
   });
 
 program.addCommand(startCmd);
 
 //---------------------------------------
 // Parse CLI
-program.parseAsync(process.argv);
+(async () => {
+  await program.parseAsync(process.argv);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

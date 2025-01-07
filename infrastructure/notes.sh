@@ -30,7 +30,8 @@ helm upgrade --install enschedule ./charts/enschedule \
   --set dashboard.service.port=3000
 
 # Get the URL to access the dashboard
-minikube service dashboard-service --url
+minikube service -n enschedule dashboard-service --url
+TEST_HELM=true DASHBOARD_URL=http://127.0.0.1:$PORT pnpm run playwright test --ui
 
 # dashboard
 export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/name=dashboard" -o jsonpath="{.items[0].metadata.name}")

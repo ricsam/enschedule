@@ -116,6 +116,8 @@ spec:
               value: "Default worker"
             - name: ENSCHEDULE_WORKER_DESCRIPTION
               value: "Worker deplyed with the helm chart"
+            - name: ENSCHEDULE_FUNCTIONS
+              value: "/enschedule-functions/functions.js"
             {{- if .Values.worker.extraEnvs }}
             {{- toYaml .Values.worker.extraEnvs | nindent 12 }}
             {{- end }}

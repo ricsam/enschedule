@@ -158,6 +158,11 @@ jobs:
 
       - name: Test CLI - create schedule
         run: |
+
+          export ENSCHEDULE_API_KEY="secret_key"
+          export ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url)
+          export ENSCHEDULE_API_VERSION="1"
+
           DATE_ONE=$(date -d "+7 days" --iso-8601=seconds)
           DATE_TWO=$(date -d "+14 days" --iso-8601=seconds)
 
@@ -166,7 +171,7 @@ jobs:
           # DATE_TWO=$(date -v+14d -u +"%Y-%m-%dT%H:%M:%S%z")
 
 
-          ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=http://localhost:3333 ENSCHEDULE_API_VERSION="1" enschedule create schedule --update \
+          enschedule create schedule --update \
             --name "created-with-cli" \
             --run-at "$DATE_ONE" \
             --function-id log-job \
@@ -174,13 +179,13 @@ jobs:
             --data '{ "message": "something to log" }' \
             --title "Schedule created from cli"
           
-          CUR_DATE=$(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=http://localhost:3333 ENSCHEDULE_API_VERSION="1" enschedule get schedules -o json | jq -r '.[] | select(.eventId == "created-with-cli") | .runAt')
+          CUR_DATE=$(enschedule get schedules -o json | jq -r '.[] | select(.eventId == "created-with-cli") | .runAt')
 
           DATE_ONE=${DATE_ONE:0:19}
           CUR_DATE=${CUR_DATE:0:19}
           [[ "$CUR_DATE" == "$DATE_ONE" ]]
 
-          ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=http://localhost:3333 ENSCHEDULE_API_VERSION="1" enschedule create schedule --update \
+          enschedule create schedule --update \
             --name "created-with-cli" \
             --run-at "$DATE_TWO" \
             --function-id log-job \
@@ -188,7 +193,7 @@ jobs:
             --data '{ "message": "something to log" }' \
             --title "Schedule created from cli"
           
-          CUR_DATE=$(ENSCHEDULE_API_KEY="secret_key" ENSCHEDULE_API_ENDPOINT=http://localhost:3333 ENSCHEDULE_API_VERSION="1" enschedule get schedules -o json | jq -r '.[] | select(.eventId == "created-with-cli") | .runAt')
+          CUR_DATE=$(enschedule get schedules -o json | jq -r '.[] | select(.eventId == "created-with-cli") | .runAt')
 
           DATE_TWO=${DATE_TWO:0:19}
           CUR_DATE=${CUR_DATE:0:19}

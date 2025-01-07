@@ -13,6 +13,7 @@ import {
   Snackbar,
   Switch,
   TextField,
+  Tooltip,
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -371,27 +372,41 @@ export default function SchedulePage({
                 {sentenceCase(schedule.status)}
               </Typography>
               <Typography color="text.secondary">Next run</Typography>
-              <Typography color="text.primary" data-testid="next-run">
-                {schedule.runNow ? (
-                  "Scheduled to run now"
-                ) : schedule.runAt ? (
-                  formatDate(new Date(schedule.runAt), { verbs: false }).label
-                ) : (
-                  <>
-                    Not scheduled, click{" "}
-                    <MuiLink
-                      data-testid="no-run-at-edit"
-                      component={Link}
-                      to="edit-details"
-                      preventScrollReset
-                      underline="hover"
-                    >
-                      here
-                    </MuiLink>{" "}
-                    to schedule
-                  </>
-                )}
-              </Typography>
+              <Tooltip
+                title={
+                  schedule.runAt
+                    ? format(new Date(schedule.runAt), "yyyy-MM-dd HH:mm:ss")
+                    : null
+                }
+                placement="left-start"
+              >
+                <Typography
+                  color="text.primary"
+                  data-testid="next-run"
+                  component={"div"}
+                  sx={{ cursor: "help" }}
+                >
+                  {schedule.runNow ? (
+                    "Scheduled to run now"
+                  ) : schedule.runAt ? (
+                    formatDate(new Date(schedule.runAt), { verbs: false }).label
+                  ) : (
+                    <>
+                      Not scheduled, click{" "}
+                      <MuiLink
+                        data-testid="no-run-at-edit"
+                        component={Link}
+                        to="edit-details"
+                        preventScrollReset
+                        underline="hover"
+                      >
+                        here
+                      </MuiLink>{" "}
+                      to schedule
+                    </>
+                  )}
+                </Typography>
+              </Tooltip>
               <Typography color="text.secondary">Title</Typography>
               <Typography color="text.primary" data-testid="schedule-title">
                 {schedule.title}
@@ -401,7 +416,7 @@ export default function SchedulePage({
                 color="text.primary"
                 data-testid="schedule-description"
               >
-                {schedule.description || '-'}
+                {schedule.description || "-"}
               </Typography>
               <Typography color="text.secondary">Definition</Typography>
               {typeof schedule.jobDefinition === "string" ? (

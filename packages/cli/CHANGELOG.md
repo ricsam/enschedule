@@ -1,5 +1,11 @@
 # @enschedule/cli
 
+## 1.1.7
+
+### Patch Changes
+
+- add create schedule support on the cli
+
 ## 1.1.6
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @enschedule/dashboard
 
+## 1.1.8
+
+### Patch Changes
+
+- add create schedule support on the cli
+
 ## 1.1.7
 
 ### Patch Changes

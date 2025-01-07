@@ -3,6 +3,7 @@ import { ScheduleStatus } from "@enschedule/types";
 import Table from "cli-table";
 import { Command } from "commander"; // add this line
 import { getAuthHeader, getWorker } from "../get-worker";
+import { getSchedule } from "../get-schedule";
 
 export const getCommand = new Command("get");
 
@@ -17,22 +18,12 @@ getScheduleCommand
   .argument("<scheduleId>", "id of the schedule to get")
   .option("-o, --output <type>", "output format")
   .action(async (scheduleId: string, options: { output?: string }) => {
-    const authHeader = await getAuthHeader();
-    const worker = await getWorker();
-    if (scheduleId.startsWith("db:")) {
-      const dbId = scheduleId.substring(3);
-      const schedule = await worker.getSchedule(authHeader, parseInt(dbId, 10));
-      printSchedules([schedule], { ...options, single: true });
-      return;
-    }
-    const schedules = await worker.getSchedules(authHeader, {
-      eventId: scheduleId,
-    });
-    if (schedules.length === 0) {
+    const schedule = await getSchedule(scheduleId);
+    if (!schedule) {
       console.log(`Schedule ${scheduleId} not found`);
       return;
     }
-    printSchedules(schedules, { ...options, single: true });
+    printSchedules([schedule], { ...options, single: true });
   });
 
 const getHumanTime = (ms: number) => {

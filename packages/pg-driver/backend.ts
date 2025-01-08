@@ -161,13 +161,22 @@ export const createPublicJobDefinition = (
   jobDef: JobDefinition
 ): PublicJobDefinition => {
   const identifier = pascalCase(jobDef.title);
-  const { node } = zodToTs(jobDef.dataSchema, identifier);
-  const typeAlias = createTypeAlias(node, identifier);
-  const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
-  const jsonSchema: Record<string, unknown> = zodToJsonSchema(
-    jobDef.dataSchema,
-    identifier
-  );
+
+  const getJsonSchema = () => {
+    if (!jobDef.dataSchema) {
+      return { codeBlock: undefined, jsonSchema: undefined };
+    }
+    const { node } = zodToTs(jobDef.dataSchema, identifier);
+    const typeAlias = createTypeAlias(node, identifier);
+    const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
+    const jsonSchema: Record<string, unknown> = zodToJsonSchema(
+      jobDef.dataSchema,
+      identifier
+    );
+    return { codeBlock, jsonSchema };
+  };
+
+  const { codeBlock, jsonSchema } = getJsonSchema();
 
   return {
     version: jobDef.version,
@@ -189,7 +198,7 @@ export const serializeRun = (run: Run): SerializedRun => {
     finishedAt: run.finishedAt ?? undefined,
     startedAt: run.startedAt,
     scheduledToRunAt: run.scheduledToRunAt,
-    data: run.data,
+    data: run.data ?? undefined,
     status: getRunStatus(run),
   };
 };
@@ -263,7 +272,7 @@ export const createPublicJobSchedule = (
     createdAt: schedule.createdAt,
     jobDefinition: jobDef,
     numRuns: schedule.numRuns,
-    data: schedule.data,
+    data: schedule.data ?? undefined,
     status,
     eventId: schedule.eventId ?? undefined,
     defaultRunAccess: schedule.defaultRunAccess,
@@ -301,7 +310,7 @@ export const createPublicJobRun = (
       typeof schedule === "string"
         ? schedule
         : createPublicJobSchedule(schedule, jobDef),
-    data: run.data,
+    data: run.data ?? undefined,
     worker: run.worker ? createPublicWorker(run.worker) : run.workerTitle,
     status,
   };
@@ -563,7 +572,7 @@ export class Schedule extends Model<
 
   // related to the handler
   declare functionVersion: number;
-  declare data: string;
+  declare data?: CreationOptional<string> | null;
 
   declare numRuns: CreationOptional<number>;
 
@@ -603,7 +612,7 @@ class Run extends Model<InferAttributes<Run>, InferCreationAttributes<Run>> {
   declare logFile: CreationOptional<string>;
   declare logFileSize: CreationOptional<number>;
   declare logFileRowCount: CreationOptional<number>;
-  declare data: string;
+  declare data?: CreationOptional<string> | null;
   declare createdAt: CreationOptional<Date>;
   declare finishedAt: CreationOptional<Date> | null;
   declare startedAt: Date;
@@ -1034,7 +1043,7 @@ export class PrivateBackend {
         },
         data: {
           type: DataTypes.TEXT,
-          allowNull: false,
+          allowNull: true,
         },
         signature: {
           type: DataTypes.TEXT,
@@ -1138,7 +1147,7 @@ export class PrivateBackend {
         },
         data: {
           type: DataTypes.TEXT,
-          allowNull: false,
+          allowNull: true,
         },
         createdAt: {
           type: DataTypes.DATE,
@@ -1534,7 +1543,7 @@ export class PrivateBackend {
     version: number
   ): {
     definition: JobDefinition;
-    migrateData: (data: any) => any;
+    migrateData: (data?: any) => any;
     version: number;
   } {
     const versions = this.definedJobs[id];
@@ -1550,12 +1559,12 @@ export class PrivateBackend {
       }
 
       let migratedVersion = version;
-      let migrateFn = (data: any) => data;
+      let migrateFn = (data?: any) => data ?? undefined;
       while (true) {
         const migration = this.migrations[id]?.[migratedVersion];
         if (migration) {
           migratedVersion = migration.targetVersion;
-          migrateFn = (data: any) => migration.migrateFn(migrateFn(data));
+          migrateFn = (data?: any) => migration.migrateFn(migrateFn(data));
         } else {
           break;
         }
@@ -2261,7 +2270,9 @@ export class PrivateBackend {
       ? parseExpression(cronExpression).stringify(true)
       : undefined;
 
-    const serializedData = JSON.stringify(migratedData);
+    const serializedData = migratedData
+      ? JSON.stringify(migratedData)
+      : undefined;
     const defaults: Optional<
       InferCreationAttributes<Schedule>,
       | "id"
@@ -2279,7 +2290,7 @@ export class PrivateBackend {
       functionId,
       cronExpression: normalizedCronExpression,
       runAt,
-      data: serializedData,
+      data: serializedData ?? null,
       signature,
       title,
       description,
@@ -2389,7 +2400,7 @@ export class PrivateBackend {
       title: options.title,
       description: options.description,
       functionVersion,
-      data,
+      data: data ?? null,
       options: {
         eventId: options.eventId,
         runAt,
@@ -2733,11 +2744,22 @@ export class PrivateBackend {
 
     await Promise.all(
       newSchedules.map(async (schedule) => {
-        const data = from.dataSchema.parse(
-          JSON.parse(schedule.data)
-        ) as z.infer<T>;
-        const newData = to.dataSchema.parse(migrateFn(data)) as z.infer<U>;
-        schedule.data = JSON.stringify(newData);
+        let newData: z.TypeOf<U> | undefined;
+        if (from.dataSchema && schedule.data) {
+          const data = from.dataSchema.parse(
+            JSON.parse(schedule.data)
+          ) as z.infer<T>;
+          newData = to.dataSchema
+            ? (to.dataSchema.parse(migrateFn(data)) as z.infer<U>)
+            : undefined;
+        } else if (to.dataSchema) {
+          newData = to.dataSchema.parse(
+            schedule.data
+              ? migrateFn(JSON.parse(schedule.data) as z.infer<T>)
+              : undefined
+          ) as z.infer<U>;
+        }
+        schedule.data = newData ? JSON.stringify(newData) : undefined;
         schedule.functionVersion = to.version;
         await schedule.save();
       })
@@ -2798,7 +2820,7 @@ export class PrivateBackend {
           error: log,
           warn: log,
           debug: log,
-        }
+        },
       });
 
       await umzug.up();
@@ -2865,7 +2887,7 @@ export class PrivateBackend {
           error: log,
           warn: log,
           debug: log,
-        }
+        },
       });
 
       await umzug.up();
@@ -3089,23 +3111,21 @@ export class PrivateBackend {
   }
 
   private async runDbSchedule(schedule: Schedule, run: Run) {
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
     const definition = this.getLocalHandler(
       schedule.functionId,
       schedule.functionVersion
     );
-    const data: any = definition.definition.dataSchema.parse(
-      definition.migrateData(JSON.parse(schedule.data))
+    const data: unknown = definition.migrateData(
+      schedule.data ? JSON.parse(schedule.data) : undefined
     );
     return this.runDefinition(
       {
         functionId: schedule.functionId,
-        data,
+        migratedData: data,
         version: definition.version,
       },
       run
     );
-    /* eslint-enable */
   }
 
   public async runDefinition(runMessage: RunHandlerInCp, run: Run) {
@@ -3296,9 +3316,7 @@ export class PrivateBackend {
       let exitSignal = "0";
       toggleSaveOutput(true);
       try {
-        await definition.definition.job(
-          definition.migrateData(runMessage.data)
-        );
+        await definition.definition.job(runMessage.migratedData ?? undefined);
       } catch (err) {
         console.error(err);
         exitSignal = "1";
@@ -3363,7 +3381,7 @@ export class PrivateBackend {
     if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
       return new Promise<boolean>((resolve) => {
         process.once("message", (message) => {
-          const { functionId, data, version } =
+          const { functionId, migratedData: data, version } =
             RunHandlerInCpSchema.parse(message);
           const definition = this.getLocalHandler(functionId, version);
           (async () => {
@@ -3438,7 +3456,7 @@ export class PrivateBackend {
         {
           scheduledToRunAt: runAt,
           startedAt,
-          data: schedule.data,
+          data: schedule.data ?? null,
           workerId: worker.id,
           functionId: definition.definition.id,
           functionVersion: definition.version,

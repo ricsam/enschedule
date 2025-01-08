@@ -137,45 +137,51 @@ export default function RunPage({
               </Box>
             </CardContent>
           </Card>
-          <Card
-            sx={{
-              flex: 1,
-              minWidth: "fit-content",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <CardContent sx={{ flex: 1 }}>
-              <Typography variant="h5" gutterBottom>
-                Job
-              </Typography>
-              <Typography color="text.secondary">
-                This run ran{" "}
-                {typeof handler === "string" ? (
-                  <Typography component="span">
-                    a job that currently is not defined on the server ({handler}
-                    )
-                  </Typography>
-                ) : (
+          {run.data ? (
+            <Card
+              sx={{
+                flex: 1,
+                minWidth: "fit-content",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <CardContent sx={{ flex: 1 }}>
+                <Typography variant="h5" gutterBottom>
+                  Job
+                </Typography>
+                <Typography color="text.secondary">
+                  This run ran{" "}
+                  {typeof handler === "string" ? (
+                    <Typography component="span">
+                      a job that currently is not defined on the server (
+                      {handler})
+                    </Typography>
+                  ) : (
+                    <>
+                      the{" "}
+                      <MuiLink component={Link} to="/" underline="hover">
+                        {handler.title}
+                      </MuiLink>{" "}
+                      definition
+                    </>
+                  )}{" "}
+                  {run.data && <>with the following data:</>}
+                </Typography>
+                {run.data && (
                   <>
-                    the{" "}
-                    <MuiLink component={Link} to="/" underline="hover">
-                      {handler.title}
-                    </MuiLink>{" "}
-                    definition
+                    <Box pb={1} />
+                    <Box maxWidth="320px" overflow="hidden">
+                      <ReadOnlyEditor
+                        example={JSON.stringify(JSON.parse(run.data), null, 2)}
+                        lang="json"
+                      ></ReadOnlyEditor>
+                    </Box>
                   </>
-                )}{" "}
-                with the following data:
-              </Typography>
-              <Box pb={1} />
-              <Box maxWidth="320px" overflow="hidden">
-                <ReadOnlyEditor
-                  example={JSON.stringify(JSON.parse(run.data), null, 2)}
-                  lang="json"
-                ></ReadOnlyEditor>
-              </Box>
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
         </Box>
         <Box display="flex" gap={3} flexWrap="wrap">
           <Card

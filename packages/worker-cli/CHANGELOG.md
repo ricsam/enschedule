@@ -1,5 +1,11 @@
 # @enschedule/worker-cli
 
+## 0.0.5
+
+### Patch Changes
+
+- @enschedule/worker@1.1.7
+
 ## 0.0.4
 
 ### Patch Changes

@@ -504,7 +504,11 @@ export default function SchedulePage({
           </DialogContent>
         </Dialog>
 
-        <DataCard schedule={schedule} />
+        {typeof schedule.jobDefinition !== "string" &&
+        schedule.jobDefinition.jsonSchema &&
+        schedule.data ? (
+          <DataCard schedule={schedule} />
+        ) : null}
       </Box>
 
       {lastRun ? (
@@ -593,6 +597,7 @@ function DataCard({
   const [isValid, setIsValid] = React.useState(true);
   const [editorRef, size] = useElementSize();
   const dataRef = React.useRef<HTMLInputElement | null>(null);
+
   return (
     <Card
       sx={{
@@ -626,27 +631,29 @@ function DataCard({
             </>
           )}
         </Typography>
-        {typeof schedule.jobDefinition !== "string" && (
-          <>
-            <Box pb={1} />
-            <Box
-              maxWidth="600px"
-              flex={1}
-              ref={editorRef}
-              sx={{ minHeight: "200px" }}
-            >
-              {size && (
-                <Editor
-                  jsonSchema={schedule.jobDefinition.jsonSchema}
-                  example={JSON.parse(schedule.data)}
-                  getValueRef={dataValueRef}
-                  setIsValid={setIsValid}
-                  height={size.height}
-                />
-              )}
-            </Box>
-          </>
-        )}
+        {typeof schedule.jobDefinition !== "string" &&
+          schedule.jobDefinition.jsonSchema &&
+          schedule.data && (
+            <>
+              <Box pb={1} />
+              <Box
+                maxWidth="600px"
+                flex={1}
+                ref={editorRef}
+                sx={{ minHeight: "200px" }}
+              >
+                {size && (
+                  <Editor
+                    jsonSchema={schedule.jobDefinition.jsonSchema}
+                    example={JSON.parse(schedule.data)}
+                    getValueRef={dataValueRef}
+                    setIsValid={setIsValid}
+                    height={size.height}
+                  />
+                )}
+              </Box>
+            </>
+          )}
       </CardContent>
       {typeof schedule.jobDefinition !== "string" && (
         <CardActions>

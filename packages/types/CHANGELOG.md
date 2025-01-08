@@ -1,5 +1,11 @@
 # @enschedule/types
 
+## 1.1.5
+
+### Patch Changes
+
+- make description and data optional on schedules
+
 ## 1.1.4
 
 ### Patch Changes

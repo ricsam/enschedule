@@ -1,5 +1,14 @@
 # @enschedule/cli
 
+## 1.1.8
+
+### Patch Changes
+
+- make description and data optional on schedules
+- Updated dependencies
+  - @enschedule/types@1.1.5
+  - @enschedule/worker-api@1.1.5
+
 ## 1.1.7
 
 ### Patch Changes

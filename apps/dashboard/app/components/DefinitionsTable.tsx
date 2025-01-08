@@ -69,6 +69,9 @@ export default function DefinitionsTable({
         columns={columns}
         renderRow={(row) => {
           const { codeBlock } = row.original;
+          if (!codeBlock) {
+            return null;
+          }
           return (
             <>
               <Typography variant="h6" gutterBottom component="div">

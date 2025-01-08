@@ -57,7 +57,7 @@ import { getLoaderData } from "./runLoader.server";
 
 const SerializedJobEventSchema = z.intersection(
   z.object({
-    data: z.string(),
+    data: z.string().optional(),
     functionId: z.string(),
     functionVersion: z.number(),
     runAt: z.string().optional(),
@@ -75,7 +75,7 @@ export const action: ActionFunction = async ({ request, context }) => {
 
   const serializedEv = SerializedJobEventSchema.parse(jsonValue);
 
-  const data = JSON.parse(serializedEv.data);
+  const data = serializedEv.data ? JSON.parse(serializedEv.data) : undefined;
   const functionId = serializedEv.functionId;
   const functionVersion = serializedEv.functionVersion;
 
@@ -309,7 +309,9 @@ export default function Run() {
                   title,
                   description,
                   functionId: selectedDef.id,
-                  data: JSON.stringify(data),
+                  data: selectedDef.codeBlock
+                    ? JSON.stringify(data)
+                    : undefined,
                   retryFailedJobs,
                   maxRetries,
                   functionVersion: selectedDef.version,
@@ -465,7 +467,7 @@ export default function Run() {
               inputProps={{
                 "data-testid": "title-input",
               }}
-              placeholder="Title..."
+              placeholder="Title"
               type="text"
               value={title}
               onChange={(ev) => {
@@ -478,7 +480,7 @@ export default function Run() {
               inputProps={{
                 "data-testid": "description-input",
               }}
-              placeholder="Description..."
+              placeholder="Description (optional)"
               multiline
               rows={4}
               type="text"
@@ -581,10 +583,14 @@ export default function Run() {
                         )}
                       </>
                     )}{" "}
-                    with the following data:
+                    {selectedDef.codeBlock && <>with the following data:</>}
                   </Typography>
-                  <Box pb={1} />
-                  <FormattedJson data={data} />
+                  {selectedDef.codeBlock && (
+                    <>
+                      <Box pb={1} />
+                      <FormattedJson data={data} />
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </React.Fragment>
@@ -695,40 +701,48 @@ export default function Run() {
         <>
           <EnscheduleBotMessage
             message={
-              <div>
-                The <LightB>{selectedDef.title}</LightB> function is described
-                as <i>{selectedDef.description}</i>
-                {workerId ? (
-                  <>
-                    and will run on the following{" "}
-                    {workerDict[workerId].length > 1
-                      ? "selected workers"
-                      : "worker"}
-                    :
-                    <WorkerOption workers={workerDict[workerId]} />
-                  </>
-                ) : null}
-              </div>
+              selectedDef.description ? (
+                <div>
+                  The <LightB>{selectedDef.title}</LightB> function is described
+                  as <i>{selectedDef.description}</i>
+                  {workerId ? (
+                    <>
+                      and will run on the following{" "}
+                      {workerDict[workerId].length > 1
+                        ? "selected workers"
+                        : "worker"}
+                      :
+                      <WorkerOption workers={workerDict[workerId]} />
+                    </>
+                  ) : null}
+                </div>
+              ) : (
+                <div>
+                  Let's run <LightB>{selectedDef.title}</LightB>
+                </div>
+              )
             }
           />
 
-          <EnscheduleBotMessage
-            message={
-              <div>
+          {selectedDef.codeBlock && (
+            <EnscheduleBotMessage
+              message={
                 <div>
-                  Let's create a schedule for the{" "}
-                  <LightB>{selectedDef.title}</LightB> definition, please
-                  provide the data according to the following schema:
+                  <div>
+                    Let's create a schedule for the{" "}
+                    <LightB>{selectedDef.title}</LightB> definition, please
+                    provide the data according to the following schema:
+                  </div>
+                  <Box pt={1}>
+                    <ReadOnlyEditor
+                      example={selectedDef.codeBlock}
+                      lang="typescript"
+                    />
+                  </Box>
                 </div>
-                <Box pt={1}>
-                  <ReadOnlyEditor
-                    example={selectedDef.codeBlock}
-                    lang="typescript"
-                  />
-                </Box>
-              </div>
-            }
-          />
+              }
+            />
+          )}
         </>
       )}
     </>
@@ -876,24 +890,28 @@ export default function Run() {
             {dataDefinedAnswer}
             {selectedDef && (
               <>
-                {data && (
+                {(data || !selectedDef.codeBlock) && (
                   <>
-                    <MyMessage
-                      message={<FormattedJson data={data} />}
-                      sx={{
-                        flex: 1,
-                        ".MuiChip-label": {
-                          flex: 1,
-                        },
-                        ".read-only-editor": {
-                          /* the up most container of the editor */
-                          filter:
-                            "invert(1) hue-rotate(100deg) brightness(1) grayscale(0)",
-                        },
-                      }}
-                    />
+                    {data && (
+                      <>
+                        <MyMessage
+                          message={<FormattedJson data={data} />}
+                          sx={{
+                            flex: 1,
+                            ".MuiChip-label": {
+                              flex: 1,
+                            },
+                            ".read-only-editor": {
+                              /* the up most container of the editor */
+                              filter:
+                                "invert(1) hue-rotate(100deg) brightness(1) grayscale(0)",
+                            },
+                          }}
+                        />
 
-                    <EnscheduleBotMessage message="Congratulations, we have now defined a job, a definition + data = job" />
+                        <EnscheduleBotMessage message="Congratulations, we have now defined a job, a definition + data = job" />
+                      </>
+                    )}
                     <EnscheduleBotMessage message="Do you want to run this job now, later or manually?" />
                     {whenToSend === undefined ? (
                       <InputArea>
@@ -1119,7 +1137,7 @@ the last Wednesday of the month:
                 )}
               </>
             )}
-            {selectedDef && !data && (
+            {selectedDef && !data && selectedDef.jsonSchema && (
               <InputArea>
                 <Box
                   display="flex"

@@ -143,6 +143,14 @@ if (!process.env.SPECIAL_HANDLERS) {
       url: "http://localhost:3000",
     },
   });
+  worker.registerJob({
+    id: "simple-job",
+    title: "Simple job",
+    version: 1,
+    job: () => {
+      console.log("This is a simple job");
+    },
+  });
 } else {
   worker.registerJob({
     id: "special-job",
@@ -198,7 +206,9 @@ if (!process.env.SPECIAL_HANDLERS) {
     worker
       .serve(
         {
-          port: process.env.ENSCHEDULE_API_PORT ? Number(process.env.ENSCHEDULE_API_PORT) : 8080,
+          port: process.env.ENSCHEDULE_API_PORT
+            ? Number(process.env.ENSCHEDULE_API_PORT)
+            : 8080,
           apiKey,
         },
         app

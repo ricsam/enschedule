@@ -89,7 +89,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             },
             data: {
               type: DataTypes.TEXT,
-              allowNull: false,
+              allowNull: true,
             },
             signature: {
               type: DataTypes.TEXT,
@@ -194,7 +194,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             },
             data: {
               type: DataTypes.TEXT,
-              allowNull: false,
+              allowNull: true,
             },
             exitSignal: {
               type: DataTypes.TEXT,

@@ -68,7 +68,7 @@ export const serializedRunSchema = z.object({
   finishedAt: OptionalDateSchema,
   startedAt: DateSchema,
   scheduledToRunAt: DateSchema,
-  data: z.string(),
+  data: z.string().optional(),
   status: z.nativeEnum(RunStatus),
 });
 export type SerializedRun = z.output<typeof serializedRunSchema>;
@@ -165,8 +165,8 @@ export const publicJobDefinitionSchema = z.object({
   description: z.string().optional(),
   title: z.string(),
   example: z.unknown(),
-  codeBlock: z.string(),
-  jsonSchema: z.record(z.unknown()),
+  codeBlock: z.string().optional(),
+  jsonSchema: z.record(z.unknown()).optional(),
   access: nullishToUndefined(FunctionAccessSchema),
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
@@ -194,7 +194,7 @@ export const publicJobScheduleSchema = z.object({
   functionId: z.string(),
   jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
   numRuns: z.number(),
-  data: z.string(),
+  data: z.string().optional(),
   status: z.nativeEnum(ScheduleStatus),
   /**
    * more like schedule id, but the unique ID that ensures that 2 schedules with the same eventId are not created
@@ -306,7 +306,10 @@ export type ScheduleUpdatePayload = z.infer<typeof ScheduleUpdatePayloadSchema>;
 
 export const RunHandlerInCpSchema = z.object({
   functionId: z.string(),
-  data: z.unknown(),
+  /**
+   * migrated data
+   */
+  migratedData: z.unknown(),
   version: z.number(),
 });
 
@@ -405,7 +408,7 @@ export const ListRunsOptionsSerialize = (
  * rename to function definition
  */
 export interface JobDefinition<T extends ZodType = ZodType> {
-  dataSchema: T;
+  dataSchema?: T;
   /**
    * This is a user provided ID that is used to "identify" the the job code.
    * If the same function is be deployed on multiple workers then they should have the same id,
@@ -413,9 +416,9 @@ export interface JobDefinition<T extends ZodType = ZodType> {
    */
   id: string;
   title: string;
-  description: string;
+  description?: string;
   job: (data: z.infer<T>) => Promise<void> | void;
-  example: z.infer<T>;
+  example?: z.infer<T>;
   version: number;
   access?: FunctionAccess;
   defaultScheduleAccess?: RunAccess;

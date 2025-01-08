@@ -71,6 +71,67 @@ test.describe("Single-Run", () => {
       expect(await page.waitForSelector("div#RunsTable")).toBeTruthy();
     }
   });
+  test("Can create a simple schedule without description nor data", async ({
+    page,
+  }) => {
+    await reset(page);
+    await login(page);
+
+    // create 4 runs + 4 schedules
+    await page.goto(`${setup.dashboardUrl}/run`);
+
+    // Select a job definition from the dropdown
+    await page.getByTestId("definition-autocomplete").click();
+
+    const definitionNumber = 7; // simple function
+    for (let i = 0; i < definitionNumber; i += 1) {
+      await page.keyboard.press("ArrowDown"); // Press the arrow down key
+    }
+    await page.keyboard.press("Enter"); // Press the enter key
+
+    await page.getByTestId("no-specific-worker").click();
+
+    await page.getByTestId("run-now").click();
+
+    // Type in title and description
+    await page.getByTestId("title-input").fill("Simple schedule");
+    await page.getByTestId("SendIcon").click();
+
+    await page.getByTestId("retry-no").click();
+
+    await page.getByTestId("trigger-no").click();
+
+    // Click the send button next to the title and description
+    await page.getByTestId("submit-button").click();
+
+    const link = page.getByTestId("schedule-link");
+
+    await navigate(setup.dashboardUrl, page, link);
+
+    await page.waitForURL("**/schedules/*");
+
+    const details = await page.waitForSelector("div#SchedulePage");
+
+    // Then I should see the SchedulePage
+    expect(details).toBeTruthy();
+
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByRole("tab", { name: "Runs" })
+    );
+
+    await waitForNumRows(page, 1, "SUCCESS");
+
+    await navigate(
+      setup.dashboardUrl,
+      page,
+      page.getByTestId("table-row-1").getByTestId("run-link")
+    );
+
+    const runPage = await page.waitForSelector("div#RunPage");
+    expect(runPage).toBeTruthy();
+  });
 });
 
 test.describe("Multi runs", () => {

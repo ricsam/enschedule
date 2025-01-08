@@ -1,5 +1,15 @@
 # @enschedule/dashboard
 
+## 1.1.9
+
+### Patch Changes
+
+- make description and data optional on schedules
+- Updated dependencies
+  - @enschedule/types@1.1.5
+  - @enschedule/worker@1.1.7
+  - @enschedule/worker-api@1.1.5
+
 ## 1.1.8
 
 ### Patch Changes

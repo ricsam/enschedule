@@ -17,14 +17,16 @@ createScheduleCommand
   .description("create schedule(s)")
   .option("-u, --update", "Perform an update", false)
   .option("--name <name>", "Name of the schedule")
-  .option("--run-at <runAt>", "Run at time in ISO format")
+  .option("--run-at [runAt]", "Run at time in ISO format")
+  .option("--run-now", "Run the schedule now", false)
+  .option("--cron-expression [cronExpression]", "Cron expression")
   .option("--function-id <functionId>", "Function ID to execute")
   .option(
     "--function-version <number>",
     "Version of the function to execute",
     parseInt
   )
-  .option("--data <data>", "Data to pass to the function (JSON)")
+  .option("--data [data]", "Data to pass to the function (JSON)")
   .option("--title <title>", "Title of the schedule")
   .action(async (_options) => {
     const update = z.object({ update: z.boolean() }).parse(_options).update;
@@ -61,7 +63,12 @@ createScheduleCommand
               .object({
                 functionId: z.string(),
                 functionVersion: z.number(),
-                data: z.string().transform((data): unknown => JSON.parse(data)),
+                data: z
+                  .string()
+                  .optional()
+                  .transform((data): unknown =>
+                    data ? JSON.parse(data) : undefined
+                  ),
               })
               .parse(_options),
           };

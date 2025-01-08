@@ -1,6 +1,6 @@
 {
   "name": "@enschedule/types",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "module": "./index.ts",
   "main": "./index.ts",
   "types": "./index.ts",

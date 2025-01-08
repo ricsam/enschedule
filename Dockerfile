@@ -1,5 +1,5 @@
 # BASE
-FROM node:18-slim as base
+FROM node:18-slim AS base
 LABEL org.opencontainers.image.source=https://github.com/ricsam/enschedule
 LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /app
@@ -17,7 +17,7 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000
 
 # INSTALL BASE
-FROM base as install-base
+FROM base AS install-base
 COPY . .
 RUN ./release-package.sh
 RUN turbo prune \

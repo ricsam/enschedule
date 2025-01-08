@@ -1,0 +1,17 @@
+{{- if and .Values.storage.persistence.enabled (not .Values.storage.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "enschedule.fullname" . }}-{{ .Values.storage.persistence.volumeName | default "data" }}
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.storage.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.persistence.size }}
+  {{- if .Values.storage.persistence.storageClass }}
+  storageClassName: {{ .Values.storage.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -46,6 +46,7 @@ spec:
               port: storage
           resources:
             {{- toYaml .Values.storage.resources | nindent 12 }}
+
           env:
             - name: ADMIN_USERNAME
               valueFrom:
@@ -59,6 +60,27 @@ spec:
                   key: enstorePassword
             - name: PORT
               value: "3456"
+
+          # Mount the volume if persistence is enabled
+          volumeMounts:
+            {{- if .Values.storage.persistence.enabled }}
+            - name: {{ .Values.storage.persistence.volumeName | default "storage-data" }}
+              mountPath: {{ .Values.storage.persistence.mountPath }}
+            {{- end }}
+            
+      # Add the volume to the pod spec
+      volumes:
+        {{- if .Values.storage.persistence.enabled }}
+        - name: {{ .Values.storage.persistence.volumeName | default "storage-data" }}
+          {{- if .Values.storage.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistence.existingClaim }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "enschedule.fullname" . }}-{{ .Values.storage.persistence.volumeName | default "data" }}
+          {{- end }}
+        {{- end }}
+
       {{- with .Values.storage.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -71,5 +93,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-
 {{- end }}

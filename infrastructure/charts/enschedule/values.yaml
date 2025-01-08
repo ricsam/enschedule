@@ -294,6 +294,23 @@ storage:
 
   affinity: {}
 
+  # New block for persistence
+  persistence:
+    enabled: true
+    # If you have a PVC, reference it here
+    # and skip auto-creation of a PVC
+    existingClaim: ""
+    # Access modes can be ReadWriteOnce, ReadOnlyMany, ReadWriteMany, etc.
+    accessMode: ReadWriteOnce
+    # Request size
+    size: 1Gi
+    # Storage class, e.g. "standard" (depends on your cluster)
+    storageClass: ""
+    # Name of the volume and mount path
+    volumeName: "storage-data"
+    # This is the default when using the enstore-server docker image
+    mountPath: "/app/uploads"
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: false

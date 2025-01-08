@@ -301,6 +301,7 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}-app-v{{ .AppVersion }}"
+          # CR_RELEASE_NOTES_FILE: # TODO generate this file based on the diff in the CHANGELOG.md files
 
   npm_publish:
     needs: test

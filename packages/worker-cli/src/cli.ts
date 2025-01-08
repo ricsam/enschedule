@@ -150,7 +150,6 @@ const startCmd = new Command("start")
       )
   )
   .action(async (_options) => {
-
     log("Starting worker with options", _options);
 
     const options = z
@@ -178,7 +177,8 @@ const startCmd = new Command("start")
       .parse(_options);
     let server: http.Server | undefined;
 
-    function shutdown() {
+    function shutdown(signal: string) {
+      log('Shutting down worker with signal', signal);
       log("\nCleaning up resources...");
       if (server) {
         server.close(() => {
@@ -207,7 +207,7 @@ const startCmd = new Command("start")
       apiKey: options.apiKey,
       nafsUri: options.nafsUri,
     });
-    worker.logJobs = z.boolean().parse(options.logJobs);
+    worker.logJobs = options.logJobs;
 
     worker.pollInterval = options.pollInterval;
 
@@ -247,11 +247,8 @@ const startCmd = new Command("start")
       log("Starting REST API");
       server = worker
         .serve({
-          port: z.coerce
-            .number({ message: "port must be an int" })
-            .int()
-            .parse(options.port),
-          hostname: z.string().optional().parse(options.hostname),
+          port: options.port,
+          hostname: options.hostname,
           apiKey: options.apiKey,
         })
         .listen();

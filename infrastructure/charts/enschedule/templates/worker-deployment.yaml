@@ -106,6 +106,8 @@ spec:
               value: "true"
             - name: ENSCHEDULE_API_PORT
               value: "8000"
+            - name: ENSCHEDULE_API_HOSTNAME
+              value: "0.0.0.0"
             - name: DB_PORT
               value: {{ .Values.database.service.port | quote }}
             - name: DEBUG

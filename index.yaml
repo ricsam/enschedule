@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   enschedule:
   - apiVersion: v2
+    appVersion: 0.0.13-alpha
+    created: "2025-01-08T16:54:28.060350712Z"
+    description: Deploy worker, api and dashboard
+    digest: ca637418395be4574cf6fbb343e7aab5abd082bb69fba38ca7dc294080a39397
+    name: enschedule
+    type: application
+    urls:
+    - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.8-alpha-app-v0.0.13-alpha/enschedule-0.0.8-alpha.tgz
+    version: 0.0.8-alpha
+  - apiVersion: v2
     appVersion: 0.0.11-alpha
     created: "2025-01-08T14:00:52.282689434Z"
     description: Deploy worker, api and dashboard
@@ -62,14 +72,14 @@ entries:
     - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.4-alpha-app-v0.0.9-alpha/enschedule-0.0.4-alpha.tgz
     version: 0.0.4-alpha
   - apiVersion: v2
-    appVersion: 0.0.5-alpha
-    created: "2025-01-03T11:49:39.457535742Z"
+    appVersion: 0.0.3-alpha
+    created: "2025-01-02T14:25:47.722752492Z"
     description: Deploy worker, api and dashboard
-    digest: 2d591581c0ef021ca67764df2ca6f1976a21af87f0c08e5a5fa9ec758d8b5bf0
+    digest: ae489e6cef48530af5f223347be5209196f3955c2c8b5098d982fc335007cf64
     name: enschedule
     type: application
     urls:
-    - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.5-alpha/enschedule-0.0.3-alpha.tgz
+    - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.3-alpha/enschedule-0.0.3-alpha.tgz
     version: 0.0.3-alpha
   - apiVersion: v2
     appVersion: 0.0.7-alpha
@@ -80,16 +90,6 @@ entries:
     type: application
     urls:
     - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.7-alpha/enschedule-0.0.3-alpha.tgz
-    version: 0.0.3-alpha
-  - apiVersion: v2
-    appVersion: 0.0.3-alpha
-    created: "2025-01-02T14:25:47.722752492Z"
-    description: Deploy worker, api and dashboard
-    digest: ae489e6cef48530af5f223347be5209196f3955c2c8b5098d982fc335007cf64
-    name: enschedule
-    type: application
-    urls:
-    - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.3-alpha/enschedule-0.0.3-alpha.tgz
     version: 0.0.3-alpha
   - apiVersion: v2
     appVersion: 0.0.6-alpha
@@ -110,6 +110,16 @@ entries:
     type: application
     urls:
     - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.4-alpha/enschedule-0.0.3-alpha.tgz
+    version: 0.0.3-alpha
+  - apiVersion: v2
+    appVersion: 0.0.5-alpha
+    created: "2025-01-03T11:49:39.457535742Z"
+    description: Deploy worker, api and dashboard
+    digest: 2d591581c0ef021ca67764df2ca6f1976a21af87f0c08e5a5fa9ec758d8b5bf0
+    name: enschedule
+    type: application
+    urls:
+    - https://github.com/ricsam/enschedule/releases/download/helm-v0.0.3-alpha-app-v0.0.5-alpha/enschedule-0.0.3-alpha.tgz
     version: 0.0.3-alpha
   - apiVersion: v2
     appVersion: 0.0.2-alpha
@@ -151,4 +161,4 @@ entries:
     urls:
     - https://github.com/ricsam/enschedule/releases/download/helm-0.0.0-alpha/enschedule-0.0.0-alpha.tgz
     version: 0.0.0-alpha
-generated: "2025-01-08T16:22:10.61503012Z"
+generated: "2025-01-08T16:54:28.060521782Z"

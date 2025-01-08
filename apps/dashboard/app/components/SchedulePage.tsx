@@ -626,7 +626,8 @@ function DataCard({
           ) : (
             <>
               <MuiLink component={Link} to="/" underline="hover">
-                {schedule.jobDefinition.title}
+                {schedule.jobDefinition.title} (v
+                {schedule.jobDefinition.version})
               </MuiLink>
               {" with the following data:"}
             </>

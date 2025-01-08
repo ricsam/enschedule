@@ -16,9 +16,10 @@ export default function DefinitionPage({
     <Box id="DefinitionPage">
       <Box>
         <Typography variant="subtitle1" color="text.secondary">
-          Every schedule can create runs against this function with data according
-          to the following schema. To modify this function you have to ask a
-          site administrator to edit the code for this function on the server.
+          Every schedule can create runs against this function with data
+          according to the following schema. To modify this function you have to
+          ask a site administrator to edit the code for this function on the
+          server.
         </Typography>
       </Box>
       <Box pt={3}></Box>
@@ -60,6 +61,28 @@ export default function DefinitionPage({
             </CardActions>
           </Card>
         ) : null}
+      </Box>
+      <Box pt={3}></Box>
+      <Box display="flex">
+        <Card
+          data-testid="schedule-details"
+          sx={{
+            flex: 1,
+            minWidth: "fit-content",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <CardContent sx={{ flex: 1 }}>
+            <Typography variant="h5" gutterBottom>
+              Details
+            </Typography>
+            <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2}>
+              <Typography color="text.secondary">Version</Typography>
+              <Typography color="text.primary">{definition.version}</Typography>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
     </Box>
   );

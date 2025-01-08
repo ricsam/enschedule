@@ -46,7 +46,7 @@ const columns: ColumnDef<RowData, any>[] = [
     },
     header: "Status",
     enableSorting: false,
-    enableMultiSort: false
+    enableMultiSort: false,
   }),
   columnHelper.accessor("id", {
     cell: (info) => {
@@ -200,7 +200,12 @@ const columns: ColumnDef<RowData, any>[] = [
       if (typeof run.jobDefinition === "string") {
         return run.jobDefinition;
       }
-      return run.jobDefinition.title;
+      return (
+        <>
+          {run.jobDefinition.title} (v
+          {run.jobDefinition.version})
+        </>
+      );
     },
   },
 ];

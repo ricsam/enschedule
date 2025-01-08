@@ -1,5 +1,12 @@
 # @enschedule/worker
 
+## 1.1.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/pg-driver@1.1.8
+
 ## 1.1.7
 
 ### Patch Changes

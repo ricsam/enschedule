@@ -157,6 +157,39 @@ const createPublicWorker = (dbWorker: Worker): PublicWorker => {
   };
 };
 
+/**
+ * Converts 4-space indentation in a code block to 2-space indentation.
+ *
+ * @param code - A string (e.g. a code snippet) to fix indentation.
+ * @returns A new string where every group of 4 spaces is replaced by 2 spaces.
+ */
+function fixIndentation(code: string): string {
+  interface IndentationGroups {
+    indentation: string; // Named capture group that matches leading spaces
+  }
+
+  return code.replace(
+    /^(?<indentation>(?: {4})+)/gm,
+    (
+      match: string, // The entire match for the leading spaces
+      p1: string, // The substring for the first capturing group
+      offset: number, // Position of the match
+      fullString: string, // The entire input string
+      groups?: IndentationGroups // The named capture groups object
+    ) => {
+      // If we somehow don't have named capture groups, bail out
+      if (!groups?.indentation) {
+        return match;
+      }
+      // Each group is guaranteed to be a multiple of 4 spaces in length
+      const originalLength = groups.indentation.length;
+      // Replace 4 spaces with 2 spaces
+      const newLength = (originalLength / 4) * 2;
+      return " ".repeat(newLength);
+    }
+  );
+}
+
 export const createPublicJobDefinition = (
   jobDef: JobDefinition
 ): PublicJobDefinition => {
@@ -168,7 +201,11 @@ export const createPublicJobDefinition = (
     }
     const { node } = zodToTs(jobDef.dataSchema, identifier);
     const typeAlias = createTypeAlias(node, identifier);
-    const codeBlock = printNode(typeAlias).replace(/^(?: {4})+/gm, "  ");
+
+    // This regex finds multiples of 4 leading spaces on each line.
+    // We then replace each group of 4 spaces with 2 spaces.
+    const codeBlock = fixIndentation(printNode(typeAlias));
+
     const jsonSchema: Record<string, unknown> = zodToJsonSchema(
       jobDef.dataSchema,
       identifier
@@ -3381,8 +3418,11 @@ export class PrivateBackend {
     if (process.env.ENSCHEDULE_CHILD_WORKER === "true" && ps) {
       return new Promise<boolean>((resolve) => {
         process.once("message", (message) => {
-          const { functionId, migratedData: data, version } =
-            RunHandlerInCpSchema.parse(message);
+          const {
+            functionId,
+            migratedData: data,
+            version,
+          } = RunHandlerInCpSchema.parse(message);
           const definition = this.getLocalHandler(functionId, version);
           (async () => {
             try {

@@ -430,7 +430,8 @@ export default function SchedulePage({
                   data-testid="definition-link"
                   to={"/definitions/" + schedule.jobDefinition.id}
                 >
-                  {schedule.jobDefinition.title}
+                  {schedule.jobDefinition.title} (v
+                  {schedule.jobDefinition.version})
                 </MuiLink>
               )}
               {schedule.cronExpression ? (
@@ -719,7 +720,7 @@ export function Actions({
                       <b>{worker.title}</b> ({worker.instanceId})
                     </MuiLink>
                     <Box component={"span"} sx={{ ml: 1 }}>
-                      <b>Polling every</b> {worker.pollInterval} s
+                      <b>Polling every</b> {worker.pollInterval}s
                     </Box>
                   </Box>
                 );

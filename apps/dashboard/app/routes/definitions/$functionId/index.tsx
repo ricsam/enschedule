@@ -23,7 +23,9 @@ export const useBreadcrumbs = (
         typeof jobDefinition === "string" ? jobDefinition : jobDefinition.id
       }`,
       title:
-        typeof jobDefinition === "string" ? jobDefinition : jobDefinition.title,
+        typeof jobDefinition === "string"
+          ? jobDefinition
+          : `${jobDefinition.title} v(${jobDefinition.version})`,
     },
   ]);
 };
@@ -62,7 +64,7 @@ export const useLayout = (def: SerializeFrom<PublicJobDefinition>) => {
   return {
     breadcrumbs: useBreadcrumbs(def),
     navbar: {
-      title: def.title,
+      title: `${def.title} v(${def.version})`,
       subTitle: def.description,
       actions: (
         <>

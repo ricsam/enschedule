@@ -355,7 +355,7 @@ test.describe("Single schedule", () => {
     await page.getByTestId("run-now").click();
     await page.getByTestId("run-now-snackbar").isVisible();
     await expect(page.getByTestId("run-now-snackbar")).toContainText(
-      "Polling every 3600 s"
+      "Polling every 3600s"
     );
 
     expect(page.getByTestId("run-now")).toBeDisabled();

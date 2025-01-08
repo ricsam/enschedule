@@ -71,8 +71,8 @@ export const useBreadcrumbs = (
 export default function Runs() {
   const { runs, schedule } = useData();
   const breadcrumbs = useBreadcrumbs(schedule);
-  const runsPage = useHref("", { relative: "path" });
-  const schedulePage = useHref("../?postActionRedirect=" + runsPage, { relative: "path" });
+  const thisPage = useHref("", { relative: "path" });
+  const schedulePage = useHref("../?postActionRedirect=" + thisPage, { relative: "path" });
   return (
     <RootLayout
       breadcrumbs={breadcrumbs}

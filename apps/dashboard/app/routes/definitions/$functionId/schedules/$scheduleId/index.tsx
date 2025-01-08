@@ -1,5 +1,5 @@
 import type { SerializeFrom } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useHref, useLoaderData } from "@remix-run/react";
 import { RootLayout } from "~/components/Layout";
 import SchedulePage, { Actions } from "~/components/SchedulePage";
 
@@ -56,10 +56,12 @@ export const useNavbar = (action: string) => {
 export default function Schedule({ editDetails }: { editDetails?: boolean }) {
   const data = useData();
   const { schedule } = useLoaderData<LoaderData>();
+  const currentPage = useHref("", { relative: "path" });
+  const schedulePage = useHref("?postActionRedirect=" + currentPage, { relative: "path" });
   return (
     <RootLayout
       breadcrumbs={useBreadcrumbs(data.schedule)}
-      navbar={useNavbar("")}
+      navbar={useNavbar(schedulePage)}
     >
       <SchedulePage schedule={schedule} editDetails={editDetails} />
     </RootLayout>

@@ -484,6 +484,9 @@ test.describe("Can update a single schedule", () => {
       );
     });
     test("Update runAt", async ({ page }) => {
+      
+      await page.getByTestId("run-now").click();
+
       let i = 0;
       while (
         (await page.getByTestId("number-of-runs").innerText()) !== "1" &&
@@ -543,17 +546,20 @@ test.describe("Can update a single schedule", () => {
 
       await page.keyboard.type("123");
 
-      // sometimes playright doesn't manage to type 123
+      /**
+       * sometimes playright doesn't manage to type 123
+       */
+      const pattern = /http:\/\/lo.*123.*3000/;
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
-      ).toMatch(/http:\/\/loc12?3?/);
+      ).toMatch(pattern);
       await Promise.all([
         page.getByTestId("submit-edit-data").click(),
         page.waitForResponse(/edit-details/),
       ]);
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
-      ).toMatch(/http:\/\/loc12?3?/);
+      ).toMatch(pattern);
       await new Promise((resolve) => {
         setTimeout(resolve, 1000);
       });
@@ -565,13 +571,15 @@ test.describe("Can update a single schedule", () => {
       });
       expect(
         await page.innerText('[data-testid="data-card"] .mtk5.detected-link')
-      ).toMatch(/http:\/\/loc12?3?/);
+      ).toMatch(pattern);
     });
   };
   test.beforeEach(async ({ page }) => {
     await reset(page);
     await login(page);
-    await createRun(page, 1);
+    await createRun(page, 1, {
+      runTomorrow: true,
+    });
     await page.goto(`${setup.dashboardUrl}/schedules`);
     await waitForNumRows(page, 1);
     expect(await numRows(page)).toBe(1);

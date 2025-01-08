@@ -120,7 +120,7 @@ spec:
             - name: DB_PORT
               value: {{ .Values.database.service.port | quote }}
             - name: DEBUG
-              value: "pg-driver,worker"
+              value: "pg-driver,worker,worker-cli"
             - name: ENSCHEDULE_WORKER_ID
               value: "migrate-enschedule-db-worker"
             - name: ENSCHEDULE_WORKER_NAME

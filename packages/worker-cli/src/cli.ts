@@ -150,6 +150,9 @@ const startCmd = new Command("start")
       )
   )
   .action(async (_options) => {
+
+    log("Starting worker with options", _options);
+
     const options = z
       .object({
         workerId: z.string({ message: "worker id is required" }),
@@ -223,6 +226,7 @@ const startCmd = new Command("start")
     };
 
     if (options.functions) {
+      log("Importing functions", options.functions);
       await Promise.all(options.functions.map(importFn));
     }
 
@@ -232,6 +236,7 @@ const startCmd = new Command("start")
     }
 
     if (options.migrate) {
+      log("Migrating");
       await worker.migrateDatabase();
     }
 
@@ -239,6 +244,7 @@ const startCmd = new Command("start")
       if (!options.apiKey) {
         throw new Error("API key is required when enabling the REST API");
       }
+      log("Starting REST API");
       server = worker
         .serve({
           port: z.coerce
@@ -252,6 +258,7 @@ const startCmd = new Command("start")
     }
 
     if (!options.disablePolling) {
+      log("Starting polling");
       await worker.startPolling({ dontMigrate: true });
     }
   });

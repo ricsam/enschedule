@@ -1,5 +1,11 @@
 # @enschedule/worker-cli
 
+## 0.0.6
+
+### Patch Changes
+
+- better logs
+
 ## 0.0.5
 
 ### Patch Changes

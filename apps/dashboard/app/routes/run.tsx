@@ -326,7 +326,7 @@ export default function Run() {
                 };
 
                 if (whenToSend === "now") {
-                  job.runAt = new Date().toJSON();
+                  job.runNow = true;
                 } else if (whenToSend === "later") {
                   if (cronDefined) {
                     job.cronExpression = parsedCron;

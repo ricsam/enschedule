@@ -1,5 +1,12 @@
 # @enschedule/hub
 
+## 1.0.13
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/dashboard@1.1.12
+
 ## 1.0.12
 
 ### Patch Changes

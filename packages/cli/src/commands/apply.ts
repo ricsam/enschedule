@@ -6,6 +6,7 @@ import { glob } from "glob";
 import yaml from "js-yaml";
 import { z } from "zod";
 import { ConfigError, getAuthHeader, getWorker } from "../get-worker";
+import { log } from "../log";
 
 const isDirectory = async (p: string): Promise<boolean> => {
   const stat = await fs.promises.stat(p);
@@ -58,6 +59,7 @@ export const apply = async (
       );
       process.exit(1);
     }
+    log("There was an unknown error", err);
   }
 };
 

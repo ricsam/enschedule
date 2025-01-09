@@ -1,5 +1,11 @@
 # @enschedule/cli
 
+## 1.1.9
+
+### Patch Changes
+
+- add more logs
+
 ## 1.1.8
 
 ### Patch Changes

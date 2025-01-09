@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.9
+
+### Patch Changes
+
+- fix log timestamps
+
 ## 1.1.8
 
 ### Patch Changes

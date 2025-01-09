@@ -3172,10 +3172,9 @@ export class PrivateBackend {
     function getHighPrecisionISOString() {
       const isoString = new Date().toJSON().replace(/\..*/, "");
       const [, nanoseconds] = process.hrtime();
-      const highPrecisionString = `${isoString}.${String(nanoseconds).padStart(
-        6,
-        "0"
-      )}Z`;
+      const highPrecisionString = `${isoString}.${String(nanoseconds)
+        .padStart(7, "0")
+        .slice(0, 7)}Z`;
       return highPrecisionString;
     }
 

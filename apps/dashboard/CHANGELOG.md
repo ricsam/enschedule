@@ -1,5 +1,11 @@
 # @enschedule/dashboard
 
+## 1.1.13
+
+### Patch Changes
+
+- @enschedule/worker@1.1.9
+
 ## 1.1.12
 
 ### Patch Changes

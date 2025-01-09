@@ -14,7 +14,6 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
   if (!readable) {
     return json({ error: "Run not found" }, { status: 404 });
   }
-  // let s = stream.Readable.toWeb(readable);
 
   return new Response(createReadableStreamFromReadable(readable), {
     headers: {

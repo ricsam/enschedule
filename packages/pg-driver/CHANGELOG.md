@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.11
+
+### Patch Changes
+
+- improve create read stream handling
+
 ## 1.1.10
 
 ### Patch Changes

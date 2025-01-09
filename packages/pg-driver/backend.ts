@@ -3289,10 +3289,14 @@ export class PrivateBackend {
       const nfs = await this.getNafs();
       const run = await Run.findByPk(runId);
       if (run?.logFile) {
-        return nfs.createReadStream(run.logFile);
+        const s = nfs.createReadStream(run.logFile);
+        s.on("error", (err) => {
+          log("Error reading log file", String(err));
+        });
+        return s;
       }
     } catch (err) {
-      log("Error reading log file", err);
+      log("Error reading log file", String(err));
       return undefined;
     }
   }

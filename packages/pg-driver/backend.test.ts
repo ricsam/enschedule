@@ -324,7 +324,7 @@ registerTests((getBackend: () => TestBackend) => {
       expect(runs).toHaveLength(1);
       const run = runs[0];
       expect(await backend.getLogs(backend.authHeader, run.id)).toBe(
-        "1970-01-01T00:00:00.000000Z comment\n"
+        "1970-01-01T00:00:00.0000000Z comment\n"
       );
 
       await awaitOverdueJobs(backend);
@@ -422,9 +422,9 @@ registerTests((getBackend: () => TestBackend) => {
           .slice(0, 3)
           .join("\n")
       ).toMatchInlineSnapshot(`
-        "1970-01-01T00:00:00.000000Z Error: Error
-        1970-01-01T00:00:00.000000Z     at Object.<anonymous> (backend.test.ts)
-        1970-01-01T00:00:00.000000Z     at awaitOverdueJobs (backend.test.ts)"
+        "1970-01-01T00:00:00.0000000Z Error: Error
+        1970-01-01T00:00:00.0000000Z     at Object.<anonymous> (backend.test.ts)
+        1970-01-01T00:00:00.0000000Z     at awaitOverdueJobs (backend.test.ts)"
       `);
     });
     it("should create a signature", () => {

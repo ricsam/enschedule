@@ -1,5 +1,14 @@
 # @enschedule/dashboard
 
+## 1.1.16
+
+### Patch Changes
+
+- improve create read stream handling
+- Updated dependencies
+  - @enschedule/worker-api@1.1.6
+  - @enschedule/worker@1.1.11
+
 ## 1.1.15
 
 ### Patch Changes

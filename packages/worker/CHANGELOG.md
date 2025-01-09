@@ -1,5 +1,14 @@
 # @enschedule/worker
 
+## 1.1.11
+
+### Patch Changes
+
+- improve create read stream handling
+- Updated dependencies
+  - @enschedule/worker-api@1.1.6
+  - @enschedule/pg-driver@1.1.11
+
 ## 1.1.10
 
 ### Patch Changes

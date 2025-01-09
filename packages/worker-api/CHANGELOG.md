@@ -1,5 +1,11 @@
 # @enschedule/worker-api
 
+## 1.1.6
+
+### Patch Changes
+
+- improve create read stream handling
+
 ## 1.1.5
 
 ### Patch Changes

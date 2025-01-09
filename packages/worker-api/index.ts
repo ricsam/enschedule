@@ -529,16 +529,21 @@ export class WorkerAPI {
       authHeader
     );
 
-    const { response } = await new Promise<{
-      response: http.IncomingMessage;
-      request: http.ClientRequest;
-    }>((resolve) => {
-      const req = (this.ssl ? https : http).request(options, (res) => {
-        resolve({ response: res, request: req });
+    try {
+      const { response } = await new Promise<{
+        response: http.IncomingMessage;
+        request: http.ClientRequest;
+      }>((resolve) => {
+        const req = (this.ssl ? https : http).request(options, (res) => {
+          resolve({ response: res, request: req });
+        });
+        req.end();
       });
-      req.end();
-    });
-
-    return response;
+      if (response.statusCode === 200) {
+        return response;
+      }
+    } catch (err) {
+      log("Error streaming logs", err);
+    }
   }
 }

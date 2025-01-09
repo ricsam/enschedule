@@ -440,6 +440,10 @@ export const expressRouter = (
         }
         res.setHeader("Content-Type", "text/plain");
         logsStream.pipe(res);
+        logsStream.on("error", (err) => {
+          log("Error reading log file", String(err));
+          res.status(500).send(String(err));
+        });
       })
       .catch(next);
   });

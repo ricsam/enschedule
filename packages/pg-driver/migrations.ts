@@ -137,6 +137,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
             runNow: {
               type: DataTypes.BOOLEAN,
               defaultValue: false,
+              allowNull: false,
             },
             functionId: {
               type: DataTypes.STRING,

@@ -1,6 +1,6 @@
 {
   "name": "@enschedule/pg-driver",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "module": "./index.ts",
   "main": "./index.ts",
   "types": "./index.ts",

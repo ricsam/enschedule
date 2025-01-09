@@ -187,7 +187,7 @@ export const publicJobScheduleSchema = z.object({
   /**
    * When clicking the run now button this is true to be claimed by a worker asap
    */
-  runNow: z.boolean(),
+  runNow: z.coerce.boolean(),
   lastRun: serializedRunSchema.optional(),
   createdAt: DateSchema,
   /** job definition functionId */

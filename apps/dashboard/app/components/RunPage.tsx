@@ -3,6 +3,7 @@ import type {
   PublicJobSchedule,
   SerializedRun,
 } from "@enschedule/types";
+import { RunStatus } from "@enschedule/types";
 import {
   Button,
   Card,
@@ -197,7 +198,7 @@ export default function RunPage({
                 stdout
               </Typography>
 
-              <Logs id={run.id} />
+              <Logs id={run.id} status={run.status} />
             </CardContent>
             <CardActions>
               <Button>Copy</Button>
@@ -209,8 +210,42 @@ export default function RunPage({
   );
 }
 
-const Logs = React.memo(function Logs({ id }: { id: number }) {
+const Logs = React.memo(function Logs({
+  id,
+  status,
+}: {
+  id: number;
+  status: RunStatus;
+}) {
   const [data, setData] = React.useState<string | null>(null);
+  const [time, setTime] = React.useState(Date.now());
+  const [focus, setFocus] = React.useState(document.hasFocus());
+
+  React.useEffect(() => {
+    const onFocus = () => setFocus(true);
+    const onBlur = () => setFocus(false);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!focus) {
+      return;
+    }
+    if (status !== RunStatus.RUNNING) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setTime(Date.now());
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+    };
+  });
   React.useEffect(() => {
     const controller = new AbortController();
     fetch("/logs/" + id, { signal: controller.signal })
@@ -223,7 +258,7 @@ const Logs = React.memo(function Logs({ id }: { id: number }) {
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, time]);
   if (!data) {
     return null;
   }

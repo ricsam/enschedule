@@ -1,5 +1,11 @@
 # @enschedule/types
 
+## 1.1.6
+
+### Patch Changes
+
+- Fix runNow type and poll for logs when schedule is running
+
 ## 1.1.5
 
 ### Patch Changes

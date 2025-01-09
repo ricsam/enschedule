@@ -1,5 +1,13 @@
 # @enschedule/pg-driver
 
+## 1.1.12
+
+### Patch Changes
+
+- Fix runNow type and poll for logs when schedule is running
+- Updated dependencies
+  - @enschedule/types@1.1.6
+
 ## 1.1.11
 
 ### Patch Changes

@@ -1,0 +1,17 @@
+{{- if and .Values.worker.enabled .Values.worker.persistence.enabled (not .Values.worker.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "enschedule.fullname" . }}-{{ .Values.worker.persistence.volumeName | default "worker-logs" }}
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.worker.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.worker.persistence.size | default "1Gi" }}
+  {{- if .Values.worker.persistence.storageClass }}
+  storageClassName: {{ .Values.worker.persistence.storageClass }}
+  {{- end }}
+{{- end }}

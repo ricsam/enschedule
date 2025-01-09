@@ -101,6 +101,19 @@ worker:
   extraVolumeMounts: []
   extraEnvs: []
 
+  # use persistence if your nafs path points to e.g. file:///var/log/enschedule and you only have one worker
+  persistence:
+    enabled: false
+    # If you have a PVC, reference it here
+    # and skip auto-creation of a PVC
+    existingClaim: ""
+    # Storage class, e.g. "standard" (depends on your cluster)
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    volumeName: "worker-logs"  # Suffix for the PVC & volume name
+    mountPath: "/var/log/enschedule"
+
 database:
   replicaCount: 1
 
@@ -163,8 +176,20 @@ database:
 
   affinity: {}
 
-dashboard:
+  # Persistence configuration
+  persistence:
+    enabled: true
+    # If you have a PVC, reference it here
+    # and skip auto-creation of a PVC
+    existingClaim: ""
+    # Storage class, e.g. "standard" (depends on your cluster)
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    volumeName: "postgres-data"
+    mountPath: "/var/lib/postgresql/data"
 
+dashboard:
   workerUrl: # if you have a custom worker set the url here.
 
   replicaCount: 1
@@ -230,7 +255,13 @@ dashboard:
 
   affinity: {}
 
+
+# If you have multiple workers we need a file server to store the logs.
+# By default storage it is an [enstore server](https://github.com/ricsam/enstore). You can also use a s3 service like minio or disable this block
+# and point the nafs uri to an external service
 storage:
+  enabled: true
+
   replicaCount: 1
 
   image:

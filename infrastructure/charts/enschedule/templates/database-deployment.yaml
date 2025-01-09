@@ -38,18 +38,12 @@ spec:
               protocol: TCP
           livenessProbe:
             exec:
-              command:
-                - sh
-                - -c
-                - "pg_isready"
+              command: ["sh", "-c", "pg_isready"]
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             exec:
-              command:
-                - sh
-                - -c
-                - "pg_isready"
+              command: ["sh", "-c", "pg_isready"]
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
@@ -60,6 +54,27 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: pgPassword
+          
+          # Add volumeMount if persistence is enabled
+          volumeMounts:
+            {{- if .Values.database.persistence.enabled }}
+            - name: {{ .Values.database.persistence.volumeName | default "postgres-data" }}
+              mountPath: {{ .Values.database.persistence.mountPath }}
+            {{- end }}
+      
+      # Add volumes if persistence is enabled
+      volumes:
+        {{- if .Values.database.persistence.enabled }}
+        - name: {{ .Values.database.persistence.volumeName | default "postgres-data" }}
+          {{- if .Values.database.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.database.persistence.existingClaim }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "enschedule.fullname" . }}-{{ .Values.database.persistence.volumeName | default "data" }}
+          {{- end }}
+        {{- end }}
+
       {{- with .Values.database.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -72,5 +87,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-
 {{- end }}

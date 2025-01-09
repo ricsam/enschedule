@@ -1,4 +1,4 @@
-{{- if .Values.storage }}
+{{- if .Values.storage.enabled }}
 apiVersion: v1
 kind: Service
 metadata:

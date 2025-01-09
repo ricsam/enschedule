@@ -1,4 +1,4 @@
-{{- if .Values.storage }}
+{{- if .Values.storage.enabled }}
 {{- if .Values.storage.ingress.enabled -}}
 {{- $fullName := include "enschedule.fullname" . -}}
 {{- $svcPort := .Values.storage.service.port -}}

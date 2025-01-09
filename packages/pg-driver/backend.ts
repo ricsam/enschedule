@@ -3195,6 +3195,7 @@ export class PrivateBackend {
     try {
       logStream = nfs.createWriteStream(logFile);
       run.logFile = logFile;
+      await run.save();
     } catch (err) {
       log("Error creating log file", err);
     }

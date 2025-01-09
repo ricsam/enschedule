@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.10
+
+### Patch Changes
+
+- save logfile path to run once it is created
+
 ## 1.1.9
 
 ### Patch Changes

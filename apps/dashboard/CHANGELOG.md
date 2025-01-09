@@ -1,5 +1,11 @@
 # @enschedule/dashboard
 
+## 1.1.14
+
+### Patch Changes
+
+- Remove scroll restoration for now
+
 ## 1.1.13
 
 ### Patch Changes

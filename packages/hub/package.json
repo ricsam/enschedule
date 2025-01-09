@@ -1,6 +1,6 @@
 {
   "name": "@enschedule/hub",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "main": "./index.ts",
   "types": "./index.ts",
   "module": "./index.ts",

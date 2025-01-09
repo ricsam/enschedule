@@ -325,7 +325,6 @@ storage:
 
   affinity: {}
 
-  # New block for persistence
   persistence:
     enabled: true
     # If you have a PVC, reference it here

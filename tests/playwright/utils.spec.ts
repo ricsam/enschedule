@@ -13,7 +13,14 @@ test.afterEach(async () => {
 });
 
 const { reset, createRun, visitRunPages, login, addLoginCookie } = utils(
-  () => setup.dashboardUrl
+  {
+    get dashboardUrl() {
+      return setup.dashboardUrl;
+    },
+    get workerUrl() {
+      return setup.workerUrl;
+    },
+  }
 );
 
 test("create_many_runs", async ({ page }) => {

@@ -6,7 +6,6 @@ import {
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration,
   isRouteErrorResponse,
   useLoaderData,
   useRouteError,
@@ -51,7 +50,7 @@ export default function App() {
             </MuiTheme>
           </ThemeProvider>
         </UserProvider>
-        <ScrollRestoration />
+        {/* <ScrollRestoration /> */}
         <Scripts />
         <LiveReload />
       </body>

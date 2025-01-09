@@ -57,7 +57,7 @@ jobs:
         run: corepack enable
       - name: All playwright tests
         run: pnpm run playwright test
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
@@ -202,7 +202,7 @@ jobs:
       - name: Test CLI - reset
         run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule reset --force
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: helm-playwright-report

@@ -219,7 +219,9 @@ const Logs = React.memo(function Logs({
 }) {
   const [data, setData] = React.useState<string | null>(null);
   const [time, setTime] = React.useState(Date.now());
-  const [focus, setFocus] = React.useState(document.hasFocus());
+  const [focus, setFocus] = React.useState(
+    typeof document !== "undefined" ? document.hasFocus() : false
+  );
 
   React.useEffect(() => {
     const onFocus = () => setFocus(true);

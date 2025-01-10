@@ -154,12 +154,12 @@ jobs:
           export ENSCHEDULE_API_KEY="Api-Key secret_key"
           export ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url)
           export ENSCHEDULE_API_VERSION="1"
-          STDOUT=$(enschedule apply -f packages/cli/__fixtures__/cron.yml)
-          echo $STDOUT
-          [ $(echo $STDOUT | grep created | wc -l) -eq 3 ]
-          STDOUT=$(enschedule apply -f packages/cli/__fixtures__/cron.yml)
-          echo $STDOUT
-          [ $(echo $STDOUT | grep unchanged | wc -l) -eq 3 ]
+          STDOUT="$(enschedule apply -f packages/cli/__fixtures__/cron.yml)"
+          echo "$STDOUT"
+          [ $(echo "$STDOUT" | grep created | wc -l) -eq 3 ]
+          STDOUT="$(enschedule apply -f packages/cli/__fixtures__/cron.yml)"
+          echo "$STDOUT"
+          [ $(echo "$STDOUT" | grep unchanged | wc -l) -eq 3 ]
 
       - name: Test CLI - get schedules, after applying a yaml file there should be 3 schedules (plus line for header)
         run: |

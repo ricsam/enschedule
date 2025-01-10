@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.14
+
+### Patch Changes
+
+- Fix update handling of schedule
+
 ## 1.1.13
 
 ### Patch Changes

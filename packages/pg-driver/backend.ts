@@ -2334,7 +2334,7 @@ export class PrivateBackend {
       failureTriggerId: failureTrigger,
       defaultRunAccess,
       access,
-      runNow,
+      runNow: runNow ?? false,
     };
     const result = await Schedule.findOrCreate({
       where,
@@ -2369,24 +2369,24 @@ export class PrivateBackend {
 
         const value = defaults[key] as any;
 
+        const prev = schedule[key];
+
         if (key === "runAt") {
           // because we are comparing date objects
-          if (String(schedule[key]) === String(value)) {
+          if (String(prev) === String(value)) {
             return;
           }
         }
 
         // sequelize returns null for undefined values
-        if (schedule[key] === null) {
-          if (value === undefined) {
-            return;
-          }
+        if (prev == value) {
+          return;
         }
 
-        if (schedule[key] !== value) {
+        if (prev !== value) {
           (schedule as Record<string, any>)[key] = value;
           updated = true;
-          updatedDebug[key] = [schedule[key], value];
+          updatedDebug[key] = [prev, value];
         }
       });
 

@@ -1,5 +1,14 @@
 # @enschedule/hub
 
+## 1.0.19
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/pg-driver@1.1.13
+  - @enschedule/worker@1.1.13
+  - @enschedule/dashboard@1.1.18
+
 ## 1.0.18
 
 ### Patch Changes

@@ -2362,6 +2362,7 @@ export class PrivateBackend {
       /* eslint-disable */
       // update the schedule
       let updated = false;
+      const updatedDebug: Record<string, [unknown, unknown]> = {};
 
       Object.keys(defaults).forEach((_key) => {
         const key = _key as keyof typeof defaults;
@@ -2385,11 +2386,13 @@ export class PrivateBackend {
         if (schedule[key] !== value) {
           (schedule as Record<string, any>)[key] = value;
           updated = true;
+          updatedDebug[key] = [schedule[key], value];
         }
       });
 
       if (updated) {
         status = "updated";
+        log(`Updating schedule (${schedule.id})`, updatedDebug);
       }
       /* eslint-enable */
 

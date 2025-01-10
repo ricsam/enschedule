@@ -1,5 +1,11 @@
 # @enschedule/pg-driver
 
+## 1.1.13
+
+### Patch Changes
+
+- more logs
+
 ## 1.1.12
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @enschedule/worker
 
+## 1.1.15
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/worker-api@1.1.7
+
 ## 1.1.14
 
 ### Patch Changes

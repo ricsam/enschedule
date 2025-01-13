@@ -1,11 +1,8 @@
+import { ScheduleJobOptionsSchema } from "@enschedule/types";
 import { Command } from "commander"; // add this line
 import { z } from "zod";
-import {
-  ScheduleJobOptionsSchema,
-  ScheduleUpdatePayloadSchema,
-} from "@enschedule/types";
-import { getAuthHeader, getWorker } from "../get-worker";
 import { getSchedule } from "../get-schedule";
+import { getAuthHeader, getWorker } from "../get-worker";
 
 export const createCommand = new Command("create");
 
@@ -39,52 +36,38 @@ createScheduleCommand
       );
     }
 
-    if ((!update || !schedule) && scheduleId.startsWith("db:")) {
+    if (!schedule && scheduleId.startsWith("db:")) {
       throw new Error("You cannot create a schedule with a db id");
     }
 
-    const action =
-      update && schedule
-        ? {
-            type: "update" as const,
-            options: ScheduleUpdatePayloadSchema.parse({
-              ..._options,
-              id: schedule.id,
-            }),
-            schedule,
-          }
-        : {
-            type: "create" as const,
-            options: {
-              ...ScheduleJobOptionsSchema.parse(_options),
-              eventId: scheduleId,
-            },
-            ...z
-              .object({
-                functionId: z.string(),
-                functionVersion: z.number(),
-                data: z
-                  .string()
-                  .optional()
-                  .transform((data): unknown =>
-                    data ? JSON.parse(data) : undefined
-                  ),
-              })
-              .parse(_options),
-          };
+    const action = {
+      options: {
+        ...ScheduleJobOptionsSchema.parse(_options),
+        eventId: scheduleId,
+      },
+      ...z
+        .object({
+          functionId: z.string(),
+          functionVersion: z.number(),
+          data: z
+            .string()
+            .optional()
+            .transform((data): unknown =>
+              data ? JSON.parse(data) : undefined
+            ),
+        })
+        .parse(_options),
+    };
 
     const authHeader = await getAuthHeader();
     const worker = await getWorker();
 
-    if (action.type === "create") {
-      await worker.scheduleJob(
-        authHeader,
-        action.functionId,
-        action.functionVersion,
-        action.data,
-        action.options
-      );
-    } else {
-      await worker.updateSchedule(authHeader, action.options);
-    }
+    const r = await worker.scheduleJob(
+      authHeader,
+      action.functionId,
+      action.functionVersion,
+      action.data,
+      action.options
+    );
+    console.log("Schedule", scheduleId, r.status);
   });

@@ -208,6 +208,29 @@ jobs:
           CUR_DATE=${CUR_DATE:0:19}
           [[ "$CUR_DATE" == "$DATE_TWO" ]]
 
+          set +e
+
+          # Run create-schedule without --update
+          enschedule create schedule \
+            --name "created-with-cli" \
+            --run-at "$DATE_TWO" \
+            --function-id log-job \
+            --function-version 1 \
+            --data '{ "message": "something to log" }' \
+            --title "Schedule created from cli again" 2>/dev/null
+
+          # Capture the exit code
+          exit_code=$?
+
+          # Re-enable `set -e`
+          set -e
+
+          [ $exit_code -ne 0 ]
+
+          # Test can update
+          enschedule update created-with-cli --title "a-new-title"
+          enschedule get schedules | grep -e 'a-new-title'
+
       - name: Test CLI - reset
         run: ENSCHEDULE_API_KEY="Api-Key secret_key" ENSCHEDULE_API_ENDPOINT=$(minikube service worker-service --url) ENSCHEDULE_API_VERSION="1" enschedule reset --force
 

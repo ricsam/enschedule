@@ -1,5 +1,13 @@
 # @enschedule/cli
 
+## 1.1.12
+
+### Patch Changes
+
+- Update the cli
+- Updated dependencies
+  - @enschedule/worker-api@1.1.7
+
 ## 1.1.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @enschedule/worker-api
 
+## 1.1.7
+
+### Patch Changes
+
+- Update the cli
+
 ## 1.1.6
 
 ### Patch Changes

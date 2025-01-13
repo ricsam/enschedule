@@ -204,7 +204,6 @@ export class WorkerAPI {
           }
           req.end();
         });
-        log("@reponse 1", response);
         return response;
       } catch (error) {
         attempt += 1;

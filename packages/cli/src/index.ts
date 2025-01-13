@@ -6,12 +6,14 @@ import { getCommand } from "./commands/get";
 import { deleteCommand } from "./commands/delete";
 import { resetCommand } from "./commands/reset";
 import { createCommand } from "./commands/create";
+import { updateCommand } from "./commands/update";
 
 program.addCommand(applyCommand);
 program.addCommand(getCommand);
 program.addCommand(deleteCommand);
 program.addCommand(resetCommand);
 program.addCommand(createCommand);
+program.addCommand(updateCommand);
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
 program.version(pkg.version).parse(process.argv);

@@ -1,5 +1,13 @@
 # @enschedule/dashboard
 
+## 1.1.20
+
+### Patch Changes
+
+- Updated dependencies
+  - @enschedule/worker-api@1.1.7
+  - @enschedule/worker@1.1.15
+
 ## 1.1.19
 
 ### Patch Changes

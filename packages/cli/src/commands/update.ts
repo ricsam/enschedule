@@ -22,6 +22,7 @@ updateScheduleCommand
   )
   .option("--data [data]", "Data to pass to the function (JSON)")
   .option("--title [title]", "Title of the schedule")
+  .option("--description [description]", "Description of the schedule")
   .action(async (name, _options) => {
     const scheduleId = z.string().parse(name);
     const schedule = await getSchedule(scheduleId);

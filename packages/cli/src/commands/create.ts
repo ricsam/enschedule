@@ -25,6 +25,7 @@ createScheduleCommand
   )
   .option("--data [data]", "Data to pass to the function (JSON)")
   .option("--title <title>", "Title of the schedule")
+  .option("--description [description]", "Description of the schedule")
   .action(async (_options) => {
     const update = z.object({ update: z.boolean() }).parse(_options).update;
     const scheduleId = z.object({ name: z.string() }).parse(_options).name;

@@ -2239,7 +2239,9 @@ export class PrivateBackend {
     data: unknown,
     cronExpression: string | undefined
   ): string {
-    const rounded = runAt
+    const rounded = cronExpression
+      ? "cron-expression"
+      : runAt
       ? Math.floor(runAt.getTime() / 1000) * 1000
       : "manual";
     let signature = `${functionId}-${rounded}-${JSON.stringify(data)}`;

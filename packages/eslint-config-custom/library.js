@@ -37,6 +37,7 @@ module.exports = {
     "@typescript-eslint/no-unnecessary-condition": 0,
     "no-constant-condition": 0,
     "eslint-comments/no-unlimited-disable": 0,
+    'no-nested-ternary': 0,
   },
   ignorePatterns: ["node_modules/", "dist/", "coverage/", "*.test.ts"],
 };

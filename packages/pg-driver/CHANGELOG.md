@@ -1,5 +1,12 @@
 # @enschedule/pg-driver
 
+## 1.1.15
+
+### Patch Changes
+
+- better schedule serialization
+  - @enschedule/types@1.1.6
+
 ## 1.1.14
 
 ### Patch Changes

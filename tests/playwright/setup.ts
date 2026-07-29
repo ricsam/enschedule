@@ -112,10 +112,10 @@ export class Setup {
       });
 
       if (options?.stdout !== false) {
-        child.stdout?.pipe(process.stdout);
+        child.stdout?.on("data", (chunk) => process.stdout.write(String(chunk)));
       }
       if (options?.stderr !== false) {
-        child.stderr?.pipe(process.stderr);
+        child.stderr?.on("data", (chunk) => process.stderr.write(String(chunk)));
       }
     });
 

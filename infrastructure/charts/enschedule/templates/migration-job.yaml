@@ -7,8 +7,8 @@ metadata:
     {{- include "enschedule.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   template:
     metadata:
@@ -42,10 +42,10 @@ spec:
             - -c
             - |
               echo "Script started...";
-              echo "Using host: database-service, port: {{ .Values.database.service.port }}";
+              echo "Using host: {{ ternary "dashboard-service" "database-service" .Values.singlePod.enabled }}, port: {{ .Values.database.service.port }}";
               for i in $(seq 1 60); do
                 echo "Attempt $i: Checking database readiness...";
-                if pg_isready -h database-service -p {{ .Values.database.service.port }} -U postgres; then
+                if pg_isready -h {{ ternary "dashboard-service" "database-service" .Values.singlePod.enabled }} -p {{ .Values.database.service.port }} -U postgres; then
                   echo "Database is ready!";
                   exit 0;
                 fi
@@ -64,6 +64,7 @@ spec:
                   key: pgPassword
       containers:
         - name: worker
+          command: ["bun", "/app/packages/pg-driver/migrate.ts"]
           volumeMounts:
             {{- if .Values.migrationJob.extraVolumeMounts }}
             {{- toYaml .Values.migrationJob.extraVolumeMounts | nindent 12 }}
@@ -75,16 +76,12 @@ spec:
           resources:
             {{- toYaml .Values.migrationJob.resources | nindent 12 }}
           env:
-            - name: ENSCHEDULE_MIGRATE
-              value: "true"
-            - name: ENSCHEDULE_DISABLE_POLLING
-              value: "true"
             - name: POSTGRES
               value: "true"
             - name: DB_USER
               value: "postgres"
             - name: DB_HOST
-              value: "database-service"
+              value: {{ ternary "dashboard-service" "database-service" .Values.singlePod.enabled | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

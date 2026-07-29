@@ -1,14 +1,11 @@
 {
   "name": "@enschedule/worker-api",
-  "version": "1.1.7",
-  "module": "./index.ts",
+  "version": "2.0.0",
+  "type": "module",
+  "exports": { ".": "./index.ts" },
   "main": "./index.ts",
   "types": "./index.ts",
-  "dist-entry": "./dist/index.js",
-  "keywords": [
-    "worker-api",
-    "enschedule"
-  ],
+  "keywords": ["worker-api", "enschedule", "richie-rpc"],
   "author": "Ricsam <oss@ricsam.dev>",
   "license": "MIT",
   "repository": {
@@ -17,19 +14,17 @@
     "directory": "packages/worker-api"
   },
   "scripts": {
-    "lint": "eslint -f visualstudio .",
-    "build": "tsc -p ./tsconfig.json"
-  },
-  "devDependencies": {
-    "@types/node": "^20.5.2",
-    "eslint-config-custom": "workspace:*",
-    "tsconfig": "workspace:*",
-    "@enschedule/types": "workspace:*",
-    "typescript": "^5.1.0",
-    "@types/debug": "^4.1.8"
+    "build": "bun build ./index.ts --outdir ./dist --target bun --format esm --external @enschedule/types --external @richie-rpc/client",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
-    "zod": "^3.22.2",
-    "debug": "^4.3.4"
+    "@enschedule/types": "workspace:*",
+    "@richie-rpc/client": "2.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^5.9.3"
   }
 }

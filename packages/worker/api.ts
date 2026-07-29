@@ -1,490 +1,300 @@
-import http from "node:http";
-import { PrivateBackend } from "@enschedule/pg-driver";
-import type { ScheduleUpdatePayload } from "@enschedule/types";
-import {
-  AuthHeader,
-  ListRunsOptionsSerializedSchema,
-  ScheduleSchema,
-  ScheduleUpdatePayloadSchema,
-  SchedulesFilterSchema,
-} from "@enschedule/types";
+import { createRouter, RouteNotFoundError, Status, ValidationError } from "@richie-rpc/server";
+import type { PrivateBackend } from "@enschedule/pg-driver";
 import type { WorkerAPI } from "@enschedule/worker-api";
-import { json as parseJsonBody } from "body-parser";
-import { debug } from "debug";
-import express, { Router } from "express";
+import { AuthHeader } from "@enschedule/types";
+import { API_BASE_PATH, enscheduleContract } from "@enschedule/types/contract";
 import { z } from "zod";
 
-const log = debug("worker");
+export type WorkerBackend = PrivateBackend | WorkerAPI;
+
+const unauthorized = () => ({
+  status: Status.Unauthorized,
+  body: { code: "UNAUTHORIZED", message: "Authentication required" },
+} as const);
+
+const notFound = (message: string) => ({
+  status: Status.NotFound,
+  body: { code: "NOT_FOUND", message },
+} as const);
+
+function getAuthHeader(
+  headers: { authorization?: string; "x-api-key"?: string },
+): z.output<typeof AuthHeader> | undefined {
+  const authorization = AuthHeader.safeParse(headers.authorization);
+  if (authorization.success) return authorization.data;
+  if (headers["x-api-key"]) return `Api-Key ${headers["x-api-key"]}`;
+  return undefined;
+}
+
+export function createWorkerRouter(worker: WorkerBackend) {
+  const requireAuth = async (headers: {
+    authorization?: string;
+    "x-api-key"?: string;
+  }) => {
+    const authHeader = getAuthHeader(headers);
+    if (!authHeader) return undefined;
+    const user = await worker.getUserAuth(authHeader);
+    return user ? authHeader : undefined;
+  };
+
+  return createRouter(
+    enscheduleContract,
+    {
+      health: () => ({
+        status: Status.OK,
+        body: { message: "Endpoint is healthy", runtime: "bun" },
+      }),
+      login: async ({ body }) => {
+        const tokens = await worker.login(body.username, body.password);
+        return tokens
+          ? { status: Status.OK, body: tokens }
+          : unauthorized();
+      },
+      refresh: async ({ body }) => {
+        const tokens = await worker.refreshToken(body.refreshToken);
+        return tokens
+          ? { status: Status.OK, body: tokens }
+          : unauthorized();
+      },
+      logout: async ({ body }) => {
+        await worker.logout(body.refreshToken, body.allDevices);
+        return { status: Status.OK, body: { success: true } };
+      },
+      session: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return { status: Status.OK, body: {} };
+        const auth = await worker.getUserAuth(authHeader);
+        return {
+          status: Status.OK,
+          body: {
+            user: auth?.userId
+              ? { userId: auth.userId, admin: auth.admin }
+              : undefined,
+          },
+        };
+      },
+      userAuth: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        const user = await worker.getUserAuth(authHeader);
+        return user
+          ? { status: Status.OK, body: user }
+          : unauthorized();
+      },
+      listUsers: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.getUsers(authHeader) };
+      },
+      getUser: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        const user = await worker.getUser(authHeader, params.id);
+        return user
+          ? { status: Status.OK, body: user }
+          : notFound("User not found");
+      },
+      listWorkers: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.getWorkers(authHeader) };
+      },
+      deleteWorkers: async ({ body, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.deleteWorkers(body.ids) };
+      },
+      listDefinitions: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.getLatestHandlers(authHeader),
+        };
+      },
+      getDefinition: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        try {
+          return {
+            status: Status.OK,
+            body: await worker.getLatestHandler(params.id, authHeader),
+          };
+        } catch {
+          return notFound("Function not found");
+        }
+      },
+      listSchedules: async ({ query, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.getSchedules(authHeader, query),
+        };
+      },
+      createSchedule: async ({ body, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.Created,
+          body: await worker.scheduleJob(
+            authHeader,
+            body.functionId,
+            body.functionVersion,
+            body.data,
+            body.options,
+          ),
+        };
+      },
+      getSchedule: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        const schedule = await worker.getSchedule(authHeader, params.id);
+        return schedule
+          ? { status: Status.OK, body: schedule }
+          : notFound("Schedule not found");
+      },
+      updateSchedule: async ({ params, body, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.updateSchedule(authHeader, { id: params.id, ...body }),
+        };
+      },
+      deleteSchedule: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.deleteSchedule(authHeader, params.id),
+        };
+      },
+      scheduleActions: async ({ body, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        if (body.action === "run") await worker.runSchedulesNow(body.ids);
+        if (body.action === "unschedule") await worker.unschedule(body.ids);
+        if (body.action === "delete") await worker.deleteSchedules(body.ids);
+        return { status: Status.OK, body: { success: true } };
+      },
+      runSchedule: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        await worker.runScheduleNow(params.id);
+        return { status: Status.OK, body: { success: true } };
+      },
+      listRuns: async ({ query, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.getRuns({ ...query, authHeader }),
+        };
+      },
+      getRun: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        try {
+          return {
+            status: Status.OK,
+            body: await worker.getRun(authHeader, params.id),
+          };
+        } catch {
+          return notFound("Run not found");
+        }
+      },
+      deleteRun: async ({ params, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: await worker.deleteRun(authHeader, params.id),
+        };
+      },
+      deleteRuns: async ({ body, headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.deleteRuns(body.ids) };
+      },
+      streamLogs: async ({ params, headers, stream }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) {
+          stream.close({ complete: false });
+          return;
+        }
+        const logs = await worker.streamLogs(authHeader, params.id);
+        if (!logs) {
+          stream.close({ complete: false });
+          return;
+        }
+        if (logs instanceof ReadableStream) {
+          const reader = logs.getReader();
+          const decoder = new TextDecoder();
+          while (stream.isOpen) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            stream.send({ text: decoder.decode(value, { stream: true }) });
+          }
+        } else {
+          for await (const chunk of logs as AsyncIterable<Uint8Array | string>) {
+            if (!stream.isOpen) break;
+            stream.send({ text: typeof chunk === "string" ? chunk : chunk.toString() });
+          }
+        }
+        stream.close({ complete: true });
+      },
+      reset: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return {
+          status: Status.OK,
+          body: { success: await worker.reset(authHeader) },
+        };
+      },
+    },
+    { basePath: API_BASE_PATH },
+  );
+}
+
+export async function handleWorkerRequest(
+  worker: WorkerBackend,
+  request: Request,
+): Promise<Response> {
+  try {
+    return await createWorkerRouter(worker).fetch(request);
+  } catch (error) {
+    if (error instanceof RouteNotFoundError) {
+      return Response.json(
+        { code: "NOT_FOUND", message: error.message },
+        { status: Status.NotFound },
+      );
+    }
+    if (error instanceof ValidationError) {
+      return Response.json(
+        { code: "VALIDATION_ERROR", message: error.message },
+        { status: Status.BadRequest },
+      );
+    }
+    console.error(error);
+    return Response.json(
+      { code: "INTERNAL_ERROR", message: "Internal server error" },
+      { status: Status.InternalServerError },
+    );
+  }
+}
 
 export interface ServeOptions {
   port: number;
-  apiKey: string;
   hostname?: string;
 }
 
-export const expressRouter = (
-  worker: WorkerAPI | PrivateBackend,
-  apiKey: string
-): Router => {
-  const apiKeyMiddleware = (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    let authHeader: z.infer<typeof AuthHeader> | undefined;
-    const requestApiKey = req.get("X-API-KEY");
-
-    const authHeaderParse = AuthHeader.safeParse(req.headers.authorization);
-    if (authHeaderParse.success) {
-      authHeader = authHeaderParse.data;
-    } else if (requestApiKey && requestApiKey === apiKey) {
-      authHeader = `Api-Key ${requestApiKey}`;
-    }
-    if (!authHeader) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    worker
-      .getUserAuth(authHeader)
-      .then((user) => {
-        if (!user) {
-          return res.status(401).json({ error: "Unauthorized" });
-        }
-        next();
-      })
-      .catch(() => {
-        return res.status(401).json({ error: "Unauthorized" });
-      });
-  };
-
-  const router = Router({
-    strict: true,
+export function serveWorker(worker: WorkerBackend, options: ServeOptions) {
+  const server = Bun.serve({
+    port: options.port,
+    hostname: options.hostname ?? "0.0.0.0",
+    fetch: (request) => handleWorkerRequest(worker, request),
   });
-
-  router.get("/healthz", (req, res) => {
-    res.status(200).json({ message: "Endpoint is healthy" });
-  });
-
-  router.use((req, res, next) => {
-    log("Incoming", req.method, decodeURI(req.url));
-    res.on("finish", () => {
-      log(
-        "Outgoing",
-        req.method,
-        decodeURI(req.url),
-        res.statusCode,
-        res.statusMessage
-      );
-    });
-    next();
-  });
-
-  router.use(apiKeyMiddleware);
-  router.use(parseJsonBody());
-
-  router.get("/job-definitions", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getLatestHandlers(authHeader.data)
-      .then((jobDefinitions) => {
-        res.json(jobDefinitions);
-      })
-      .catch(next);
-  });
-
-  router.get("/job-definitions/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getLatestHandler(req.params.id, authHeader.data)
-      .then((jobDefinition) => {
-        res.json(jobDefinition);
-      })
-      .catch(next);
-  });
-
-  router.get("/schedules", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const filters = SchedulesFilterSchema.parse(req.query);
-    worker
-      .getSchedules(authHeader.data, filters)
-      .then((schedules) => {
-        res.json(schedules);
-      })
-      .catch(next);
-  });
-
-  router.post("/workers", (req, res, next) => {
-    const { ids } = z.object({ ids: z.array(z.number()) }).parse(req.body);
-    worker
-      .deleteWorkers(ids)
-      .then((deletedIds) => {
-        res.json(deletedIds);
-      })
-      .catch(next);
-  });
-
-  router.get("/workers", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getWorkers(authHeader.data)
-      .then((workers) => {
-        res.json(workers);
-      })
-      .catch(next);
-  });
-
-  router.post("/schedules", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { functionId, data, options, functionVersion } = ScheduleSchema.parse(
-      req.body
-    );
-    worker
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      .scheduleJob(
-        authHeader.data,
-        functionId,
-        functionVersion,
-        data as any,
-        options
-      )
-      .then((newSchedule) => {
-        res.json(newSchedule);
-      })
-      .catch(next);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-  });
-
-  router.get("/schedules/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    worker
-      .getSchedule(authHeader.data, validatedId)
-      .then((schedule) => {
-        res.json(schedule);
-      })
-      .catch(next);
-  });
-
-  router.delete("/schedules/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    worker
-      .deleteSchedule(authHeader.data, validatedId)
-      .then((schedule) => {
-        res.json(schedule);
-      })
-      .catch(next);
-  });
-
-  router.post("/delete-schedules", (req, res, next) => {
-    const idSchema = z.object({
-      scheduleIds: z.array(z.number().int().positive()),
-    });
-    const { scheduleIds } = idSchema.parse(req.body);
-
-    worker
-      .deleteSchedules(scheduleIds)
-      .then((deletedIds) => {
-        res.json(deletedIds);
-      })
-      .catch(next);
-  });
-
-  router.get("/runs", (req, res, next) => {
-    const options = ListRunsOptionsSerializedSchema.parse(req.query);
-    worker
-      .getRuns(options)
-      .then((runs) => {
-        res.json(runs);
-      })
-      .catch(next);
-  });
-
-  router.put("/schedules/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const updatePayload: ScheduleUpdatePayload =
-      ScheduleUpdatePayloadSchema.parse({
-        ...req.body,
-        id: Number(req.params.id),
-      });
-    worker
-      .updateSchedule(authHeader.data, updatePayload)
-      .then((updatedSchedule) => {
-        res.json(updatedSchedule);
-      })
-      .catch(next);
-  });
-
-  router.get("/runs/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    worker
-      .getRun(authHeader.data, validatedId)
-      .then((run) => {
-        res.json(run);
-      })
-      .catch(next);
-  });
-
-  router.delete("/runs/:id", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    worker
-      .deleteRun(authHeader.data, validatedId)
-      .then((run) => {
-        res.json(run);
-      })
-      .catch(next);
-  });
-
-  router.post("/delete-runs", (req, res, next) => {
-    const idSchema = z.object({
-      runIds: z.array(z.number().int().positive()),
-    });
-    const { runIds } = idSchema.parse(req.body);
-
-    worker
-      .deleteRuns(runIds)
-      .then((deletedIds) => {
-        res.json(deletedIds);
-      })
-      .catch(next);
-  });
-
-  router.post("/schedules/:id/runs", (req, res, next) => {
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    worker
-      .runScheduleNow(validatedId)
-      .then(() => {
-        res.json({ success: true });
-      })
-      .catch(next);
-  });
-
-  router.post("/runs-schedules", (req, res, next) => {
-    const idSchema = z.number().int().positive();
-    const validatedIds = z.array(idSchema).parse(req.body);
-    worker
-      .runSchedulesNow(validatedIds)
-      .then(() => {
-        res.json({ success: true });
-      })
-      .catch(next);
-  });
-
-  router.post("/unschedule", (req, res, next) => {
-    const idSchema = z.number().int().positive();
-    const validatedIds = z.array(idSchema).parse(req.body);
-    worker
-      .unschedule(validatedIds)
-      .then(() => {
-        res.json({ success: true });
-      })
-      .catch(next);
-  });
-
-  router.delete("/", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .reset(authHeader.data)
-      .then((success) => {
-        res.json({ success });
-      })
-      .catch(next);
-  });
-
-  router.post("/login", (req, res, next) => {
-    const { username, password } = z
-      .object({
-        username: z.string(),
-        password: z.string(),
-      })
-      .parse(req.body);
-    worker
-      .login(username, password)
-      .then((tokens) => {
-        if (tokens) {
-          res.json(tokens);
-        } else {
-          res.status(401).json({ error: "Unauthorized" });
-        }
-      })
-      .catch(next);
-  });
-
-  router.post("/refresh-token", (req, res, next) => {
-    const { refreshToken } = z
-      .object({
-        refreshToken: z.string(),
-      })
-      .parse(req.body);
-    worker
-      .refreshToken(refreshToken)
-      .then((tokens) => {
-        if (tokens) {
-          res.json(tokens);
-        } else {
-          res.status(401).json({ error: "Unauthorized" });
-        }
-      })
-      .catch(next);
-  });
-
-  router.get("/users/:id", (req, res, next) => {
-    const idSchema = z.number().int().positive();
-    const validatedId = idSchema.parse(Number(req.params.id));
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getUser(authHeader.data, validatedId)
-      .then((user) => {
-        res.json(user);
-      })
-      .catch(next);
-  });
-
-  router.get("/users", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getUsers(authHeader.data)
-      .then((users) => {
-        res.json(users);
-      })
-      .catch(next);
-  });
-
-  router.post("/logout", (req, res, next) => {
-    const { refreshToken, allDevices } = z
-      .object({
-        refreshToken: z.string(),
-        allDevices: z.boolean(),
-      })
-      .parse(req.body);
-    worker
-      .logout(refreshToken, allDevices)
-      .then(() => {
-        res.json({ success: true });
-      })
-      .catch(next);
-  });
-
-  router.get("/user-auth", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .getUserAuth(authHeader.data)
-      .then((user) => {
-        if (!user) {
-          return res.status(401).json({ error: "Unauthorized" });
-        }
-        res.json(user);
-      })
-      .catch(next);
-  });
-
-  router.get("/logs/:runId", (req, res, next) => {
-    const authHeader = AuthHeader.safeParse(req.headers.authorization);
-    if (!authHeader.success) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    worker
-      .streamLogs(authHeader.data, Number(req.params.runId))
-      .then((logsStream) => {
-        if (!logsStream) {
-          return res.status(404).json({ error: "Not found" });
-        }
-        res.setHeader("Content-Type", "text/plain");
-        logsStream.pipe(res);
-        logsStream.on("error", (err) => {
-          log("Error reading log file", String(err));
-          res.status(500).send(String(err));
-        });
-      })
-      .catch(next);
-  });
-
-  return router;
-};
-
-export class Worker extends PrivateBackend {
-  serve(
-    serveOptions: ServeOptions,
-    app: express.Express = express()
-  ): { listen: (cb?: (url: string) => void) => http.Server } {
-    const router = expressRouter(this, serveOptions.apiKey);
-
-    app.use("/api/v1", router);
-
-    return {
-      listen: (cb) => {
-        const { port, hostname } = serveOptions;
-        const server = http.createServer(app);
-        const onListen = () => {
-          const ad = server.address();
-          const host =
-            typeof ad === "string"
-              ? ad
-              : `${
-                  !ad?.address || ad.address === "::" ? "localhost" : ad.address
-                }:${ad?.port || port}`;
-          const url = `http://${host}`;
-          console.log(`Worker API is running on ${url}`);
-          if (cb) {
-            cb(url);
-          }
-        };
-        if (hostname) {
-          server.listen(port, hostname, onListen);
-        } else {
-          server.listen(port, onListen);
-        }
-        return server;
-      },
-    };
-  }
+  console.log(`Worker API is running on ${server.url}`);
+  return server;
 }

@@ -1,0 +1,131 @@
+---
+title: "Schedules"
+description: "Create one-time, immediate, recurring, and retrying schedules."
+---
+
+A schedule binds a function version to a payload and decides when Enschedule should execute it.
+
+## Schedule modes
+
+<Columns cols={2}>
+  <Card title="Run once" icon="calendar">
+    Set `runAt` to a timezone-aware ISO timestamp.
+  </Card>
+  <Card title="Run now" icon="play">
+    Set `runNow` to `true` or invoke the run action later.
+  </Card>
+  <Card title="Run on a cron" icon="repeat-2">
+    Set `cronExpression`; Enschedule calculates the next occurrence.
+  </Card>
+  <Card title="Keep unscheduled" icon="pause">
+    Omit execution timing until you are ready to trigger it.
+  </Card>
+</Columns>
+
+## Create a schedule with the API
+
+```bash
+curl --request POST \
+  --url https://enschedule.example.com/api/schedules \
+  --header 'Content-Type: application/json' \
+  --header 'X-API-Key: your-api-key' \
+  --data '{
+    "functionId": "send-receipt",
+    "functionVersion": 1,
+    "data": {
+      "orderId": "ord_123",
+      "email": "customer@example.com"
+    },
+    "options": {
+      "eventId": "receipt-ord-123",
+      "title": "Send receipt for ord_123",
+      "runNow": true
+    }
+  }'
+```
+
+The response status reports whether the schedule was `created`, `updated`, or `unchanged`.
+
+## Run at a specific time
+
+Use a timestamp with timezone information:
+
+```json
+{
+  "runAt": "2026-08-01T09:00:00+02:00",
+  "title": "Send morning report"
+}
+```
+
+<Warning>
+  Always include `Z` or an explicit UTC offset in date strings. A timezone-free timestamp is rejected.
+</Warning>
+
+## Use cron expressions
+
+```json
+{
+  "cronExpression": "0 9 * * 1-5",
+  "title": "Weekday report"
+}
+```
+
+Enschedule normalizes the expression and stores the next occurrence in `runAt`. After each completed run, it calculates and stores the following occurrence.
+
+## Choose a stable schedule name
+
+Set `eventId` when a schedule is managed by code or configuration:
+
+```json
+{
+  "eventId": "weekday-sales-report"
+}
+```
+
+A later create request with the same `eventId` updates the existing schedule. This is the mechanism behind declarative CLI apply.
+
+## Retry failed runs
+
+```json
+{
+  "retryFailedJobs": true,
+  "maxRetries": 5,
+  "title": "Sync billing records"
+}
+```
+
+Retries use exponential backoff. The default strategy starts at one minute and caps the delay at five minutes. A value of `-1` for `maxRetries` means unlimited retries.
+
+<Note>
+  `maxRetries` counts the configured retry budget used by the runtime. Choose a finite value for jobs that can fail permanently.
+</Note>
+
+## Target one worker class
+
+Set `workerId` to the stable worker ID when a function should execute only on a particular worker class:
+
+```json
+{
+  "workerId": "gpu-worker",
+  "title": "Build image embeddings"
+}
+```
+
+The selected worker must also register the exact function ID and version.
+
+## Trigger another schedule after failure
+
+Set `failureTrigger` to the numeric ID of another schedule. Enschedule marks that schedule to run after the current schedule exhausts its retry path and fails.
+
+## Unschedule or run later
+
+Use `POST /api/schedules/actions` for bulk actions:
+
+```json
+{
+  "ids": [12, 13],
+  "action": "unschedule"
+}
+```
+
+Supported actions are `run`, `unschedule`, and `delete`.

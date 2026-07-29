@@ -1,0 +1,66 @@
+---
+title: "Enschedule"
+description: "Build, schedule, and operate PostgreSQL-backed jobs with Bun workers."
+---
+
+# Jobs that run when they should
+
+Enschedule is an open-source job scheduler for Bun applications. Define typed functions in code, run one or more workers, and manage schedules and run history from a React dashboard or the API.
+
+<Columns cols={2}>
+  <Card title="Start locally" icon="rocket" href="/quickstart">
+    Run PostgreSQL, register your first function, and open the dashboard.
+  </Card>
+  <Card title="Define functions" icon="code-xml" href="/guides/functions">
+    Validate payloads with Zod and execute Bun-compatible JavaScript or TypeScript.
+  </Card>
+  <Card title="Create schedules" icon="calendar-clock" href="/guides/schedules">
+    Run once, run immediately, or use recurring cron expressions.
+  </Card>
+  <Card title="Explore the API" icon="braces" href="/api/overview">
+    Use the Richie RPC contract through the generated OpenAPI 3.1 reference.
+  </Card>
+</Columns>
+
+## Why Enschedule
+
+- **Typed at the boundary.** Zod schemas validate job payloads and produce JSON Schema for the dashboard.
+- **PostgreSQL-backed.** Schedules, workers, users, and run history persist in PostgreSQL through Drizzle ORM.
+- **Safe for multiple workers.** Workers claim due schedules with PostgreSQL row locking so a schedule is not claimed twice.
+- **Operationally visible.** Inspect workers, definitions, schedules, runs, and captured logs in one dashboard.
+- **Bun-native.** The worker and dashboard backend run on Bun.
+
+<Note>
+  Enschedule 2 supports Bun and PostgreSQL. The former Remix, Express, Sequelize, SQLite, and `/api/v1` paths are not part of the supported runtime.
+</Note>
+
+## How it fits together
+
+<Steps>
+  <Step title="Register a function">
+    A worker loads a Bun-compatible ESM module and registers each job definition with an ID and version.
+  </Step>
+  <Step title="Create a schedule">
+    The dashboard, CLI, or API stores a one-time, immediate, or cron schedule in PostgreSQL.
+  </Step>
+  <Step title="Claim and execute">
+    A compatible worker claims due work, validates the payload, runs the function, and captures its output.
+  </Step>
+  <Step title="Inspect the result">
+    Enschedule records success or failure, retry state, timestamps, and logs for each run.
+  </Step>
+</Steps>
+
+## Next steps
+
+<Columns cols={3}>
+  <Card title="Quickstart" icon="play" href="/quickstart" horizontal>
+    Run the local stack.
+  </Card>
+  <Card title="Core concepts" icon="blocks" href="/concepts" horizontal>
+    Learn the data model.
+  </Card>
+  <Card title="Deploy" icon="ship-wheel" href="/deployment/helm" horizontal>
+    Install with Helm.
+  </Card>
+</Columns>

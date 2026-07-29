@@ -1,0 +1,46 @@
+---
+title: "Statuses"
+description: "Reference for worker, schedule, and run statuses."
+---
+
+## Worker statuses
+
+| Status | Meaning |
+| --- | --- |
+| `UP` | The worker checked in within its normal polling window. |
+| `PENDING` | The worker missed its normal interval but has not crossed the down threshold. |
+| `DOWN` | The worker has not checked in before the down threshold. |
+
+The threshold includes the configured poll interval and a small grace period.
+
+## Schedule statuses
+
+| Status | Meaning |
+| --- | --- |
+| `UNSCHEDULED` | No future run, immediate run, or active recurrence is waiting. |
+| `SCHEDULED` | The schedule has a due time or `runNow` request and a compatible worker exists. |
+| `NO_WORKER` | The schedule is ready but no available worker exposes the required function version. |
+| `RUNNING` | The latest run is still in progress. |
+| `RETRYING` | The latest attempt failed and another retry is scheduled. |
+| `SUCCESS` | The latest completed attempt succeeded. |
+| `FAILED` | The latest attempt failed or was lost without another retry pending. |
+
+## Run statuses
+
+| Status | Meaning |
+| --- | --- |
+| `RUNNING` | The run has started but has no finish timestamp. |
+| `SUCCESS` | The run finished with exit signal `0`. |
+| `FAILED` | The run finished with a non-zero exit signal. |
+| `LOST` | The run has no finish timestamp and its worker is unavailable. |
+
+## Common transitions
+
+```text
+UNSCHEDULED -> SCHEDULED -> RUNNING -> SUCCESS
+                           |          -> FAILED
+                           |          -> RETRYING -> RUNNING
+                           -> NO_WORKER
+```
+
+A recurring schedule may show `SUCCESS` after a completed occurrence while retaining a future `runAt`. Use `runAt`, `cronExpression`, and run history alongside the display status when diagnosing timing.

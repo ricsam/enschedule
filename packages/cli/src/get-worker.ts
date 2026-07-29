@@ -81,9 +81,7 @@ export const getWorker = async () => {
     return _worker;
   }
   const options = await getConfig();
-  _worker = new WorkerAPI(options.apiKey, options.apiEndpoint, {
-    retries: 0,
-  });
+  _worker = new WorkerAPI(options.apiKey, options.apiEndpoint);
   return _worker;
 };
 

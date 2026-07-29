@@ -11,20 +11,22 @@
     "forceConsistentCasingInFileNames": true,
     "inlineSources": false,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
-    "module": "CommonJS",
+    "module": "ESNext",
     "outDir": "dist",
+    "types": ["bun"],
   },
   "exclude": [
     "dist",
     "build",
-    "node_modules"
+    "node_modules",
+    "src/**/*.test.ts"
   ],
   "include": [
     "src",

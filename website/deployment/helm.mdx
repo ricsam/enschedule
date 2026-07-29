@@ -1,0 +1,118 @@
+---
+title: "Helm"
+description: "Deploy Enschedule, PostgreSQL, workers, and the dashboard to Kubernetes."
+---
+
+The chart in `infrastructure/charts/enschedule` can deploy PostgreSQL, a worker, shared log storage, the dashboard, and a migration job.
+
+## Install the chart
+
+Create a values file instead of passing production secrets on the command line:
+
+```yaml values-production.yaml
+config:
+  pgPassword: replace-me
+  accessTokenSecret: replace-me
+  refreshTokenSecret: replace-me
+  cookieSessionSecret: replace-me
+  apiKey: replace-me
+  adminAccount: admin:replace-me
+  httpsOnlyCookies: true
+  publicOrigin: https://enschedule.example.com
+
+dashboard:
+  ingress:
+    enabled: true
+    className: traefik
+    hosts:
+      - host: enschedule.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+
+database:
+  persistence:
+    enabled: true
+    storageClass: rook-ceph-block
+    accessMode: ReadWriteOnce
+    size: 10Gi
+
+worker:
+  persistence:
+    enabled: true
+    storageClass: rook-ceph-block
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    mountPath: /var/log/enschedule
+```
+
+```bash
+helm upgrade --install enschedule infrastructure/charts/enschedule \
+  --namespace enschedule \
+  --create-namespace \
+  --values values-production.yaml
+```
+
+<Warning>
+  Defaults are suitable for evaluation, not production. Replace all credentials, choose an appropriate storage class, and configure ingress and backups explicitly.
+</Warning>
+
+## Choose a topology
+
+### Separate workloads
+
+The default topology runs PostgreSQL, worker, storage, and dashboard as separate Kubernetes workloads. Use this for independent resource sizing and network policy.
+
+### Single Pod
+
+Set `singlePod.enabled: true` for a small single-replica installation. PostgreSQL, worker, and dashboard share one Pod and one Service.
+
+The single-Pod Deployment uses the `Recreate` strategy because its `ReadWriteOnce` volumes cannot be mounted by old and new Pods concurrently. Expect brief downtime during upgrades.
+
+## Persist data
+
+PostgreSQL persistence is enabled by default. Worker log persistence is optional. For normal single-writer storage, use a `ReadWriteOnce` volume.
+
+Do not mount a PVC, ConfigMap, or Secret with `subPath` on Kata-based clusters. Mount the complete volume at a dedicated directory and configure Enschedule to use a child path.
+
+## Use private images
+
+Set image pull secrets for each enabled workload:
+
+```yaml
+dashboard:
+  imagePullSecrets:
+    - name: ghcr-pull
+worker:
+  imagePullSecrets:
+    - name: ghcr-pull
+migrationJob:
+  imagePullSecrets:
+    - name: ghcr-pull
+```
+
+## Verify an installation
+
+```bash
+helm lint infrastructure/charts/enschedule
+kubectl -n enschedule get deployment,pod,service,ingress,pvc,job
+kubectl -n enschedule rollout status deployment/dashboard --timeout=10m
+kubectl -n enschedule logs job/migrations --all-containers --tail=200
+```
+
+For single-Pod mode, wait for `deployment/enschedule` instead.
+
+Check both health endpoints when the worker is separately reachable:
+
+```bash
+curl --fail https://enschedule.example.com/healthz
+curl --fail http://worker-service.enschedule.svc.cluster.local:8000/api/healthz
+```
+
+## Upgrade safely
+
+1. Back up PostgreSQL.
+2. Pin new dashboard, worker, and migration image tags.
+3. Run `helm upgrade --dry-run=server` with the exact values you intend to apply.
+4. Apply the upgrade with `--wait` and a timeout.
+5. Verify the migration job, rollout, logs, events, and public health endpoint.

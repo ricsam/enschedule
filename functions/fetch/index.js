@@ -1,22 +1,14 @@
-const { z } = require("zod");
-const { text } = require('node:stream/consumers');
+import { z } from "zod";
 
-module.exports = async (worker) => {
+export default async function register(worker) {
   worker.registerJob({
     id: "send-http-request",
     version: 1,
     title: "Send HTTP request",
     dataSchema: z.object({
       url: z.string(),
-      method: z
-        .union([
-          z.literal("GET"),
-          z.literal("POST"),
-          z.literal("PUT"),
-          z.literal("DELETE"),
-        ])
-        .optional(),
-      headers: z.record(z.string()).optional(),
+      method: z.enum(["GET", "POST", "PUT", "DELETE"]).optional(),
+      headers: z.record(z.string(), z.string()).optional(),
       body: z.string().optional(),
     }),
     job: async (data) => {
@@ -27,12 +19,9 @@ module.exports = async (worker) => {
       });
       console.log("status", result.status);
       console.log("headers", Object.fromEntries(result.headers.entries()));
-      const body = await text(result.body);
-      console.log("body", body);
+      console.log("body", await result.text());
     },
     description: "Provide HTTP parameters as data to send a request",
-    example: {
-      url: "http://localhost:3000",
-    },
+    example: { url: "http://localhost:3000" },
   });
-};
+}

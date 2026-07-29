@@ -30,3 +30,8 @@ export const migrate = async () => {
     admin: true,
   });
 };
+
+if (import.meta.main) {
+  await migrate();
+  await worker.close();
+}

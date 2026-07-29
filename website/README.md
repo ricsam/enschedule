@@ -1,41 +1,38 @@
-# Website
+# Enschedule documentation
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This directory is an independent [Mintlify](https://mintlify.com) documentation project for Enschedule.
 
-### Installation
+## Preview
 
-```
-$ yarn
-```
+The current Mintlify CLI requires Node.js 20.17 or later.
 
-### Local Development
-
-```
-$ yarn start
+```bash
+npm install --global mint
+cd website
+mint dev
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+Open `http://localhost:3000`.
 
-### Build
+## Validate
 
-```
-$ yarn build
-```
-
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-### Deployment
-
-Using SSH:
-
-```
-$ USE_SSH=true yarn deploy
+```bash
+cd website
+mint validate
+mint broken-links --check-anchors
+mint a11y
 ```
 
-Not using SSH:
+## Update the API reference
 
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
+Generate `openapi.json` from the same Richie RPC contract used by the dashboard:
+
+```bash
+bun run --cwd website openapi:generate
 ```
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+Then run `mint validate` from this directory.
+
+## Deploy from this monorepo
+
+Connect `ricsam/enschedule` in Mintlify Git Settings and set the docs subdirectory to `website`. Mintlify deploys changes when the configured branch is pushed.

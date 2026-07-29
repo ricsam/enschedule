@@ -1,0 +1,139 @@
+---
+title: "Functions"
+description: "Define typed, versioned job functions and migrate their payloads."
+---
+
+A function is the executable unit in Enschedule. Register it on a worker with `worker.registerJob()`.
+
+## Define a function
+
+```typescript functions.ts
+import { z } from "zod";
+
+export default async function register(worker) {
+  worker.registerJob({
+    id: "send-receipt",
+    version: 1,
+    title: "Send receipt",
+    description: "Email a receipt for a completed order",
+    dataSchema: z.object({
+      orderId: z.string().min(1),
+      email: z.string().email(),
+    }),
+    example: {
+      orderId: "ord_123",
+      email: "customer@example.com",
+    },
+    job: async ({ orderId, email }) => {
+      await sendReceipt({ orderId, email });
+    },
+  });
+}
+```
+
+The module must be Bun-compatible ESM and export a default registration function. A named `register` export is also accepted by the worker CLI.
+
+## Definition fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `id` | Yes | Stable identifier shared by workers that implement the same function. |
+| `version` | Yes | Positive integer identifying the accepted payload and implementation version. |
+| `title` | Yes | Human-readable name shown in the dashboard. |
+| `job` | Yes | Synchronous or asynchronous callback that performs the work. |
+| `dataSchema` | No | Zod schema used to validate payloads and generate JSON Schema. |
+| `description` | No | Explanation shown with the definition. |
+| `example` | No | Example payload shown to schedule authors. |
+| `access` | No | Who can view the function or create its schedules. |
+| `defaultScheduleAccess` | No | Access inherited by newly created schedules. |
+| `defaultRunAccess` | No | Access inherited by newly created runs. |
+
+<Note>
+  Keep `id` stable across deployments. Changing it creates a different logical function and leaves existing schedules pointed at the old ID.
+</Note>
+
+## Validate payloads
+
+`dataSchema` runs before the function definition is registered and describes the expected payload to the dashboard. Prefer precise schemas:
+
+```typescript
+const payload = z.object({
+  accountId: z.string().uuid(),
+  range: z.object({
+    from: z.string().datetime({ offset: true }),
+    to: z.string().datetime({ offset: true }),
+  }),
+  format: z.enum(["csv", "json"]).default("csv"),
+});
+```
+
+Enschedule converts the Zod schema to JSON Schema for editor validation and function metadata.
+
+## Handle output and errors
+
+Enschedule treats a completed callback as success. Throw an error to mark the run as failed:
+
+```typescript
+job: async ({ orderId }) => {
+  const order = await loadOrder(orderId);
+  if (!order) {
+    throw new Error(`Order ${orderId} was not found`);
+  }
+  console.log("Processing", orderId);
+}
+```
+
+`console.log` and `console.error` output emitted during the callback is captured in the run log. Avoid logging secrets or sensitive payload fields.
+
+## Version a function
+
+Increment `version` when existing schedule payloads are not directly compatible with new code.
+
+```typescript
+worker.registerJob({
+  id: "send-receipt",
+  version: 2,
+  title: "Send receipt",
+  dataSchema: z.object({
+    orderId: z.string(),
+    recipient: z.object({ email: z.string().email() }),
+  }),
+  job: async ({ orderId, recipient }) => {
+    await sendReceipt({ orderId, email: recipient.email });
+  },
+});
+```
+
+Existing schedules continue to reference their stored version. Register a migration when the worker should upgrade those payloads:
+
+```typescript
+await worker.migrateHandler(
+  "send-receipt",
+  {
+    version: 1,
+    dataSchema: z.object({
+      orderId: z.string(),
+      email: z.string().email(),
+    }),
+  },
+  {
+    version: 2,
+    title: "Send receipt",
+    dataSchema: z.object({
+      orderId: z.string(),
+      recipient: z.object({ email: z.string().email() }),
+    }),
+    job: async ({ orderId, recipient }) => {
+      await sendReceipt({ orderId, email: recipient.email });
+    },
+  },
+  (data) => ({
+    orderId: data.orderId,
+    recipient: { email: data.email },
+  }),
+);
+```
+
+<Warning>
+  Test migrations against production-shaped payloads before deployment. Back up PostgreSQL before any upgrade that changes stored schedules.
+</Warning>

@@ -166,7 +166,7 @@ export const publicJobDefinitionSchema = z.object({
   title: z.string(),
   example: z.unknown(),
   codeBlock: z.string().optional(),
-  jsonSchema: z.record(z.unknown()).optional(),
+  jsonSchema: z.record(z.string(), z.unknown()).optional(),
   access: nullishToUndefined(FunctionAccessSchema),
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
@@ -252,7 +252,7 @@ export const publicJobRunSchema = serializedRunSchema.and(
   z.object({
     jobSchedule: z.union([publicJobScheduleSchema, z.string()]),
     jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
-    worker: z.union([PublicWorkerSchema, z.string()]),
+    worker: z.union([PublicWorkerSchema, z.string()]).optional(),
   })
 );
 export type PublicJobRun = z.output<typeof publicJobRunSchema>;
@@ -316,14 +316,10 @@ export const RunHandlerInCpSchema = z.object({
 export type RunHandlerInCp = z.output<typeof RunHandlerInCpSchema>;
 //#endregion
 
-const StringToOptionalPositiveIntSchema = z
-  .string()
-  .optional()
+const StringToOptionalNonNegativeIntSchema = z
+  .union([z.string(), z.number()])
   .transform((value, ctx) => {
-    if (typeof value === "undefined") {
-      return undefined;
-    }
-    const parsed = parseInt(value, 10);
+    const parsed = typeof value === "number" ? value : parseInt(value, 10);
     if (Number.isNaN(parsed)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -331,15 +327,16 @@ const StringToOptionalPositiveIntSchema = z
       });
       return z.NEVER;
     }
-    if (parsed <= 0 || !Number.isInteger(parsed)) {
+    if (parsed < 0 || !Number.isInteger(parsed)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Not a postive integer",
+        message: "Not a non-negative integer",
       });
       return z.NEVER;
     }
     return parsed;
-  });
+  })
+  .optional();
 
 export type ListRunsOptions = z.output<typeof ListRunsOptionsSerializedSchema>;
 
@@ -353,14 +350,14 @@ export const AuthHeader = z.custom<`${
 });
 
 export const ListRunsOptionsSerializedSchema = z.object({
-  scheduleId: StringToOptionalPositiveIntSchema,
+  scheduleId: StringToOptionalNonNegativeIntSchema.refine((value) => value === undefined || value > 0, "Not a positive integer"),
   order: z
-    .string()
-    .optional()
-    .transform((value, ctx): [string, "DESC" | "ASC"][] | undefined => {
-      if (typeof value === "undefined") {
-        return undefined;
-      }
+    .union([
+      z.string(),
+      z.array(z.tuple([z.string(), z.enum(["ASC", "DESC"])])),
+    ])
+    .transform((value, ctx): [string, "DESC" | "ASC"][] => {
+      if (Array.isArray(value)) return value;
       const matches = /^(?:[^-]+-(?:ASC|DESC),?)*$/g;
       const result = matches.exec(value.replace(/,$/, ""));
       if (!result) {
@@ -370,20 +367,16 @@ export const ListRunsOptionsSerializedSchema = z.object({
         });
         return z.NEVER;
       }
-      if (result[0] === "") {
-        return [];
-      }
+      if (result[0] === "") return [];
       return result[0].split(",").map((colValue) => {
         const [colId, order] = colValue.split("-");
-        return [
-          colId,
-          z.union([z.literal("ASC"), z.literal("DESC")]).parse(order),
-        ];
+        return [colId!, z.enum(["ASC", "DESC"]).parse(order)];
       });
-    }),
-  limit: StringToOptionalPositiveIntSchema,
-  offset: StringToOptionalPositiveIntSchema,
-  authHeader: AuthHeader,
+    })
+    .optional(),
+  limit: StringToOptionalNonNegativeIntSchema.refine((value) => value === undefined || value > 0, "Not a positive integer"),
+  offset: StringToOptionalNonNegativeIntSchema,
+  authHeader: AuthHeader.optional(),
 });
 
 export const ListRunsOptionsSerialize = (
@@ -425,12 +418,12 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   defaultRunAccess?: RunAccess;
 }
 export const JobDefinitionSchema = z.object({
-  dataSchema: z.any(),
+  dataSchema: z.any().optional(),
   id: z.string(),
   title: z.string(),
   description: z.string().optional(),
   job: z.any(),
-  example: z.any(),
+  example: z.any().optional(),
   version: z.number().int().positive(),
   access: nullishToUndefined(FunctionAccessSchema),
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),

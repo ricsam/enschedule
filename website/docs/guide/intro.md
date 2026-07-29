@@ -2,45 +2,35 @@
 sidebar_position: 1
 ---
 
-Enschedule is currently in beta.
+# Getting started
 
-## Single docker file
+Enschedule 2 runs on Bun and PostgreSQL. The dashboard is a Vite SPA backed by a same-origin Bun server, and worker/API calls use Richie RPC under `/api`.
 
-You can test it out by running everything in a single container:
+## Local stack
 
 ```bash
-docker container run -it --rm \
-  --name enschedule-dashboard \
-  -e SQLITE=":memory:" \
-  -e LOGS="/var/logs/enschedule" \
-  -e IMPORT_FUNCTIONS="@enschedule-fns/fetch,@enschedule-fns/log" \
-  -e ADMIN_ACCOUNT=adm1n:s3cr3t \
-  -p 3333:3000 \
-  ghcr.io/ricsam/enschedule-dashboard:alpha
+bun install --frozen-lockfile
+docker compose up -d
+
+export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres
+export ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me
+export ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me
+export ENSCHEDULE_COOKIE_SESSION_SECRET=change-me
+export NAFS_URI=file:///tmp/enschedule-logs
+export ADMIN_ACCOUNT=adm1n:s3cr3t
+
+bun packages/pg-driver/migrate.ts
+bun run --cwd apps/dashboard build
+NODE_ENV=production bun run --cwd apps/dashboard start
 ```
 
-You have to login to the admin account to view [schedules](./schedules), [runs](./runs), [functions](./functions) and [workers](./workers).
-
-Because you added IMPORT_FUNCTIONS you should have a [fetch function](https://www.npmjs.com/package/@enschedule-fns/fetch) and a [log function](https://www.npmjs.com/package/@enschedule-fns/log).
-
-The schedules and runs will be stored in the sqlite database, in memory.
-
+Log in to view schedules, runs, functions, workers, and the admin area. API documentation is available at `/docs` and OpenAPI JSON at `/openapi.json`.
 
 ## Helm chart
 
-Getting started with the helm chart:
-
 ```bash
-helm show values --devel enschedule/enschedule | pbcopy
-helm upgrade --devel --install enschedule enschedule/enschedule --version v0.0.1-alpha --namespace enschedule -f tasks/values.yml
+helm upgrade --install enschedule infrastructure/charts/enschedule \
+  --namespace enschedule --create-namespace
 ```
 
-
-## Advanced options
-
-Advanced options:
-```bash
-ENSCHEDULE_ACCESS_TOKEN_SECRET=secret       # signs the short lived access JWT token
-ENSCHEDULE_REFRESH_TOKEN_SECRET=secret      # signs the long lived access JWT token
-ENSCHEDULE_COOKIE_SESSION_SECRET=secret     # signs the cookies
-```
+The chart deploys PostgreSQL, a worker, and the dashboard. Back up PostgreSQL and run the chart migration job before upgrading an existing deployment. PostgreSQL is the only supported database.

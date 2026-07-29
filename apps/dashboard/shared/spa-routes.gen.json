@@ -1,0 +1,147 @@
+{
+  "routes": [
+    {
+      "id": "__root__",
+      "to": "/",
+      "parentId": null,
+      "isRoot": true
+    },
+    {
+      "id": "/",
+      "to": "/",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/admin",
+      "to": "/admin",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/definitions/",
+      "to": "/definitions",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/definitions/$functionId",
+      "to": "/definitions/$functionId",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/definitions/$functionId/",
+      "to": "/definitions/$functionId",
+      "parentId": "/definitions/$functionId",
+      "isRoot": false
+    },
+    {
+      "id": "/definitions/$functionId/schedules",
+      "to": "/definitions/$functionId/schedules",
+      "parentId": "/definitions/$functionId",
+      "isRoot": false
+    },
+    {
+      "id": "/login",
+      "to": "/login",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/profile",
+      "to": "/profile",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/run",
+      "to": "/run",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/runs/",
+      "to": "/runs",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/runs/$runId",
+      "to": "/runs/$runId",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/schedules/",
+      "to": "/schedules",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/schedules/$scheduleId",
+      "to": "/schedules/$scheduleId",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/schedules/$scheduleId/",
+      "to": "/schedules/$scheduleId",
+      "parentId": "/schedules/$scheduleId",
+      "isRoot": false
+    },
+    {
+      "id": "/schedules/$scheduleId/runs",
+      "to": "/schedules/$scheduleId/runs",
+      "parentId": "/schedules/$scheduleId",
+      "isRoot": false
+    },
+    {
+      "id": "/schedules/$scheduleId/runs/$runId",
+      "to": "/schedules/$scheduleId/runs/$runId",
+      "parentId": "/schedules/$scheduleId/runs",
+      "isRoot": false
+    },
+    {
+      "id": "/workers/",
+      "to": "/workers",
+      "parentId": "__root__",
+      "isRoot": false
+    },
+    {
+      "id": "/workers/$workerId",
+      "to": "/workers/$workerId",
+      "parentId": "__root__",
+      "isRoot": false
+    }
+  ],
+  "spaRoutes": [
+    "/",
+    "/admin",
+    "/definitions",
+    "/definitions/$functionId",
+    "/definitions/$functionId/schedules",
+    "/login",
+    "/profile",
+    "/run",
+    "/runs",
+    "/runs/$runId",
+    "/schedules",
+    "/schedules/$scheduleId",
+    "/schedules/$scheduleId/runs",
+    "/schedules/$scheduleId/runs/$runId",
+    "/workers",
+    "/workers/$workerId"
+  ],
+  "hostedRouting": {
+    "headBasePath": "/head-api",
+    "passthrough": [
+      "/head-api",
+      "/api/$",
+      "/healthz",
+      "/openapi.json",
+      "/docs",
+      "/assets/$"
+    ]
+  }
+}

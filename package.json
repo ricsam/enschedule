@@ -1,23 +1,37 @@
 {
+  "name": "enschedule",
   "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tests/*",
+    "functions/*",
+    "website"
+  ],
   "scripts": {
-    "build": "MONO_REPO_BUILD=true turbo run build",
-    "dev": "turbo run dev -F 'test-worker' -F '@enschedule/dashboard'",
-    "lint": "CI=true NODE_ENV=production turbo run lint",
+    "build": "turbo run build",
+    "dev": "turbo run dev --filter=test-worker --filter=@enschedule/dashboard",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "test": "bun test packages/types packages/cli apps/dashboard packages/pg-driver",
     "playwright": "playwright",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@changesets/cli": "^2.29.7"
   },
   "devDependencies": {
-    "@playwright/test": "^1.38.1",
-    "eslint": "^8.51.0",
-    "prettier": "^2.8.8",
-    "tsconfig": "workspace:*",
-    "turbo": "^2.0.14"
+    "@playwright/test": "^1.58.2",
+    "@types/bun": "^1.3.14",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.2",
+    "turbo": "^2.10.7",
+    "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@9.0.6",
-  "name": "enschedule-2",
-  "dependencies": {
-    "@changesets/cli": "^2.27.7"
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "bun": ">=1.3.0"
   }
 }

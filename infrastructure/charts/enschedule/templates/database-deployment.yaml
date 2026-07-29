@@ -1,4 +1,4 @@
-{{- if .Values.database }}
+{{- if and .Values.database (not .Values.singlePod.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -49,6 +49,8 @@ spec:
           resources:
             {{- toYaml .Values.database.resources | nindent 12 }}
           env:
+            - name: PGDATA
+              value: {{ printf "%s/pgdata" .Values.database.persistence.mountPath | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -1,16 +1,11 @@
 {
   "name": "@enschedule-fns/log",
-  "version": "0.0.3",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Bun-native logging job for Enschedule",
+  "type": "module",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "log",
-    "enschedule",
-    "enschedule-function"
-  ],
+  "scripts": { "test": "bun test" },
+  "keywords": ["log", "enschedule", "enschedule-function", "bun"],
   "author": "Ricsam <oss@ricsam.dev>",
   "license": "MIT",
   "repository": {
@@ -18,7 +13,5 @@
     "url": "git+https://github.com/ricsam/enschedule.git",
     "directory": "functions/log"
   },
-  "dependencies": {
-    "zod": "^3.22.2"
-  }
+  "dependencies": { "zod": "^4.1.12" }
 }

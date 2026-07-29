@@ -1,3 +1,3 @@
-export function Header({ text }: { text: string }): JSX.Element {
+export function Header({ text }: { text: string }) {
   return <h1>{text}</h1>;
 }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="40" viewBox="0 0 190 40" role="img" aria-labelledby="title">
+  <title id="title">Enschedule</title>
+  <g fill="none" fill-rule="evenodd">
+    <rect x="2" y="2" width="36" height="36" rx="11" fill="#3ECC5F"/>
+    <path d="M11 12.5h18M11 20h13M11 27.5h18" stroke="#072E1B" stroke-width="3" stroke-linecap="round"/>
+    <path d="M28 17v6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M25 20h6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <text x="48" y="27" fill="#10261A" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.5">Enschedule</text>
+</svg>

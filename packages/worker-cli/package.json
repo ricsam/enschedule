@@ -1,21 +1,20 @@
 {
   "name": "@enschedule/worker-cli",
-  "version": "0.0.16",
-  "description": "A CLI for the Enschedule Worker",
+  "version": "2.0.0",
+  "description": "Bun CLI for the Enschedule worker",
+  "type": "module",
   "main": "dist/cli.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc && chmod +x dist/cli.js",
-    "lint": "eslint -f visualstudio ."
+    "build": "bun build ./src/cli.ts --outfile ./dist/cli.js --target bun --format esm --external @enschedule/worker",
+    "start": "bun ./src/cli.ts",
+    "lint": "tsc --noEmit",
+    "test": "bun test"
   },
   "bin": {
     "enschedule-worker": "dist/cli.js"
   },
-  "keywords": [
-    "cli",
-    "worker",
-    "enschedule"
-  ],
+  "keywords": ["cli", "worker", "enschedule", "bun"],
   "author": "Ricsam <oss@ricsam.dev>",
   "license": "MIT",
   "repository": {
@@ -27,15 +26,11 @@
     "@enschedule/worker": "workspace:*",
     "commander": "^12.1.0",
     "debug": "^4.4.0",
-    "zod": "^3.24.1"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
     "@types/debug": "^4.1.12",
-    "@types/express": "^4.17.17",
-    "@types/jest": "^29.5.4",
-    "@types/node": "^20.5.2",
-    "eslint-config-custom": "workspace:*",
-    "tsconfig": "workspace:*",
-    "typescript": "^5.1.0"
+    "typescript": "^5.9.3"
   }
 }

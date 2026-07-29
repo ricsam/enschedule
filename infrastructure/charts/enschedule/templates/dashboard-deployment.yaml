@@ -1,4 +1,4 @@
-{{- if .Values.dashboard }}
+{{- if and .Values.dashboard (not .Values.singlePod.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,11 +42,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: http
           resources:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
@@ -73,6 +73,8 @@ spec:
                   key: refreshTokenSecret
             - name: ENSCHEDULE_HTTPS_ONLY_COOKIES
               value: {{ .Values.config.httpsOnlyCookies | quote }}
+            - name: ENSCHEDULE_PUBLIC_ORIGIN
+              value: {{ .Values.config.publicOrigin | quote }}
           {{- if .Values.dashboard.workerUrl }}
             - name: ENSCHEDULE_WORKER_URL
               value: "{{ .Values.dashboard.workerUrl }}"

@@ -1,0 +1,157 @@
+---
+title: "Quickstart"
+description: "Run Enschedule locally and execute your first scheduled function."
+---
+
+## Prerequisites
+
+Install these tools before you begin:
+
+- [Bun 1.3 or later](https://bun.sh/)
+- Docker with Docker Compose
+- PostgreSQL 15 or later if you do not use the included Compose service
+
+<Warning>
+  The commands below use development secrets and credentials. Replace every secret before exposing Enschedule outside your machine.
+</Warning>
+
+## Run the dashboard with an integrated worker
+
+<Steps>
+  <Step title="Install dependencies">
+
+    From the repository root:
+
+    ```bash
+    bun install --frozen-lockfile
+    ```
+
+  </Step>
+  <Step title="Start PostgreSQL">
+
+    The repository maps PostgreSQL to port `6543`:
+
+    ```bash
+    docker compose up -d postgres
+    ```
+
+  </Step>
+  <Step title="Configure the runtime">
+
+    ```bash
+    export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres
+    export ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me
+    export ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me
+    export ENSCHEDULE_COOKIE_SESSION_SECRET=change-me
+    export ENSCHEDULE_API_KEY=change-me
+    export NAFS_URI=file:///tmp/enschedule-logs
+    export ADMIN_ACCOUNT=adm1n:s3cr3t
+    ```
+
+    `ADMIN_ACCOUNT` uses the form `username:password`. The integrated worker creates this account when it migrates the database.
+
+  </Step>
+  <Step title="Migrate and start Enschedule">
+
+    ```bash
+    bun packages/pg-driver/migrate.ts
+    bun run --cwd apps/dashboard build
+    NODE_ENV=production bun run --cwd apps/dashboard start
+    ```
+
+    Open [http://localhost:3000](http://localhost:3000) and log in as `adm1n` with password `s3cr3t`.
+
+  </Step>
+</Steps>
+
+The integrated worker is useful for a minimal setup. To load custom functions, run a separate worker instead.
+
+## Register your first function
+
+Create `functions.js` in your application:
+
+```javascript functions.js
+import { z } from "zod";
+
+export default async function register(worker) {
+  worker.registerJob({
+    id: "welcome-user",
+    version: 1,
+    title: "Welcome user",
+    description: "Send a welcome message",
+    dataSchema: z.object({
+      name: z.string(),
+      email: z.string().email(),
+    }),
+    example: {
+      name: "Ada",
+      email: "ada@example.com",
+    },
+    job: async ({ name, email }) => {
+      console.log(`Welcoming ${name} at ${email}`);
+    },
+  });
+}
+```
+
+## Start a separate worker
+
+Use the same PostgreSQL database and secrets as the dashboard:
+
+```bash
+ENSCHEDULE_WORKER_ID=welcome-worker \
+ENSCHEDULE_WORKER_NAME='Welcome worker' \
+ENSCHEDULE_FUNCTIONS=./functions.js \
+ENSCHEDULE_API=true \
+ENSCHEDULE_API_HOSTNAME=0.0.0.0 \
+ENSCHEDULE_API_PORT=8000 \
+ENSCHEDULE_API_KEY=change-me \
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres \
+ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me \
+ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me \
+NAFS_URI=file:///tmp/enschedule-logs \
+bun run --cwd packages/worker-cli start
+```
+
+<Note>
+  Set `ENSCHEDULE_WORKER_URL=http://localhost:8000` on the dashboard when you want the dashboard to proxy an external worker rather than use its integrated worker.
+</Note>
+
+## Create and run a schedule
+
+In the dashboard:
+
+1. Open **Functions** and select **Welcome user**.
+2. Create a schedule with a title and this payload:
+
+   ```json
+   {
+     "name": "Ada",
+     "email": "ada@example.com"
+   }
+   ```
+
+3. Choose **Run now**.
+4. Open the new run to inspect its status and captured logs.
+
+<Check>
+  Your first function is registered, scheduled, and observable in the dashboard.
+</Check>
+
+## Development mode
+
+Run the Bun backend and Vite client in separate terminals:
+
+<CodeGroup>
+
+```bash Backend
+bun run --cwd apps/dashboard start
+```
+
+```bash Frontend
+bun x --cwd apps/dashboard vite
+```
+
+</CodeGroup>
+
+Vite proxies `/api`, `/healthz`, `/openapi.json`, and `/docs` to the backend.

@@ -1,0 +1,210 @@
+{{- if .Values.singlePod.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enschedule
+  labels:
+    {{- include "enschedule.labels" . | nindent 4 }}
+    app.kubernetes.io/name: enschedule
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enschedule
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: enschedule
+    spec:
+      {{- with .Values.dashboard.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "enschedule.serviceAccountName" . }}
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ include "enschedule.fullname" . }}-{{ .Values.database.persistence.volumeName | default "data" }}
+        - name: worker-logs
+          persistentVolumeClaim:
+            claimName: {{ include "enschedule.fullname" . }}-{{ .Values.worker.persistence.volumeName | default "worker-logs" }}
+        - name: worker-config
+          configMap:
+            name: {{ include "enschedule.fullname" . }}-worker-config
+      initContainers:
+        - name: database
+          restartPolicy: Always
+          image: "{{ .Values.database.image.image }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: PGDATA
+              value: {{ printf "%s/pgdata" .Values.database.persistence.mountPath | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
+          volumeMounts:
+            - name: postgres-data
+              mountPath: {{ .Values.database.persistence.mountPath }}
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      containers:
+        - name: worker
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              until bun -e 'const sql = new Bun.SQL(process.env.DATABASE_URL); await sql`SELECT 1`; await sql.close()'; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              exec bun /app/packages/worker-cli/src/cli.ts start
+          ports:
+            - name: worker-http
+              containerPort: 8000
+          env:
+            - name: POSTGRES
+              value: "true"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_HOST
+              value: "127.0.0.1"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: pgPassword
+            - name: DB_DATABASE
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DATABASE_URL
+              value: "postgres://postgres:$(DB_PASSWORD)@127.0.0.1:5432/postgres"
+            - name: NAFS_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: nafsUri
+            - name: ENSCHEDULE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: apiKey
+            - name: ENSCHEDULE_ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: accessTokenSecret
+            - name: ENSCHEDULE_REFRESH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: refreshTokenSecret
+            - name: ADMIN_ACCOUNT
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: adminAccount
+            - name: ENSCHEDULE_API
+              value: "true"
+            - name: ENSCHEDULE_API_PORT
+              value: "8000"
+            - name: ENSCHEDULE_API_HOSTNAME
+              value: "0.0.0.0"
+            - name: ENSCHEDULE_MIGRATE
+              value: "true"
+            - name: ENSCHEDULE_WORKER_ID
+              value: "helm-deployed-worker"
+            - name: ENSCHEDULE_WORKER_NAME
+              value: "Default worker"
+            - name: ENSCHEDULE_WORKER_DESCRIPTION
+              value: "Worker deployed with the Helm chart"
+            - name: ENSCHEDULE_FUNCTIONS
+              value: "/enschedule-functions/functions.js"
+          volumeMounts:
+            - name: worker-config
+              mountPath: /enschedule-functions
+            - name: worker-logs
+              mountPath: {{ .Values.worker.persistence.mountPath }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: worker-http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+        - name: dashboard
+          image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: ENSCHEDULE_COOKIE_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: cookieSessionSecret
+            - name: ENSCHEDULE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: apiKey
+            - name: ENSCHEDULE_ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: accessTokenSecret
+            - name: ENSCHEDULE_REFRESH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: refreshTokenSecret
+            - name: ENSCHEDULE_HTTPS_ONLY_COOKIES
+              value: {{ .Values.config.httpsOnlyCookies | quote }}
+            - name: ENSCHEDULE_PUBLIC_ORIGIN
+              value: {{ .Values.config.publicOrigin | quote }}
+            - name: ENSCHEDULE_WORKER_URL
+              value: "http://127.0.0.1:8000"
+            - name: NAFS_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: nafsUri
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+{{- end }}

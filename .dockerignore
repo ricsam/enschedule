@@ -12,5 +12,4 @@ build
 /playwright/.cache/
 /infrastructure
 .github
-tests
 ci.secrets

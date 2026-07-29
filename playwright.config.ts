@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
 // require('dotenv').config();
 
 // process.env.SKIP_SETUP is used for development
-// SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 pnpm run playwright test --ui
+// SKIP_SETUP=true DASHBOARD_URL=http://localhost:3000 bun run playwright -- test --ui
 
 /**
  * See https://playwright.dev/docs/test-configuration.

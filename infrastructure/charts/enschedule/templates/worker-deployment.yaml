@@ -1,4 +1,4 @@
-{{- if .Values.worker.enabled }}
+{{- if and .Values.worker.enabled (not .Values.singlePod.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,8 +40,7 @@ spec:
         - name: worker
           volumeMounts:
             - name: worker-config
-              mountPath: /enschedule-functions/functions.js
-              subPath: functions.js
+              mountPath: /enschedule-functions
             {{- if .Values.worker.extraVolumeMounts }}
             {{- toYaml .Values.worker.extraVolumeMounts | nindent 12 }}
             {{- end }}
@@ -55,11 +54,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/v1/healthz
+              path: /api/healthz
               port: http
           readinessProbe:
             httpGet:
-              path: /api/v1/healthz
+              path: /api/healthz
               port: http
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}

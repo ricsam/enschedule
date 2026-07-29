@@ -10,13 +10,16 @@ config:
   # username / password for the enstore instance
   enstoreUsername: admin
   enstorePassword: password
+  # Override the log storage URI (for example file:///var/log/enschedule).
+  # When empty, the bundled Enstore service URI is used.
+  nafsUri: ""
 
   # The secret for the short lived access JWT token
   accessTokenSecret: secret_key
   # The secret for the long lived refresh JWT token
   refreshTokenSecret: secret_key
 
-  # Cookie secrets should be a comma separated list https://remix.run/docs/en/main/utils/cookies#signing-cookies
+  # Cookie secrets may be a comma-separated list; the first key signs new HttpOnly sessions.
   # Can be changed to refresh the session cookies
   cookieSessionSecret: s3cr3t
 
@@ -26,9 +29,16 @@ config:
   # Set the "Secure" attribute is set on the cookie
   # When true the browser needs an HTTPS connection for the dashboard login to work
   httpsOnlyCookies: false
+  # Comma-separated origins accepted for browser mutations behind a reverse proxy.
+  publicOrigin: ""
 
   # Automatically create an admin account if this is present
   adminAccount: "adm1n:s3cr3t"
+
+# Run PostgreSQL, the worker API, and dashboard in one Pod behind one Service.
+# This is intended for small, single-replica installations.
+singlePod:
+  enabled: false
 
 worker:
   # Disable the worker and set the workerUrl on the dashboard
@@ -107,8 +117,8 @@ worker:
     # If you have a PVC, reference it here
     # and skip auto-creation of a PVC
     existingClaim: ""
-    # Storage class, e.g. "standard" (depends on your cluster)
-    storageClass: ""
+    # Storage class for worker log persistence.
+    storageClass: "rook-ceph-block"
     accessMode: ReadWriteOnce
     size: 1Gi
     volumeName: "worker-logs"  # Suffix for the PVC & volume name
@@ -182,8 +192,8 @@ database:
     # If you have a PVC, reference it here
     # and skip auto-creation of a PVC
     existingClaim: ""
-    # Storage class, e.g. "standard" (depends on your cluster)
-    storageClass: ""
+    # Storage class for PostgreSQL data.
+    storageClass: "rook-ceph-block"
     accessMode: ReadWriteOnce
     size: 1Gi
     volumeName: "postgres-data"
@@ -334,8 +344,8 @@ storage:
     accessMode: ReadWriteOnce
     # Request size
     size: 1Gi
-    # Storage class, e.g. "standard" (depends on your cluster)
-    storageClass: ""
+    # Storage class for single-writer object storage data.
+    storageClass: "rook-ceph-block"
     # Name of the volume and mount path
     volumeName: "storage-data"
     # This is the default when using the enstore-server docker image

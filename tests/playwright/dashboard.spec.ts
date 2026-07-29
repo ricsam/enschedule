@@ -1,6 +1,6 @@
 import { ScheduleStatus } from "@enschedule/types";
 import { expect, Page, test } from "@playwright/test";
-import format from "date-fns/format";
+import { format } from "date-fns";
 import { Setup } from "./setup";
 import { navigate, numRows, sleep, utils, waitForNumRows } from "./utils";
 
@@ -798,8 +798,8 @@ test.describe("login", () => {
     await page.waitForSelector('[data-testid="login-link"]');
   });
   test("login with cookie", async ({ page, context }) => {
-    await page.goto(`${setup.dashboardUrl}/`);
     await addLoginCookie(context, "1m");
+    await page.goto(`${setup.dashboardUrl}/`);
     await page.waitForSelector('[data-testid="profile-link"]');
   });
   test("logout all devices", async ({ page, browser }) => {

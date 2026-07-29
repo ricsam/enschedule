@@ -1,8 +1,5 @@
 import { BrowserContext, expect, Locator, Page } from "@playwright/test";
-import * as cookieSignature from "cookie-signature";
-import addDays from "date-fns/addDays";
-import format from "date-fns/format";
-import * as jwt from "jsonwebtoken";
+import { addDays, format } from "date-fns";
 
 export const navigate = async (baseUrl: string, page: Page, link: Locator) => {
   const url = await link.getAttribute("href");
@@ -342,52 +339,14 @@ export async function addLoginCookie(
   context: BrowserContext,
   expire: string
 ) {
-  // Replicate the cookie process in remix. This may change in the future!
-  const token = jwt.sign({ userId: 1, admin: true }, "secret_key", {
-    expiresIn: expire,
+  const response = await context.request.post(`${baseUrl.dashboardUrl}/api/auth/login`, {
+    data: { username: "adm1n", password: "s3cr3t" },
   });
-  await context.addCookies([
-    {
-      name: "access_token",
-      value: cookieSignature.sign(
-        btoa(myUnescape(encodeURIComponent(JSON.stringify({ token })))),
-        "s3cr3t"
-      ),
-      httpOnly: true,
-      sameSite: "Lax",
-      url: baseUrl.dashboardUrl,
-      secure: false,
-    },
-  ]);
-}
-
-// https://github.com/remix-run/remix/blob/aabc7f84514c1c0e0ba8e33c48c7fba422cf8084/packages/remix-server-runtime/cookies.ts#L222C1-L250C2
-// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
-function myUnescape(value: string): string {
-  let str = value.toString();
-  let result = "";
-  let index = 0;
-  let chr, part;
-  while (index < str.length) {
-    chr = str.charAt(index++);
-    if (chr === "%") {
-      if (str.charAt(index) === "u") {
-        part = str.slice(index + 1, index + 5);
-        if (/^[\da-f]{4}$/i.exec(part)) {
-          result += String.fromCharCode(parseInt(part, 16));
-          index += 5;
-          continue;
-        }
-      } else {
-        part = str.slice(index, index + 2);
-        if (/^[\da-f]{2}$/i.exec(part)) {
-          result += String.fromCharCode(parseInt(part, 16));
-          index += 2;
-          continue;
-        }
-      }
-    }
-    result += chr;
+  if (!response.ok()) {
+    throw new Error(`Failed to create login session: ${response.status()} ${await response.text()}`);
   }
-  return result;
+
+  if (expire === "2s") {
+    await context.clearCookies({ name: "enschedule_session" });
+  }
 }

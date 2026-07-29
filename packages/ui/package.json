@@ -1,27 +1,19 @@
 {
   "name": "@enschedule/ui",
   "private": true,
+  "type": "module",
   "main": "./index.tsx",
   "types": "./index.tsx",
-  "author": "Ricsam <oss@ricsam.dev>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ricsam/enschedule.git",
-    "directory": "packages/ui"
-  },
   "scripts": {
-    "lint": "eslint -f visualstudio .",
-    "generate:component": "turbo gen react-component"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build ./index.tsx --outdir ./dist --target browser --format esm --external react"
   },
   "devDependencies": {
-    "@turbo/gen": "^1.10.12",
-    "@types/node": "^20.5.2",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint-config-custom": "workspace:*",
-    "react": "^18.2.0",
-    "tsconfig": "workspace:*",
-    "typescript": "^5.1.0"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3"
   }
 }

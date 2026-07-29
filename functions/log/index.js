@@ -1,19 +1,13 @@
-const { z } = require("zod");
+import { z } from "zod";
 
-module.exports = async (worker) => {
+export default async function register(worker) {
   worker.registerJob({
     id: "log-job",
     version: 1,
     title: "Log message",
-    dataSchema: z.object({
-      message: z.string(),
-    }),
-    job: (data) => {
-      console.log(data.message);
-    },
+    dataSchema: z.object({ message: z.string() }),
+    job: (data) => console.log(data.message),
     description: "Will print the message on the server",
-    example: {
-      message: "some message",
-    },
+    example: { message: "some message" },
   });
-};
+}

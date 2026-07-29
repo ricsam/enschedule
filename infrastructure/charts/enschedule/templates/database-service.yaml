@@ -1,4 +1,4 @@
-{{- if .Values.database }}
+{{- if and .Values.database (not .Values.singlePod.enabled) }}
 apiVersion: v1
 kind: Service
 metadata:

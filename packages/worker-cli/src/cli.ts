@@ -1,6 +1,5 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import fs from "node:fs";
-import type http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -19,7 +18,7 @@ function createSecretKey(envKey: string) {
     fs.writeFileSync(tokenFile, JSON.stringify({}));
   }
   const tokens: Record<string, string> = z
-    .record(z.string())
+    .record(z.string(), z.string())
     .parse(JSON.parse(fs.readFileSync(tokenFile, "utf-8")));
   if (!tokens[envKey]) {
     tokens[envKey] = crypto.randomBytes(64).toString("hex");
@@ -95,7 +94,7 @@ const startCmd = new Command("start")
   .addOption(
     new Option(
       "-f, --functions [path...]",
-      "A path to a nodejs file exporting a function"
+      "A path to a Bun-compatible module exporting a function"
     ).env("ENSCHEDULE_FUNCTIONS")
   )
   .addOption(
@@ -175,19 +174,17 @@ const startCmd = new Command("start")
         disablePolling: z.boolean(),
       })
       .parse(_options);
-    let server: http.Server | undefined;
+    let server: Bun.Server<unknown> | undefined;
 
-    function shutdown(signal: string) {
-      log('Shutting down worker with signal', signal);
+    async function shutdown(signal: string) {
+      log("Shutting down worker with signal", signal);
       log("\nCleaning up resources...");
       if (server) {
-        server.close(() => {
-          log("HTTP server closed.");
-          process.exit(0);
-        });
-      } else {
-        process.exit(0);
+        await server.stop();
+        log("HTTP server closed.");
       }
+      await worker.close();
+      process.exit(0);
     }
 
     process.on("SIGINT", shutdown);
@@ -215,8 +212,15 @@ const startCmd = new Command("start")
       const parts = requirePath.split(/,| +/);
       if (parts.length === 1) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-var-requires
-          await require(requirePath)(worker);
+          const location = requirePath.startsWith(".") || requirePath.startsWith("/")
+            ? new URL(requirePath, `file://${process.cwd()}/`).href
+            : requirePath;
+          const module = await import(location);
+          const register = module.default ?? module.register;
+          if (typeof register !== "function") {
+            throw new Error(`${requirePath} must export a default registration function`);
+          }
+          await register(worker);
         } catch (err) {
           console.error("Error loading function", requirePath, err);
         }
@@ -244,14 +248,11 @@ const startCmd = new Command("start")
       if (!options.apiKey) {
         throw new Error("API key is required when enabling the REST API");
       }
-      log("Starting REST API");
-      server = worker
-        .serve({
-          port: options.port,
-          hostname: options.hostname,
-          apiKey: options.apiKey,
-        })
-        .listen();
+      log("Starting Richie RPC API");
+      server = worker.serve({
+        port: options.port,
+        hostname: options.hostname,
+      });
     }
 
     if (!options.disablePolling) {

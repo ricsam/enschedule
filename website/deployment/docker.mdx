@@ -1,0 +1,80 @@
+---
+title: "Docker"
+description: "Build and run the Enschedule dashboard and worker container images."
+---
+
+Enschedule produces separate dashboard and worker images from the repository Dockerfile.
+
+## Build images
+
+```bash
+# Dashboard backend and Vite SPA
+docker build --target dashboard -t enschedule-dashboard:local .
+
+# Bun worker runtime
+docker build --target worker -t enschedule-worker:local .
+```
+
+Both images are based on Bun 1.3. The worker image starts `enschedule-worker start`; the dashboard image starts the Bun dashboard server on port `3000`.
+
+## Run PostgreSQL
+
+```bash
+docker run --name enschedule-postgres \
+  --detach \
+  --env POSTGRES_PASSWORD=postgres \
+  --publish 6543:5432 \
+  --volume enschedule-postgres:/var/lib/postgresql/data \
+  postgres:15-alpine
+```
+
+Run database migrations before starting an upgraded application:
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres \
+  bun packages/pg-driver/migrate.ts
+```
+
+## Run a worker
+
+Mount the complete function directory into the container. Do not mount one file with a Kubernetes `subPath` in Kata-based environments.
+
+```bash
+docker run --rm \
+  --network host \
+  --env DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres \
+  --env ENSCHEDULE_WORKER_ID=worker-1 \
+  --env ENSCHEDULE_WORKER_NAME='Worker 1' \
+  --env ENSCHEDULE_FUNCTIONS=/enschedule-functions/functions.js \
+  --env ENSCHEDULE_API=true \
+  --env ENSCHEDULE_API_HOSTNAME=0.0.0.0 \
+  --env ENSCHEDULE_API_PORT=8000 \
+  --env ENSCHEDULE_API_KEY=change-me \
+  --env ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me \
+  --env ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me \
+  --env NAFS_URI=file:///var/log/enschedule \
+  --volume "$PWD/functions:/enschedule-functions:ro" \
+  --volume enschedule-logs:/var/log/enschedule \
+  enschedule-worker:local
+```
+
+## Run the dashboard
+
+```bash
+docker run --rm \
+  --network host \
+  --env ENSCHEDULE_WORKER_URL=http://127.0.0.1:8000 \
+  --env ENSCHEDULE_API_KEY=change-me \
+  --env ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me \
+  --env ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me \
+  --env ENSCHEDULE_COOKIE_SESSION_SECRET=change-me \
+  --env NAFS_URI=file:///var/log/enschedule \
+  --publish 3000:3000 \
+  enschedule-dashboard:local
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+<Warning>
+  Pin immutable image tags in production. Do not use the example secrets or publish PostgreSQL directly to an untrusted network.
+</Warning>

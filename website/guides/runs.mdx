@@ -1,0 +1,73 @@
+---
+title: "Runs and logs"
+description: "Inspect execution attempts, statuses, retries, and captured logs."
+---
+
+Every execution attempt creates a run. One schedule may have many runs because it recurs or retries after failures.
+
+## Run lifecycle
+
+1. A worker claims a due schedule.
+2. Enschedule records a run with `startedAt` and `scheduledToRunAt`.
+3. The worker executes the registered callback.
+4. Enschedule captures output and stores `finishedAt` plus the exit signal.
+5. The run resolves to `SUCCESS`, `FAILED`, `RUNNING`, or `LOST`.
+
+## Inspect runs
+
+Use the dashboard to filter runs by schedule, open an individual attempt, and stream its log. Through the API:
+
+```bash
+curl --request GET \
+  --url 'https://enschedule.example.com/api/runs?scheduleId=12&limit=25&order=startedAt-DESC' \
+  --header 'X-API-Key: your-api-key'
+```
+
+The list response contains `count` and `rows`.
+
+## Statuses
+
+| Status | Meaning |
+| --- | --- |
+| `RUNNING` | The callback has started and has not finished. |
+| `SUCCESS` | The callback completed without throwing. |
+| `FAILED` | The callback threw or returned a non-zero exit signal. |
+| `LOST` | The run has not finished and its worker is unavailable. |
+
+## Captured logs
+
+Enschedule temporarily captures `console.log` and `console.error` while a job callback runs. Each line receives an ISO timestamp and is written to the configured `NAFS_URI`.
+
+```typescript
+job: async ({ accountId }) => {
+  console.log("Starting export", accountId);
+  await createExport(accountId);
+  console.log("Export complete", accountId);
+}
+```
+
+<Warning>
+  Do not print secrets, credentials, tokens, or regulated personal data. Anyone with run-log access may be able to read captured output.
+</Warning>
+
+## Log storage
+
+Use a `file://` URI for a single worker:
+
+```bash
+export NAFS_URI=file:///var/log/enschedule
+```
+
+Use shared object or file storage when multiple workers or a separate dashboard must read the same logs. The Helm chart can deploy Enstore and constructs an `enstore://` URI by default.
+
+## Retry history
+
+A failed schedule with retries enabled is moved to `RETRYING`, assigned a future `runAt`, and unclaimed. Every retry creates a separate run, preserving the full attempt history.
+
+## Delete run records
+
+Delete one run with `DELETE /api/runs/{id}` or several runs with `DELETE /api/runs` and an `ids` body.
+
+<Danger>
+  Deletion is permanent. Confirm that your retention and audit requirements allow removing run history and logs.
+</Danger>

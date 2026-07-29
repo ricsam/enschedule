@@ -1,0 +1,97 @@
+---
+title: "CLI reference"
+description: "Manage Enschedule schedules from the command line."
+---
+
+The `enschedule` CLI manages schedules through an Enschedule API. Configure `ENSCHEDULE_API_ENDPOINT`, `ENSCHEDULE_API_KEY`, and `ENSCHEDULE_API_VERSION=1` before running commands.
+
+<Note>
+  The CLI's configuration version is `1`; the supported HTTP base path is still `/api`, not `/api/v1`.
+</Note>
+
+## Apply declarative schedules
+
+```bash
+enschedule apply --file schedules/
+```
+
+The file can be YAML, JSON, a glob, or a directory of `.yaml`, `.yml`, and `.json` files.
+
+```yaml schedules/weekday-report.yaml
+apiVersion: v1
+kind: schedule
+metadata:
+  name: weekday-report
+spec:
+  functionId: build-report
+  functionVersion: 1
+  data:
+    accountId: acct_123
+  options:
+    title: Weekday report
+    description: Build the report every weekday morning
+    cronExpression: "0 9 * * 1-5"
+```
+
+`metadata.name` becomes the schedule `eventId`, so reapplying the file updates the existing schedule.
+
+## Create a schedule
+
+```bash
+enschedule create schedule \
+  --name receipt-ord-123 \
+  --function-id send-receipt \
+  --function-version 1 \
+  --title 'Send receipt' \
+  --data '{"orderId":"ord_123","email":"customer@example.com"}' \
+  --run-now
+```
+
+Use `--update` to replace a schedule with the same stable name.
+
+## List schedules
+
+```bash
+enschedule get schedules
+enschedule get schedules --output wide
+enschedule get schedules --output json
+```
+
+## Get one schedule
+
+Use an event ID or prefix the numeric database ID with `db:`:
+
+```bash
+enschedule get schedule weekday-report
+enschedule get schedule db:42 --output json
+```
+
+## Update a schedule
+
+```bash
+enschedule update schedule weekday-report \
+  --title 'Updated weekday report' \
+  --run-now
+```
+
+## Delete schedules
+
+```bash
+enschedule delete schedule weekday-report db:42
+```
+
+## Reset Enschedule
+
+```bash
+enschedule reset
+```
+
+The command asks for confirmation. Skip the prompt only in controlled automation:
+
+```bash
+enschedule reset --force
+```
+
+<Danger>
+  Reset deletes schedules, runs, and worker records from the database. It is an administrative, destructive operation.
+</Danger>

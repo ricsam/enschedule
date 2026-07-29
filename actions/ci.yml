@@ -28,36 +28,31 @@ jobs:
         run: ss -l -p -n
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-      - uses: pnpm/action-setup@v2.0.1
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 8.7.0
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "pnpm"
+          bun-version: 1.3.14
       - name: Install dependencies
-        run: pnpm install
+        run: bun install --frozen-lockfile
       - name: Lint
-        run: pnpm lint
+        run: bun run lint
       - name: Typecheck
-        run: pnpm typecheck
+        run: bun run typecheck
       - name: Start postgres for testing
         run: docker compose up -d
       - name: Wait for postgres to be up
         run: until docker compose exec postgres pg_isready ; do sleep 5 ; done
       - name: Run unit tests
-        run: pnpm run --filter=@enschedule/pg-driver --filter=@enschedule/types test
+        run: bun run test
       - name: Install Playwright Browsers
-        run: npx playwright install chromium --with-deps
+        run: bun x playwright install chromium --with-deps
       - name: modify package jsons main fields
         run: ./release-package.sh
       - name: Build all packages
-        run: NODE_ENV=production pnpm run build
+        run: NODE_ENV=production bun run build
       - name: corepack enable
         run: corepack enable
       - name: All playwright tests
-        run: pnpm run playwright test
+        run: bun run playwright test
       - uses: actions/upload-artifact@v3
         if: always()
         with:
@@ -94,7 +89,7 @@ jobs:
           minikube service dashboard-service --url
 
       - name: Playwright on helm
-        run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) pnpm run playwright test
+        run: TEST_HELM=true DASHBOARD_URL=$(minikube service dashboard-service --url) bun run playwright test
 
       - uses: actions/upload-artifact@v3
         if: always()

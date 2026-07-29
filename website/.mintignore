@@ -1,0 +1,14 @@
+blog/**
+src/**
+static/**
+docs/**
+.docusaurus/**
+.turbo/**
+build/**
+node_modules/**
+docusaurus.config.ts
+sidebars.ts
+tsconfig.json
+*.json
+!docs.json
+!openapi.json

@@ -2,9 +2,8 @@
 /* eslint-disable no-nested-ternary */
 import "dotenv/config";
 import { Worker } from "@enschedule/worker";
-import add from "date-fns/add";
+import { add } from "date-fns";
 import { z } from "zod";
-import express, { Router } from "express";
 
 const apiKey = process.env.ENSCHEDULE_API_KEY;
 if (!apiKey) {
@@ -177,43 +176,12 @@ if (!process.env.SPECIAL_HANDLERS) {
 
   if (process.env.ENSCHEDULE_API) {
     console.log("Starting the API");
-    const app = express();
-    const router = Router();
-    router.get("/healthz", (req, res) => {
-      res.send("Test endpoint is Ok");
+    worker.serve({
+      port: process.env.ENSCHEDULE_API_PORT
+        ? Number(process.env.ENSCHEDULE_API_PORT)
+        : 8080,
+      hostname: process.env.ENSCHEDULE_API_HOSTNAME ?? "0.0.0.0",
     });
-    router.get("/set-poll-interval", (req, res, next) => {
-      const val = Number(req.query.pollInterval);
-      if (typeof val === "number" && val > 0) {
-        worker
-          .updatePollInterval(val)
-          .then(() => {
-            return worker.getWorkers(`Api-Key ${apiKey}`);
-          })
-          .then((workers) => {
-            res.send(
-              `Updated poll interval to ${String(val)}, there are now ${
-                workers.length
-              } workers`
-            );
-          })
-          .catch(next);
-      } else {
-        res.status(400).send("Invalid poll interval");
-      }
-    });
-    app.use("/test", router);
-    worker
-      .serve(
-        {
-          port: process.env.ENSCHEDULE_API_PORT
-            ? Number(process.env.ENSCHEDULE_API_PORT)
-            : 8080,
-          apiKey,
-        },
-        app
-      )
-      .listen();
   }
   console.log("Starting polling");
   await worker.startPolling({ dontMigrate: true });
@@ -229,6 +197,8 @@ if (!process.env.SPECIAL_HANDLERS) {
         days: 5,
       }),
       title: "Programatically Created",
+      defaultRunAccess: undefined,
+      access: undefined,
       description:
         "This is an automatically created job which will run in 5 days",
     }
@@ -240,6 +210,9 @@ if (!process.env.SPECIAL_HANDLERS) {
     { url: "http://localhost:3000" },
     {
       eventId: "non_existing_function",
+      runAt: undefined,
+      defaultRunAccess: undefined,
+      access: undefined,
       title: "Run on a non existing function version",
       description:
         "This is an automatically created job which will not run, because there is no function with id send-http-request and version 10",

@@ -147,7 +147,7 @@ export class Setup {
     console.log("Successfully created database", this.TEST_DB);
 
     console.log("Migrating", this.TEST_DB);
-    await this.asyncExec("pnpm run seed", {
+    await this.asyncExec("bun run seed", {
       env: {
         ...process.env,
         ...this.workerEnvs,
@@ -162,6 +162,7 @@ export class Setup {
     if (process.env.SKIP_SETUP) {
       return;
     }
+    this.childProcesses = [];
     this.TEST_DB = "pw" + Math.random().toString(36).substring(2, 14) + "e";
 
     console.log("Running global setup");
@@ -177,7 +178,7 @@ export class Setup {
       const id = `[${cmd.join(",")} in ${path.relative(this.cwd, cwd)}]`;
       const log = (...msg: any[]) => console.log(id, ...msg);
       const getPort = async () => {
-        let server = spawn("pnpm", cmd, {
+        let server = spawn("bun", cmd, {
           env: env(0),
           stdio: ["inherit", "pipe", "pipe"],
           cwd,
@@ -196,40 +197,14 @@ export class Setup {
             allData += data;
             log(data.toString());
             if (ready(data)) {
-              if (!server.pid) {
-                throw new Error(`${id} server must have a pid`);
+              const matches = [...allData.matchAll(/https?:\/\/[^\s:]+:(\d+)/g)];
+              const value = matches.at(-1)?.[1];
+              if (!value || Number.isNaN(Number(value))) {
+                reject(new Error(`${id} could not determine the Bun server port from: ${allData}`));
+                return;
               }
-              const pstree = await this.asyncExec("pstree -p " + server.pid, {
-                stdout: false,
-              });
-              const childprocs = [...pstree.matchAll(/[\( ](\d+)[\) ]/g)].map(
-                ([, v]) => v
-              );
-
-              let port = 0;
-              await Promise.all(
-                childprocs.map(async (pid) => {
-                  if (port !== 0) {
-                    return;
-                  }
-                  try {
-                    const lsof = await this.asyncExec(
-                      "lsof -aPi -F -p " + pid,
-                      {
-                        stderr: false,
-                        stdout: false,
-                      }
-                    );
-                    const match = lsof.match(/^n\*:(\d+)$/m);
-                    if (!match || !match[1] || Number.isNaN(Number(match[1]))) {
-                      throw new Error(`${id} could not parse lsof ${lsof}`);
-                    }
-                    port = Number(match[1]);
-                  } catch (err) {}
-                })
-              );
-
-              log(`Server running on http://localhost:${port} 🚀`);
+              const port = Number(value);
+              log(`Server running on http://localhost:${port}`);
               clearTimeout(timeout);
               resolve(port);
             }
@@ -292,13 +267,13 @@ export class Setup {
       }),
       this.workerPwd,
       (stdout) => stdout.includes("Worker up and running"),
-      "/api/v1/healthz"
+      "/api/healthz"
     );
 
     const dashboardPwd = path.join(this.cwd, "apps/dashboard");
 
     // Start the second worker server
-    const worker2 = spawn("pnpm", ["run", "serve"], {
+    const worker2 = spawn("bun", ["run", "serve"], {
       env: { ...process.env, ...this.workerEnvs },
       stdio: ["inherit", "pipe", "inherit"],
       cwd: this.workerPwd,
@@ -335,7 +310,7 @@ export class Setup {
         NAFS_URI: "enstore://admin:password?endpoint=http://localhost:3456",
       }),
       dashboardPwd,
-      (stdout) => stdout.includes("[remix-serve] http"),
+      (stdout) => stdout.includes("Enschedule dashboard running"),
       "/healthz"
     );
 
@@ -370,6 +345,7 @@ export class Setup {
       });
     });
     await Promise.all(terminationPromises);
+    this.childProcesses = [];
     console.log("Terminated all started processes");
 
     // Delete the test database

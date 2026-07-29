@@ -1,0 +1,80 @@
+---
+title: "API overview"
+description: "Call the Enschedule Richie RPC API and use its OpenAPI 3.1 specification."
+---
+
+Enschedule serves a JSON HTTP API generated from a shared Richie RPC contract.
+
+## Base paths
+
+| Resource | Path |
+| --- | --- |
+| API | `/api` |
+| API health | `/api/healthz` |
+| Dashboard health | `/healthz` |
+| OpenAPI 3.1 document | `/openapi.json` |
+| Built-in Scalar reference | `/docs` |
+
+The API reference in this site is generated from the same contract.
+
+## Check health
+
+```bash
+curl https://enschedule.example.com/api/healthz
+```
+
+```json
+{
+  "message": "Endpoint is healthy",
+  "runtime": "bun"
+}
+```
+
+## Send JSON requests
+
+```bash
+curl --request GET \
+  --url https://enschedule.example.com/api/schedules \
+  --header 'X-API-Key: your-api-key'
+```
+
+Request and response bodies use JSON. Streaming run logs use the Richie RPC streaming transport.
+
+## Error shape
+
+Standard API errors use this form:
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "Schedule not found",
+  "issues": []
+}
+```
+
+`issues` is optional. Common response statuses include `400`, `401`, `403`, `404`, `409`, and `500`.
+
+## API groups
+
+<Columns cols={2}>
+  <Card title="Authentication" icon="key-round" href="/api/authentication">
+    Log in, refresh, log out, or provide an API key.
+  </Card>
+  <Card title="Definitions" icon="function-square">
+    List the functions currently published by available workers.
+  </Card>
+  <Card title="Schedules" icon="calendar-clock">
+    Create, update, trigger, unschedule, and delete schedules.
+  </Card>
+  <Card title="Runs" icon="list-checks">
+    Inspect attempts, statuses, and captured logs.
+  </Card>
+</Columns>
+
+<Note>
+  The exact generated endpoint URLs are controlled by Mintlify's OpenAPI renderer. Use the **API reference** tab when a direct card link changes after a Mintlify upgrade.
+</Note>
+
+## OpenAPI document
+
+Use **Download API spec** in the page menu, or fetch `/openapi.json` from a running Enschedule dashboard. The checked-in `openapi.json` document is OpenAPI 3.1 and is generated from `packages/types/contract.ts`.

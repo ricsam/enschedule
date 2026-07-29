@@ -1,9 +1,4 @@
-/* eslint-disable eslint-comments/disable-enable-pair */
-/* eslint-disable @typescript-eslint/no-loop-func */
-/* eslint-disable no-await-in-loop */
-import http from "node:http";
-import https from "node:https";
-import type { Readable } from "node:stream";
+import { createClient, type Client } from "@richie-rpc/client";
 import type {
   AuthHeader,
   ListRunsOptions,
@@ -15,534 +10,271 @@ import type {
   ScheduleJobResult,
   ScheduleUpdatePayloadSchema,
   SchedulesFilterSchema,
+  UserSchema,
+  UserAuthSchema,
 } from "@enschedule/types";
 import {
-  UserAuthSchema,
-  ListRunsOptionsSerialize,
-  PublicWorkerSchema,
-  ScheduleJobResultSchema,
-  UserSchema,
-  publicJobDefinitionSchema,
-  publicJobRunSchema,
-  publicJobScheduleSchema,
-} from "@enschedule/types";
-import { debug } from "debug";
-import { z } from "zod";
-
-const log = debug("worker-api");
-if (process.env.DEBUG) {
-  debug.enable(process.env.DEBUG);
-}
-
-interface WorkerApiOptions {
-  retries?: number;
-  apiVersion?: number;
-}
+  API_BASE_PATH,
+  enscheduleContract,
+  type EnscheduleContract,
+} from "@enschedule/types/contract";
+import type { z } from "zod";
 
 export class NetworkError extends Error {
+  originalError?: Error;
+  cliMessage?: string;
+
   constructor(message: string) {
     super(message);
     this.name = "NetworkError";
   }
-  public originalError?: Error;
-  public cliMessage?: string;
 }
 
+type Auth = z.output<typeof AuthHeader>;
+type WorkerClient = Client<EnscheduleContract>;
+
 export class WorkerAPI {
-  private hostname: string;
-  private apiKey: string;
-  private ssl: boolean;
-  private port: number;
-  private url: string;
+  readonly client: WorkerClient;
+  private readonly apiKey: string;
+  private readonly apiUrl: string;
 
-  private retries: number;
-  private apiVersion: number;
-
-  /**
-   * @param apiKey - The ENSCHEDULE_API_KEY environment variable provided to the worker
-   * @param url - The URL of the worker e.g. https://localhost or http://my-worker.localdomain.localhost:8080
-   */
-  constructor(apiKey: string, url: string, options?: WorkerApiOptions) {
-    this.url = url;
-    const urlObject = new URL(url);
-    this.apiKey = apiKey;
-    this.hostname = urlObject.hostname;
-    this.ssl = urlObject.protocol === "https:";
-    if (urlObject.port) {
-      this.port = parseInt(urlObject.port);
-    } else {
-      this.port = this.ssl ? 443 : 80;
-    }
-    this.retries = options?.retries ?? 4;
-    this.apiVersion = options?.apiVersion ?? 1;
+  constructor(apiKey: string, url: string) {
+    this.apiKey = apiKey.replace(/^Api-Key\s+/, "");
+    this.apiUrl = `${url.replace(/\/$/, "")}${API_BASE_PATH}`;
+    this.client = createClient(enscheduleContract, {
+      baseUrl: this.apiUrl,
+      headers: () => ({ "x-api-key": this.apiKey }),
+    });
   }
 
-  private getRequestOptions(
-    method: "POST" | "DELETE" | "GET" | "PUT",
-    path: string,
-    data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: z.output<typeof AuthHeader>
-  ) {
-    let dataString = "";
-    if (data && method === "GET") {
-      dataString = Object.entries(data)
-        .filter(
-          (a): a is [string, string | number | boolean] => a[1] !== undefined
-        )
-        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join("&");
-    }
-    const bodyString = JSON.stringify(data);
-    const headers: http.OutgoingHttpHeaders = {
-      "Content-Type": "application/json",
-      "X-API-KEY": this.apiKey,
-    };
-    const options = {
-      hostname: this.hostname,
-      port: this.port,
-      path: `/api/v1${
-        method === "GET" && dataString ? `${path}?${dataString}` : path
-      }`,
-      method,
-      headers,
-    };
-    if (authHeader) {
-      headers.Authorization = authHeader;
-    }
-
-    const requestLog = (...args: unknown[]) => {
-      log("Req:", method, `${this.url}${decodeURI(options.path)}`, ...args);
-    };
-
-    if (data) {
-      requestLog("data:", JSON.stringify(data));
-    }
-    return { data, bodyString, options, requestLog };
+  private headers(authHeader?: Auth) {
+    return authHeader ? { authorization: authHeader } : { "x-api-key": this.apiKey };
   }
 
-  private async request(
-    method: "POST" | "PUT",
-    path: string,
-    data?: unknown,
-    authHeader?: z.output<typeof AuthHeader>
-  ): Promise<unknown>;
-  private async request(
-    method: "GET" | "DELETE",
-    path: string,
-    data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: z.output<typeof AuthHeader>
-  ): Promise<unknown>;
-  private async request(
-    method: "POST" | "DELETE" | "GET" | "PUT",
-    path: string,
-    data?: Record<string, string | number | boolean | undefined>,
-    authHeader?: z.output<typeof AuthHeader>
-  ) {
-    const { options, bodyString, requestLog } = this.getRequestOptions(
-      method,
-      path,
-      data,
-      authHeader
-    );
-
-    let attempt = 0;
-    const delay = 1000;
-
-    const totalAttempts = this.retries + 1;
-
-    while (attempt < totalAttempts) {
-      try {
-        const response = await new Promise((resolve, reject) => {
-          const req = (this.ssl ? https : http).request(options, (res) => {
-            let body = "";
-            res.on("data", (chunk) => {
-              body += chunk;
-            });
-            res.on("end", () => {
-              const responseLog = (...args: unknown[]) => {
-                log(
-                  "Res:",
-                  method,
-                  `${this.url}${options.path}`,
-                  res.statusCode,
-                  res.statusMessage,
-                  ...args
-                );
-              };
-
-              responseLog();
-
-              if (res.statusCode && res.statusCode > 299) {
-                let statusMessage = `Code: ${res.statusCode}`;
-                if (res.statusMessage) {
-                  statusMessage = `${res.statusCode} ${res.statusMessage}`;
-                }
-                const err = new NetworkError(statusMessage);
-                reject(err);
-                return;
-              }
-
-              try {
-                const resData: unknown = JSON.parse(body);
-                resolve(resData);
-                if (resData) {
-                  responseLog("data:", JSON.stringify(resData));
-                }
-              } catch (err) {
-                responseLog(
-                  "Failed to json parse, the response body was:",
-                  body
-                );
-                reject(err);
-              }
-            });
-          });
-
-          req.on("error", reject);
-          if (data && (method === "POST" || method === "PUT")) {
-            req.write(bodyString);
-          }
-          req.end();
-        });
-        return response;
-      } catch (error) {
-        attempt += 1;
-        requestLog(`Attempt ${attempt} failed:`, String(error));
-
-        // If we've used all retries, throw the error
-        if (attempt >= totalAttempts) {
-          if (error instanceof NetworkError) {
-            throw error;
-          }
-          const networkError = new NetworkError(
-            `${method} ${this.url}${decodeURI(
-              options.path
-            )} failed after ${attempt} attempts with ${String(error)}`
-          );
-          if (error instanceof Error) {
-            networkError.stack = error.stack;
-            networkError.cliMessage = error.message;
-          }
-          throw networkError;
-        }
-
-        // Wait for an exponential backoff time before retrying
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, delay * Math.pow(2, attempt - 1));
-        });
-      }
-    }
+  private requestHeaders(authHeader?: Auth): HeadersInit {
+    return authHeader
+      ? { authorization: authHeader }
+      : { "x-api-key": this.apiKey };
   }
 
-  async getLatestHandlers(
-    authHeader: z.output<typeof AuthHeader>
-  ): Promise<PublicJobDefinition[]> {
-    const jobDefinitions = await this.request(
-      "GET",
-      "/job-definitions",
-      undefined,
-      authHeader
-    );
-    return z.array(publicJobDefinitionSchema).parse(jobDefinitions);
+  async getLatestHandlers(authHeader: Auth): Promise<PublicJobDefinition[]> {
+    return (await this.client.listDefinitions({ headers: this.headers(authHeader) })).payload;
   }
 
-  async unschedule(ids: number[]): Promise<void> {
-    await this.request("POST", "/unschedule", ids);
-  }
-
-  async getLatestHandler(
-    id: string,
-    authHeader: z.output<typeof AuthHeader>
-  ): Promise<PublicJobDefinition> {
-    const definition = await this.request(
-      "GET",
-      `/job-definitions/${id}`,
-      undefined,
-      authHeader
-    );
-    return publicJobDefinitionSchema.parse(definition);
+  async getLatestHandler(id: string, authHeader: Auth): Promise<PublicJobDefinition> {
+    return (
+      await this.client.getDefinition({
+        params: { id },
+        headers: this.headers(authHeader),
+      })
+    ).payload;
   }
 
   async getSchedules(
-    authHeader: z.output<typeof AuthHeader>,
-    filter: z.output<typeof SchedulesFilterSchema> = {}
+    authHeader: Auth,
+    filter: z.output<typeof SchedulesFilterSchema> = {},
   ): Promise<PublicJobSchedule[]> {
-    const schedules = await this.request(
-      "GET",
-      "/schedules",
-      filter,
-      authHeader
-    );
-    return z.array(publicJobScheduleSchema).parse(schedules);
-  }
-
-  async deleteWorkers(ids: number[]): Promise<number[]> {
-    const workers = await this.request("POST", "/workers", { ids });
-    return z.array(z.number()).parse(workers);
-  }
-
-  async getWorkers(
-    authHeader: z.output<typeof AuthHeader>
-  ): Promise<PublicWorker[]> {
-    const workers = await this.request(
-      "GET",
-      "/workers",
-      undefined,
-      authHeader
-    );
-    return z.array(PublicWorkerSchema).parse(workers);
+    return (
+      await this.client.listSchedules({
+        headers: this.headers(authHeader),
+        query: filter,
+      })
+    ).payload;
   }
 
   async scheduleJob(
-    authHeader: z.output<typeof AuthHeader>,
+    authHeader: Auth,
     functionId: string,
     functionVersion: number,
     data: unknown,
-    options: ScheduleJobOptions
+    options: ScheduleJobOptions,
   ): Promise<ScheduleJobResult> {
-    const result = await this.request(
-      "POST",
-      "/schedules",
-      {
-        functionId,
-        functionVersion,
-        data,
-        options,
-      },
-      authHeader
-    );
-    log("scheduleJob result", result);
-    return ScheduleJobResultSchema.parse(result);
+    return (
+      await this.client.createSchedule({
+        headers: this.headers(authHeader),
+        body: { functionId, functionVersion, data, options },
+      })
+    ).payload;
   }
 
-  async getSchedule(
-    authHeader: z.output<typeof AuthHeader>,
-    id: number
-  ): Promise<PublicJobSchedule> {
-    const schedule = await this.request(
-      "GET",
-      `/schedules/${id}`,
-      undefined,
-      authHeader
-    );
-    return publicJobScheduleSchema.parse(schedule);
-  }
-
-  async deleteSchedule(
-    authHeader: z.output<typeof AuthHeader>,
-    id: number
-  ): Promise<PublicJobSchedule> {
-    const schedule = await this.request(
-      "DELETE",
-      `/schedules/${id}`,
-      undefined,
-      authHeader
-    );
-    return publicJobScheduleSchema.parse(schedule);
-  }
-
-  async deleteSchedules(scheduleIds: number[]): Promise<number[]> {
-    const response = await this.request("POST", "/delete-schedules", {
-      scheduleIds,
-    });
-    return z.array(z.number()).parse(response);
-  }
-
-  async getRuns(
-    options: ListRunsOptions
-  ): Promise<{ count: number; rows: PublicJobRun[] }> {
-    const runs = await this.request(
-      "GET",
-      "/runs",
-      ListRunsOptionsSerialize(options)
-    );
-    return z
-      .object({ rows: z.array(publicJobRunSchema), count: z.number() })
-      .parse(runs);
+  async getSchedule(authHeader: Auth, id: number): Promise<PublicJobSchedule> {
+    return (
+      await this.client.getSchedule({
+        params: { id },
+        headers: this.headers(authHeader),
+      })
+    ).payload;
   }
 
   async updateSchedule(
-    authHeader: z.output<typeof AuthHeader>,
-    updatePayload: z.output<typeof ScheduleUpdatePayloadSchema>
+    authHeader: Auth,
+    payload: z.output<typeof ScheduleUpdatePayloadSchema>,
   ): Promise<PublicJobSchedule> {
-    const schedule = await this.request(
-      "PUT",
-      `/schedules/${updatePayload.id}`,
-      {
-        ...updatePayload,
-        runAt: updatePayload.runAt
-          ? updatePayload.runAt.toJSON()
-          : updatePayload.runAt,
-      },
-      authHeader
-    );
-    return publicJobScheduleSchema.parse(schedule);
+    const { id, ...body } = payload;
+    return (
+      await this.client.updateSchedule({
+        params: { id },
+        headers: this.headers(authHeader),
+        body,
+      })
+    ).payload;
   }
 
-  async getRun(
-    authHeader: z.output<typeof AuthHeader>,
-    id: number
-  ): Promise<PublicJobRun> {
-    const run = await this.request("GET", `/runs/${id}`, undefined, authHeader);
-    return publicJobRunSchema.parse(run);
+  async deleteSchedule(authHeader: Auth, id: number): Promise<PublicJobSchedule> {
+    return (
+      await this.client.deleteSchedule({
+        params: { id },
+        headers: this.headers(authHeader),
+      })
+    ).payload;
   }
 
-  async deleteRun(
-    authHeader: z.output<typeof AuthHeader>,
-    id: number
-  ): Promise<PublicJobRun> {
-    const run = await this.request(
-      "DELETE",
-      `/runs/${id}`,
-      undefined,
-      authHeader
-    );
-    return publicJobRunSchema.parse(run);
-  }
-
-  async deleteRuns(runIds: number[]): Promise<number[]> {
-    const response = await this.request("POST", "/delete-runs", {
-      runIds,
+  async deleteSchedules(ids: number[]): Promise<number[]> {
+    await this.client.scheduleActions({
+      headers: this.headers(),
+      body: { ids, action: "delete" },
     });
-    return z.array(z.number()).parse(response);
-  }
-
-  async reset(authHeader: z.output<typeof AuthHeader>): Promise<boolean> {
-    const result = await this.request("DELETE", `/`, undefined, authHeader);
-    return z.object({ success: z.boolean() }).parse(result).success;
+    return ids;
   }
 
   async runScheduleNow(id: number): Promise<void> {
-    await this.request("POST", `/schedules/${id}/runs`);
+    await this.client.runSchedule({ params: { id }, headers: this.headers() });
   }
 
   async runSchedulesNow(ids: number[]): Promise<void> {
-    await this.request("POST", `/runs-schedules`, ids);
+    await this.client.scheduleActions({
+      headers: this.headers(),
+      body: { ids, action: "run" },
+    });
   }
 
-  async login(
-    username: string,
-    password: string
-  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
-    try {
-      const tokens = await this.request("POST", "/login", {
-        username,
-        password,
-      });
-      const result = z
-        .object({
-          refreshToken: z.string(),
-          accessToken: z.string(),
-        })
-        .safeParse(tokens);
+  async unschedule(ids: number[]): Promise<void> {
+    await this.client.scheduleActions({
+      headers: this.headers(),
+      body: { ids, action: "unschedule" },
+    });
+  }
 
-      if (result.success) {
-        return result.data;
-      }
-    } catch (err) {
-      // some error that can be ignored
+  async getWorkers(authHeader: Auth): Promise<PublicWorker[]> {
+    return (await this.client.listWorkers({ headers: this.headers(authHeader) })).payload;
+  }
+
+  async deleteWorkers(ids: number[]): Promise<number[]> {
+    return (
+      await this.client.deleteWorkers({
+        headers: this.headers(),
+        body: { ids },
+      })
+    ).payload;
+  }
+
+  async getRuns(options: ListRunsOptions): Promise<{ count: number; rows: PublicJobRun[] }> {
+    const query = {
+      scheduleId: options.scheduleId,
+      order: options.order,
+      limit: options.limit ?? 10_000,
+      offset: options.offset,
+    };
+    return (
+      await this.client.listRuns({
+        headers: this.headers(options.authHeader),
+        query,
+      })
+    ).payload;
+  }
+
+  async getRun(authHeader: Auth, id: number): Promise<PublicJobRun> {
+    return (
+      await this.client.getRun({
+        params: { id },
+        headers: this.headers(authHeader),
+      })
+    ).payload;
+  }
+
+  async deleteRun(authHeader: Auth, id: number): Promise<PublicJobRun> {
+    return (
+      await this.client.deleteRun({
+        params: { id },
+        headers: this.headers(authHeader),
+      })
+    ).payload;
+  }
+
+  async deleteRuns(ids: number[]): Promise<number[]> {
+    return (
+      await this.client.deleteRuns({
+        headers: this.headers(),
+        body: { ids },
+      })
+    ).payload;
+  }
+
+  async reset(authHeader: Auth): Promise<boolean> {
+    return (await this.client.reset({ headers: this.headers(authHeader) })).payload.success;
+  }
+
+  async login(username: string, password: string) {
+    try {
+      return (await this.client.login({ body: { username, password } })).payload;
+    } catch {
+      return undefined;
     }
   }
 
-  async refreshToken(
-    refreshToken: string
-  ): Promise<undefined | { refreshToken: string; accessToken: string }> {
+  async refreshToken(refreshToken: string) {
     try {
-      const tokens = await this.request("POST", "/refresh-token", {
-        refreshToken,
-      });
-      const result = z
-        .object({
-          refreshToken: z.string(),
-          accessToken: z.string(),
-        })
-        .safeParse(tokens);
-
-      if (result.success) {
-        return result.data;
-      }
-    } catch (err) {
-      // some error that can be ignored
+      return (await this.client.refresh({ body: { refreshToken } })).payload;
+    } catch {
+      return undefined;
     }
-  }
-
-  async getUser(
-    authHeader: z.output<typeof AuthHeader>,
-    userId: number
-  ): Promise<undefined | z.output<typeof UserSchema>> {
-    try {
-      const user = await this.request(
-        "GET",
-        `/users/${userId}`,
-        undefined,
-        authHeader
-      );
-      const result = UserSchema.safeParse(user);
-
-      if (result.success) {
-        return result.data;
-      }
-    } catch (err) {
-      // some error that can be ignored
-    }
-  }
-
-  async getUserAuth(
-    authHeader: z.output<typeof AuthHeader>
-  ): Promise<z.output<typeof UserAuthSchema> | undefined> {
-    try {
-      const userAuth = await this.request(
-        "GET",
-        "/user-auth",
-        undefined,
-        authHeader
-      );
-      const result = UserAuthSchema.safeParse(userAuth);
-      if (result.success) {
-        return result.data;
-      }
-    } catch (err) {
-      // ignore error
-    }
-  }
-
-  async getUsers(
-    authHeader: z.output<typeof AuthHeader>
-  ): Promise<z.output<typeof UserSchema>[]> {
-    const users = await this.request("GET", "/users", undefined, authHeader);
-    return z.array(UserSchema).parse(users);
   }
 
   async logout(refreshToken: string, allDevices: boolean): Promise<void> {
-    await this.request("POST", "/logout", { refreshToken, allDevices });
+    await this.client.logout({ body: { refreshToken, allDevices } });
   }
 
-  async streamLogs(
-    authHeader: z.output<typeof AuthHeader>,
-    runId: number
-  ): Promise<Readable | undefined> {
-    const { options } = this.getRequestOptions(
-      "GET",
-      `/logs/${runId}`,
-      undefined,
-      authHeader
-    );
-
+  async getUser(
+    authHeader: Auth,
+    id: number,
+  ): Promise<z.output<typeof UserSchema> | undefined> {
     try {
-      const { response } = await new Promise<{
-        response: http.IncomingMessage;
-        request: http.ClientRequest;
-      }>((resolve) => {
-        const req = (this.ssl ? https : http).request(options, (res) => {
-          resolve({ response: res, request: req });
-        });
-        req.end();
+      return (
+        await this.client.getUser({
+          params: { id },
+          headers: this.headers(authHeader),
+        })
+      ).payload;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async getUsers(authHeader: Auth): Promise<z.output<typeof UserSchema>[]> {
+    return (await this.client.listUsers({ headers: this.headers(authHeader) })).payload;
+  }
+
+  async getUserAuth(
+    authHeader: Auth,
+  ): Promise<z.output<typeof UserAuthSchema> | undefined> {
+    try {
+      return (await this.client.userAuth({ headers: this.headers(authHeader) })).payload;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async streamLogs(authHeader: Auth, runId: number): Promise<ReadableStream<Uint8Array> | undefined> {
+    try {
+      // Keep the worker's NDJSON response intact. Attaching listeners only after
+      // the Richie streaming client promise resolves can lose fast log chunks.
+      const response = await fetch(`${this.apiUrl}/runs/${runId}/logs`, {
+        method: "POST",
+        headers: this.requestHeaders(authHeader),
       });
-      if (response.statusCode === 200) {
-        return response;
-      }
-    } catch (err) {
-      log("Error streaming logs", err);
+      return response.ok && response.body ? response.body : undefined;
+    } catch {
+      return undefined;
     }
   }
 }

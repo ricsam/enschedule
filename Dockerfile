@@ -1,151 +1,72 @@
-# BASE
-FROM node:18-slim AS base
-LABEL org.opencontainers.image.source=https://github.com/ricsam/enschedule
-LABEL org.opencontainers.image.licenses=MIT
+# syntax=docker/dockerfile:1.7
+FROM oven/bun:1.3.14-debian AS install
 WORKDIR /app
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+COPY package.json bun.lock turbo.json tsconfig.json ./
+COPY apps/dashboard/package.json apps/dashboard/package.json
+COPY packages/pg-driver/package.json packages/pg-driver/package.json
+COPY packages/types/package.json packages/types/package.json
+COPY packages/tsconfig/package.json packages/tsconfig/package.json
+COPY packages/worker/package.json packages/worker/package.json
+COPY packages/worker-api/package.json packages/worker-api/package.json
+COPY packages/worker-cli/package.json packages/worker-cli/package.json
+COPY functions/fetch/package.json functions/fetch/package.json
+COPY functions/log/package.json functions/log/package.json
+COPY packages/cli/package.json packages/cli/package.json
+COPY packages/hub/package.json packages/hub/package.json
+COPY packages/ui/package.json packages/ui/package.json
+COPY packages/eslint-config-custom/package.json packages/eslint-config-custom/package.json
+COPY tests/hub-test/package.json tests/hub-test/package.json
+COPY tests/playwright/package.json tests/playwright/package.json
+COPY tests/test-worker/package.json tests/test-worker/package.json
+COPY website/package.json website/package.json
+# Mintlify depends on Puppeteer for local docs tooling; runtime images do not need its browser download.
+RUN PUPPETEER_SKIP_DOWNLOAD=true bun install --frozen-lockfile
+
+FROM install AS build
+COPY apps/dashboard apps/dashboard
+COPY packages/pg-driver packages/pg-driver
+COPY packages/types packages/types
+COPY packages/tsconfig packages/tsconfig
+COPY packages/worker packages/worker
+COPY packages/worker-api packages/worker-api
+COPY packages/worker-cli packages/worker-cli
+COPY functions functions
+RUN bun run --cwd packages/types build
+RUN bun run --cwd packages/pg-driver build
+RUN bun run --cwd packages/worker-api build
+RUN bun run --cwd packages/worker build
+RUN bun run --cwd apps/dashboard build
+RUN bun run --cwd packages/worker-cli build
+
+FROM oven/bun:1.3.14-debian AS runtime
+LABEL org.opencontainers.image.source="https://github.com/ricsam/enschedule"
+LABEL org.opencontainers.image.licenses="MIT"
+WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable
-RUN pnpm install turbo --global
+COPY --from=build /app/package.json /app/bun.lock ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/dashboard ./apps/dashboard
+COPY --from=build /app/packages/pg-driver ./packages/pg-driver
+COPY --from=build /app/packages/types ./packages/types
+COPY --from=build /app/packages/worker ./packages/worker
+COPY --from=build /app/packages/worker-api ./packages/worker-api
+COPY --from=build /app/packages/worker-cli ./packages/worker-cli
+COPY --from=build /app/functions ./functions
+RUN mkdir -p /root/.bun/install/cache/@enschedule/types@1.1.6@@@1/dist \
+  && cp /app/packages/types/dist/index.js /root/.bun/install/cache/@enschedule/types@1.1.6@@@1/dist/index.js \
+  && cp /app/packages/types/dist/contract.js /root/.bun/install/cache/@enschedule/types@1.1.6@@@1/dist/contract.js
 
-RUN apt-get update && \
-    apt-get install -y jq moreutils && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
-
-# INSTALL BASE
-FROM base AS install-base
-COPY . .
-RUN ./release-package.sh
-RUN turbo prune \
-  --scope="@enschedule/worker" \
-  --scope="@enschedule/worker-cli" \
-  --scope="@enschedule/dashboard" \
-  --scope="@enschedule-fns/log" \
-  --scope="@enschedule-fns/fetch" \
-  --docker
-
-RUN rm -rf /app/out/**/node_modules
-
-FROM base AS prod-deps
-COPY --from=install-base /app/out/json/ .
-COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
-RUN pnpm install --prod --frozen-lockfile
-
-FROM base AS build
-COPY --from=install-base /app/out/json/ .
-COPY --from=install-base /app/out/pnpm-lock.yaml /app/out/pnpm-workspace.yaml ./
-RUN NODE_ENV="development" pnpm install --frozen-lockfile
-COPY --from=install-base /app/out/full/ .
-RUN turbo build
-
-# Worker image
-FROM base AS worker
-LABEL org.opencontainers.image.description="Worker"
-COPY --from=install-base /app/out/full/ .
-COPY --from=install-base /app/random-token.sh ./
-
-# Install pg-driver
-RUN rm -rf /app/packages/pg-driver/node_modules
-COPY --from=prod-deps /app/packages/pg-driver/node_modules/ /app/packages/pg-driver/node_modules
-COPY --from=build /app/packages/pg-driver/dist /app/packages/pg-driver/dist
-# Install types
-RUN rm -rf /app/packages/types/node_modules
-COPY --from=prod-deps /app/packages/types/node_modules/ /app/packages/types/node_modules
-COPY --from=build /app/packages/types/dist /app/packages/types/dist
-# Install worker
-RUN rm -rf /app/packages/worker/node_modules
-COPY --from=prod-deps /app/packages/worker/node_modules/ /app/packages/worker/node_modules
-COPY --from=build /app/packages/worker/dist /app/packages/worker/dist
-# Install worker-cli
-RUN rm -rf /app/packages/worker-cli/node_modules
-COPY --from=prod-deps /app/packages/worker-cli/node_modules/ /app/packages/worker-cli/node_modules
-COPY --from=build /app/packages/worker-cli/dist /app/packages/worker-cli/dist
-
-# Install functions
-## fetch-fn
-RUN rm -rf /app/functions/fetch/node_modules
-COPY --from=prod-deps /app/functions/fetch/node_modules/ /app/functions/fetch/node_modules
-## log-fn
-RUN rm -rf /app/functions/log/node_modules
-COPY --from=prod-deps /app/functions/log/node_modules/ /app/functions/log/node_modules
-
-# Root node_modules
-COPY --from=prod-deps /app/node_modules/ /app/node_modules
-
-# Create the folder where the user can mount job definitions
-RUN mkdir /app/packages/worker/definitions
-
-WORKDIR /app/packages/worker
-
-RUN cp -r /app/functions/* ./node_modules/@enschedule/
-
-RUN cd /app/packages/worker-cli && \
-    npm link
-
-RUN mkdir -p /enschedule-functions
-
-WORKDIR /enschedule-functions
-
-RUN ln -s /app/packages/worker/node_modules /enschedule-functions/node_modules
-
-RUN echo '#!/bin/bash' > docker-entry.sh && \
-    echo 'ENSCHEDULE_API_HOSTNAME=0.0.0.0 \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_ACCESS_TOKEN_SECRET=${ENSCHEDULE_ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_REFRESH_TOKEN_SECRET=${ENSCHEDULE_REFRESH_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'enschedule-worker start "$@"' >> docker-entry.sh && \
-    chmod +x docker-entry.sh
-
-ENTRYPOINT ["sh", "docker-entry.sh"]
-CMD []
-
-# Dashboard image
-FROM base AS dashboard
-LABEL org.opencontainers.image.description="Dashboard"
-COPY --from=install-base /app/out/full/ .
-COPY --from=install-base /app/random-token.sh ./
-
-# Install worker-api
-RUN rm -rf /app/packages/worker-api/node_modules
-COPY --from=prod-deps /app/packages/worker-api/node_modules/ /app/packages/worker-api/node_modules
-COPY --from=build /app/packages/worker-api/dist /app/packages/worker-api/dist
-# Install types
-RUN rm -rf /app/packages/types/node_modules
-COPY --from=prod-deps /app/packages/types/node_modules/ /app/packages/types/node_modules
-COPY --from=build /app/packages/types/dist /app/packages/types/dist
-# Install dashboard
-RUN rm -rf /app/apps/dashboard/node_modules
-COPY --from=prod-deps /app/apps/dashboard/node_modules/ /app/apps/dashboard/node_modules
-COPY --from=build /app/apps/dashboard/build /app/apps/dashboard/build
-COPY --from=build /app/apps/dashboard/public/build /app/apps/dashboard/public/build
-
-# Install functions
-## fetch-fn
-RUN rm -rf /app/functions/fetch/node_modules
-COPY --from=prod-deps /app/functions/fetch/node_modules/ /app/functions/fetch/node_modules
-## log-fn
-RUN rm -rf /app/functions/log/node_modules
-COPY --from=prod-deps /app/functions/log/node_modules/ /app/functions/log/node_modules
-
-# Root node_modules
-COPY --from=prod-deps /app/node_modules/ /app/node_modules
-
+FROM runtime AS dashboard
+LABEL org.opencontainers.image.description="Enschedule Bun backend and Vite SPA"
 WORKDIR /app/apps/dashboard
+EXPOSE 3000
+CMD ["bun", "./server/main.ts"]
 
-RUN cp -r /app/functions/* ./node_modules/@enschedule/
-
-RUN echo "HOST=0.0.0.0 npm run docker:start" > docker-entry.sh && \
-    chmod +x docker-entry.sh
-
-RUN echo '#!/bin/bash' > docker-entry.sh && \
-    echo 'HOST=0.0.0.0 \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_ACCESS_TOKEN_SECRET=${ENSCHEDULE_ACCESS_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_ACCESS_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_REFRESH_TOKEN_SECRET=${ENSCHEDULE_REFRESH_TOKEN_SECRET:-$(/app/random-token.sh ENSCHEDULE_REFRESH_TOKEN_SECRET)} \\' >> docker-entry.sh && \
-    echo 'ENSCHEDULE_COOKIE_SESSION_SECRET=${ENSCHEDULE_COOKIE_SESSION_SECRET:-$(/app/random-token.sh ENSCHEDULE_COOKIE_SESSION_SECRET)} \\' >> docker-entry.sh && \
-    echo 'npm run docker:start' >> docker-entry.sh && \
-    chmod +x docker-entry.sh
-
-CMD ["sh", "docker-entry.sh"]
+FROM runtime AS worker
+LABEL org.opencontainers.image.description="Enschedule Bun worker"
+WORKDIR /app
+RUN ln -s /app/node_modules/zod /app/packages/worker-cli/node_modules/zod || true
+WORKDIR /enschedule-functions
+EXPOSE 8000
+ENTRYPOINT ["bun", "/app/packages/worker-cli/src/cli.ts", "start"]
+CMD []

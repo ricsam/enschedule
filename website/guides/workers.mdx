@@ -1,0 +1,89 @@
+---
+title: "Workers"
+description: "Run, configure, scale, and monitor Enschedule workers."
+---
+
+Workers load function definitions, publish their capabilities to PostgreSQL, and claim schedules that are ready to run.
+
+## Run with the worker CLI
+
+```bash
+ENSCHEDULE_WORKER_ID=mail-worker \
+ENSCHEDULE_WORKER_NAME='Mail worker' \
+ENSCHEDULE_WORKER_DESCRIPTION='Sends customer emails' \
+ENSCHEDULE_FUNCTIONS='./functions/mail.js ./functions/reports.js' \
+ENSCHEDULE_POLL_INTERVAL=10 \
+ENSCHEDULE_API=true \
+ENSCHEDULE_API_HOSTNAME=0.0.0.0 \
+ENSCHEDULE_API_PORT=8000 \
+ENSCHEDULE_API_KEY=change-me \
+DATABASE_URL=postgres://user:password@db:5432/enschedule \
+ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me \
+ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me \
+NAFS_URI=file:///var/log/enschedule \
+bun run --cwd packages/worker-cli start
+```
+
+The worker health endpoint is `GET /api/healthz`.
+
+<Warning>
+  Enabling the worker API requires `ENSCHEDULE_API_KEY`. Do not expose the worker API directly to the public internet without an authenticated gateway.
+</Warning>
+
+## Use the Worker class
+
+```typescript worker.ts
+import { Worker } from "@enschedule/worker";
+import register from "./functions";
+
+const worker = new Worker({
+  workerId: "mail-worker",
+  name: "Mail worker",
+  accessTokenSecret: process.env.ENSCHEDULE_ACCESS_TOKEN_SECRET!,
+  refreshTokenSecret: process.env.ENSCHEDULE_REFRESH_TOKEN_SECRET!,
+  apiKey: process.env.ENSCHEDULE_API_KEY,
+  nafsUri: process.env.NAFS_URI!,
+});
+
+await register(worker);
+await worker.startPolling();
+worker.serve({ port: 8000, hostname: "0.0.0.0" });
+```
+
+Call `worker.close()` during shutdown to stop polling and close the PostgreSQL connection.
+
+## Worker identity
+
+`workerId` is stable and user-provided. Use the same value for interchangeable replicas. `instanceId` is generated for each process and distinguishes individual registrations.
+
+A schedule with `workerId` set can be claimed only by a worker with that stable ID. A schedule without it can be claimed by any worker that implements the required function ID and version.
+
+## Polling and availability
+
+Workers update their `lastReached` timestamp while polling.
+
+- `UP`: the worker checked in within the expected interval.
+- `PENDING`: the worker is late but still inside the failure threshold.
+- `DOWN`: the worker has missed the threshold.
+
+Set `ENSCHEDULE_POLL_INTERVAL` in seconds. A short interval reduces dispatch latency but increases database traffic.
+
+## Scale workers
+
+Multiple workers can safely poll the same PostgreSQL database. Enschedule uses transactional row locking with `FOR UPDATE SKIP LOCKED` while claiming due schedules.
+
+For horizontal scaling:
+
+1. Run the same function module on each interchangeable replica.
+2. Use the same stable `workerId`.
+3. Give every replica access to the same PostgreSQL database.
+4. Use shared log storage, such as Enstore or a compatible `NAFS_URI`, when logs must be readable from another process.
+5. Keep worker clocks synchronized.
+
+<Info>
+  Local `file://` log storage is appropriate for one worker. It is not shared between replicas unless the path is backed by a shared volume.
+</Info>
+
+## Worker versions
+
+Enschedule derives a worker version hash from its title, description, poll interval, definitions, and default access policy. Changing those values produces a new logical worker version in the dashboard.

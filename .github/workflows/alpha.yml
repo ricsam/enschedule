@@ -44,6 +44,7 @@ jobs:
       - run: bun run playwright -- test
         env:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          DB_PORT: "5432"
       - run: helm lint infrastructure/charts/enschedule
       - run: docker build --target worker -t enschedule-worker:ci .
       - run: docker build --target dashboard -t enschedule-dashboard:ci .

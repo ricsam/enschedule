@@ -17,11 +17,11 @@ export class Setup {
   private childProcesses: ChildProcess[] = [];
 
   private dbCreds = {
-    DB_USER: "postgres",
-    DB_HOST: "127.0.0.1",
-    DB_PASSWORD: "postgres",
-    DB_DATABASE: "postgres",
-    DB_PORT: "6543",
+    DB_USER: process.env.DB_USER ?? "postgres",
+    DB_HOST: process.env.DB_HOST ?? "127.0.0.1",
+    DB_PASSWORD: process.env.DB_PASSWORD ?? "postgres",
+    DB_DATABASE: process.env.DB_DATABASE ?? "postgres",
+    DB_PORT: process.env.DB_PORT ?? "6543",
   };
 
   private _dashboardUrl = "";

@@ -759,6 +759,9 @@
                         "admin"
                       ],
                       "additionalProperties": false
+                    },
+                    "noAuth": {
+                      "type": "boolean"
                     }
                   },
                   "additionalProperties": false

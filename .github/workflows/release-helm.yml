@@ -49,10 +49,10 @@ jobs:
         run: |
           git fetch origin gh-pages
           git worktree add /tmp/enschedule-gh-pages origin/gh-pages
-          cp infrastructure/chart-repository/index.html /tmp/enschedule-gh-pages/index.html
-          touch /tmp/enschedule-gh-pages/.nojekyll
           cd /tmp/enschedule-gh-pages
           git pull --rebase origin gh-pages
+          cp "$GITHUB_WORKSPACE/infrastructure/chart-repository/index.html" index.html
+          touch .nojekyll
           git add index.html .nojekyll
           if git diff --cached --quiet; then
             exit 0

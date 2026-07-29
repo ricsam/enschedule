@@ -5,7 +5,23 @@ import { enscheduleContract } from "@enschedule/types/contract";
 import { commitSession, clearSession, getSession } from "./cookies";
 import type { DashboardWorker } from "./worker";
 
-export function createDashboardRouter(worker: DashboardWorker) {
+export interface DashboardRouterOptions {
+  noAuth?: boolean;
+  apiKey?: string;
+}
+
+export function createDashboardRouter(
+  worker: DashboardWorker,
+  options: DashboardRouterOptions = {},
+) {
+  const noAuth = options.noAuth ?? false;
+  const apiKey = options.apiKey?.replace(/^Api-Key\s+/, "").trim();
+  if (noAuth && !apiKey) {
+    throw new Error("ENSCHEDULE_API_KEY is required when ENSCHEDULE_NO_AUTH is enabled");
+  }
+  const noAuthHeader = noAuth
+    ? AuthHeader.parse(`Api-Key ${apiKey}`)
+    : undefined;
   const refreshes = new Map<string, ReturnType<DashboardWorker["refreshToken"]>>();
   const refreshOnce = (refreshToken: string) => {
     const active = refreshes.get(refreshToken);
@@ -27,6 +43,7 @@ export function createDashboardRouter(worker: DashboardWorker) {
     }
   };
   const auth = async (request: Request) => {
+    if (noAuthHeader) return { session: {}, header: noAuthHeader };
     const session = await getSession(request);
     if (session.refreshToken && expiresSoon(session.accessToken)) {
       const tokens = await refreshOnce(session.refreshToken);
@@ -74,6 +91,9 @@ export function createDashboardRouter(worker: DashboardWorker) {
       return { status: Status.OK, body: { success: true }, headers: { "set-cookie": clearSession() } };
     },
     session: async ({ request }) => {
+      if (noAuth) {
+        return { status: Status.OK, body: { noAuth: true } };
+      }
       const { session, header } = await auth(request);
       const userAuth = header ? await worker.getUserAuth(header) : undefined;
       if (header && !userAuth) {

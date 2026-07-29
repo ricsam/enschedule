@@ -7,7 +7,7 @@ metadata:
     {{- include "enschedule.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "1"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   template:
@@ -64,7 +64,7 @@ spec:
                   key: pgPassword
       containers:
         - name: worker
-          command: ["bun", "/app/packages/pg-driver/migrate.ts"]
+          command: ["bun", "/app/packages/worker-cli/src/cli.ts", "start"]
           volumeMounts:
             {{- if .Values.migrationJob.extraVolumeMounts }}
             {{- toYaml .Values.migrationJob.extraVolumeMounts | nindent 12 }}
@@ -124,6 +124,12 @@ spec:
               value: "Enschedule db migrator"
             - name: ENSCHEDULE_WORKER_DESCRIPTION
               value: "This is created to migrate the database and will then shut down"
+            - name: ENSCHEDULE_MIGRATE
+              value: "true"
+            - name: ENSCHEDULE_DISABLE_POLLING
+              value: "true"
+            - name: ENSCHEDULE_API
+              value: "false"
             {{- if .Values.migrationJob.extraEnvs }}
             {{- toYaml .Values.migrationJob.extraEnvs | nindent 12 }}
             {{- end }}

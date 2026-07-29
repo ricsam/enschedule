@@ -90,7 +90,12 @@ export const enscheduleContract = defineContract({
     method: "GET",
     path: "/session",
     headers: AuthHeadersSchema,
-    responses: { [Status.OK]: z.object({ user: SessionUserSchema.optional() }) },
+    responses: {
+      [Status.OK]: z.object({
+        user: SessionUserSchema.optional(),
+        noAuth: z.boolean().optional(),
+      }),
+    },
     errorResponses,
   },
   userAuth: {

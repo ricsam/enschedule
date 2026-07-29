@@ -1,0 +1,76 @@
+name: enschedule-quickstart
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  worker:
+    image: ghcr.io/ricsam/enschedule-worker:2.0.0-alpha
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+      ENSCHEDULE_WORKER_ID: quickstart-worker
+      ENSCHEDULE_WORKER_NAME: Quickstart worker
+      ENSCHEDULE_FUNCTIONS: /app/functions/fetch/index.js /app/functions/log/index.js
+      ENSCHEDULE_API: "true"
+      ENSCHEDULE_API_HOSTNAME: 0.0.0.0
+      ENSCHEDULE_API_PORT: "8000"
+      ENSCHEDULE_API_KEY: quickstart-api-key
+      ENSCHEDULE_ACCESS_TOKEN_SECRET: quickstart-access-token-secret
+      ENSCHEDULE_REFRESH_TOKEN_SECRET: quickstart-refresh-token-secret
+      ENSCHEDULE_MIGRATE: "true"
+      NAFS_URI: file:///var/log/enschedule
+      ADMIN_ACCOUNT: adm1n:s3cr3t
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - const response = await fetch("http://127.0.0.1:8000/api/healthz"); process.exit(response.ok ? 0 : 1)
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - run-logs:/var/log/enschedule
+
+  dashboard:
+    image: ghcr.io/ricsam/enschedule-dashboard:2.0.0-alpha
+    depends_on:
+      worker:
+        condition: service_healthy
+    environment:
+      ENSCHEDULE_WORKER_URL: http://worker:8000
+      ENSCHEDULE_API_KEY: quickstart-api-key
+      ENSCHEDULE_ACCESS_TOKEN_SECRET: quickstart-access-token-secret
+      ENSCHEDULE_REFRESH_TOKEN_SECRET: quickstart-refresh-token-secret
+      ENSCHEDULE_COOKIE_SESSION_SECRET: quickstart-cookie-session-secret
+      ENSCHEDULE_PUBLIC_ORIGIN: http://localhost:3000
+      NAFS_URI: file:///var/log/enschedule
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - const response = await fetch("http://127.0.0.1:3000/healthz"); process.exit(response.ok ? 0 : 1)
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "3000:3000"
+    volumes:
+      - run-logs:/var/log/enschedule
+
+volumes:
+  postgres-data:
+  run-logs:

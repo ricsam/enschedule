@@ -48,6 +48,7 @@ Boolean values accept `true`, `false`, `yes`, `no`, `1`, `0`, and an empty value
 | `ENSCHEDULE_COOKIE_SESSION_SECRET` | Production | Comma-separated signing keys for the HttpOnly session cookie. The first key signs new cookies. |
 | `ENSCHEDULE_HTTPS_ONLY_COOKIES` | No | Set `true` to add the `Secure` cookie attribute. |
 | `ENSCHEDULE_PUBLIC_ORIGIN` | Proxied deployments | Comma-separated origins allowed for browser mutations. |
+| `ENSCHEDULE_NO_AUTH` | No | Set `true` to disable login and grant every visitor API-key-level access. Requires `ENSCHEDULE_API_KEY`; use only for disposable demos. |
 | `PORT` | `3000` | Dashboard backend port. |
 | `HOST` | `0.0.0.0` | Dashboard backend bind address. |
 | `NODE_ENV` | Development | Set `production` to serve built Vite assets. |

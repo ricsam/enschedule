@@ -1,0 +1,61 @@
+name: Release Helm chart
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/charts/enschedule/**"
+      - "infrastructure/chart-repository/**"
+      - ".github/workflows/release-helm.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: helm-chart-repository
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint infrastructure/charts/enschedule
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Release chart and update repository index
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: infrastructure/charts
+          skip_existing: true
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}-app-v{{ .AppVersion }}"
+
+      - name: Publish chart repository landing page
+        run: |
+          git fetch origin gh-pages
+          git worktree add /tmp/enschedule-gh-pages origin/gh-pages
+          cp infrastructure/chart-repository/index.html /tmp/enschedule-gh-pages/index.html
+          touch /tmp/enschedule-gh-pages/.nojekyll
+          cd /tmp/enschedule-gh-pages
+          git pull --rebase origin gh-pages
+          git add index.html .nojekyll
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Update Helm repository landing page"
+          git push origin HEAD:gh-pages

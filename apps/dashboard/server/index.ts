@@ -40,9 +40,24 @@ async function staticFile(pathname: string) {
   });
 }
 
-export async function createDashboardFetch(injectedWorker?: DashboardWorker) {
+export interface DashboardFetchOptions {
+  noAuth?: boolean;
+  apiKey?: string;
+}
+
+function environmentFlag(value?: string) {
+  return ["true", "1", "yes", "on"].includes((value ?? "").toLowerCase());
+}
+
+export async function createDashboardFetch(
+  injectedWorker?: DashboardWorker,
+  options: DashboardFetchOptions = {},
+) {
   const worker = injectedWorker ?? await getWorker();
-  const api = createDashboardRouter(worker);
+  const api = createDashboardRouter(worker, {
+    noAuth: options.noAuth ?? environmentFlag(process.env.ENSCHEDULE_NO_AUTH),
+    apiKey: options.apiKey ?? process.env.ENSCHEDULE_API_KEY,
+  });
   const openapi = generateOpenAPISpec(enscheduleContract, {
     basePath: "/api",
     info: {

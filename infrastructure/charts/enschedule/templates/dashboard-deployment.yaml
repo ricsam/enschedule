@@ -75,6 +75,8 @@ spec:
               value: {{ .Values.config.httpsOnlyCookies | quote }}
             - name: ENSCHEDULE_PUBLIC_ORIGIN
               value: {{ .Values.config.publicOrigin | quote }}
+            - name: ENSCHEDULE_NO_AUTH
+              value: {{ .Values.dashboard.noAuth | default false | quote }}
           {{- if .Values.dashboard.workerUrl }}
             - name: ENSCHEDULE_WORKER_URL
               value: "{{ .Values.dashboard.workerUrl }}"

@@ -65,6 +65,12 @@
               "reference/cli",
               "reference/statuses"
             ]
+          },
+          {
+            "group": "Contribute",
+            "pages": [
+              "development/contributing"
+            ]
           }
         ]
       },
@@ -99,8 +105,8 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Open dashboard",
-      "href": "https://enschedule-irqfaf85i4ig.r5d.app"
+      "label": "View demo",
+      "href": "https://demo-irqfaf85i4ig.r5d.app"
     }
   },
   "footer": {
@@ -137,8 +143,8 @@
             "href": "https://github.com/ricsam/enschedule/issues"
           },
           {
-            "label": "Dashboard",
-            "href": "https://enschedule-irqfaf85i4ig.r5d.app"
+            "label": "Dashboard demo",
+            "href": "https://demo-irqfaf85i4ig.r5d.app"
           }
         ]
       }

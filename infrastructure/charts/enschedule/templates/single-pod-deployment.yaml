@@ -28,8 +28,12 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "enschedule.fullname" . }}-{{ .Values.database.persistence.volumeName | default "data" }}
         - name: worker-logs
+          {{- if .Values.worker.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "enschedule.fullname" . }}-{{ .Values.worker.persistence.volumeName | default "worker-logs" }}
+            claimName: {{ .Values.worker.persistence.existingClaim | default (printf "%s-%s" (include "enschedule.fullname" .) (.Values.worker.persistence.volumeName | default "worker-logs")) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         - name: worker-config
           configMap:
             name: {{ include "enschedule.fullname" . }}-worker-config
@@ -187,6 +191,8 @@ spec:
               value: {{ .Values.config.httpsOnlyCookies | quote }}
             - name: ENSCHEDULE_PUBLIC_ORIGIN
               value: {{ .Values.config.publicOrigin | quote }}
+            - name: ENSCHEDULE_NO_AUTH
+              value: {{ .Values.dashboard.noAuth | default false | quote }}
             - name: ENSCHEDULE_WORKER_URL
               value: "http://127.0.0.1:8000"
             - name: NAFS_URI

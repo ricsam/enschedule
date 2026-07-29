@@ -3,7 +3,7 @@ title: "Helm"
 description: "Deploy Enschedule, PostgreSQL, workers, and the dashboard to Kubernetes."
 ---
 
-The chart in `infrastructure/charts/enschedule` can deploy PostgreSQL, a worker, shared log storage, the dashboard, and a migration job.
+The public chart repository can deploy PostgreSQL, a worker, shared log storage, the dashboard, and a migration job. Browse released versions at [ricsam.github.io/enschedule](https://ricsam.github.io/enschedule/).
 
 ## Install the chart
 
@@ -47,7 +47,9 @@ worker:
 ```
 
 ```bash
-helm upgrade --install enschedule infrastructure/charts/enschedule \
+helm repo add enschedule https://ricsam.github.io/enschedule
+helm repo update enschedule
+helm upgrade --install enschedule enschedule/enschedule \
   --namespace enschedule \
   --create-namespace \
   --values values-production.yaml
@@ -68,6 +70,19 @@ The default topology runs PostgreSQL, worker, storage, and dashboard as separate
 Set `singlePod.enabled: true` for a small single-replica installation. PostgreSQL, worker, and dashboard share one Pod and one Service.
 
 The single-Pod Deployment uses the `Recreate` strategy because its `ReadWriteOnce` volumes cannot be mounted by old and new Pods concurrently. Expect brief downtime during upgrades.
+
+## Run an open dashboard
+
+Set `dashboard.noAuth: true` to disable dashboard login. Every visitor receives API-key-level access through the dashboard server.
+
+```yaml
+dashboard:
+  noAuth: true
+```
+
+<Warning>
+  No-auth mode exposes all dashboard operations, including creating and deleting schedules, runs, workers, and data. Use it only for disposable demos with no sensitive data.
+</Warning>
 
 ## Persist data
 
@@ -94,7 +109,6 @@ migrationJob:
 ## Verify an installation
 
 ```bash
-helm lint infrastructure/charts/enschedule
 kubectl -n enschedule get deployment,pod,service,ingress,pvc,job
 kubectl -n enschedule rollout status deployment/dashboard --timeout=10m
 kubectl -n enschedule logs job/migrations --all-containers --tail=200

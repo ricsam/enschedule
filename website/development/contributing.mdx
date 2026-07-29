@@ -1,0 +1,115 @@
+---
+title: "Contributing"
+description: "Set up the Enschedule repository for application and documentation development."
+---
+
+Use this setup when you want to change Enschedule itself. To evaluate or deploy the application, start with the [Docker or Helm quickstart](/quickstart).
+
+## Prerequisites
+
+Install:
+
+- [Bun 1.3 or later](https://bun.sh/)
+- Docker
+- PostgreSQL 15 or later if you do not use the included Compose service
+- Node.js 20.17 or later when previewing the Mintlify site
+
+## Set up the repository
+
+<Steps>
+  <Step title="Clone and install dependencies">
+
+    ```bash
+    git clone https://github.com/ricsam/enschedule.git
+    cd enschedule
+    bun install --frozen-lockfile
+    ```
+
+  </Step>
+  <Step title="Start development services">
+
+    The repository maps PostgreSQL to port `6543`:
+
+    ```bash
+    docker compose up -d postgres
+    ```
+
+  </Step>
+  <Step title="Configure the runtime">
+
+    ```bash
+    export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:6543/postgres
+    export ENSCHEDULE_ACCESS_TOKEN_SECRET=change-me
+    export ENSCHEDULE_REFRESH_TOKEN_SECRET=change-me
+    export ENSCHEDULE_COOKIE_SESSION_SECRET=change-me
+    export ENSCHEDULE_API_KEY=change-me
+    export NAFS_URI=file:///tmp/enschedule-logs
+    export ADMIN_ACCOUNT=adm1n:s3cr3t
+    ```
+
+    These values are development credentials. Do not use them in a shared or production environment.
+
+  </Step>
+  <Step title="Migrate and run a production build">
+
+    ```bash
+    bun packages/pg-driver/migrate.ts
+    bun run --cwd apps/dashboard build
+    NODE_ENV=production bun run --cwd apps/dashboard start
+    ```
+
+    Open [http://localhost:3000](http://localhost:3000).
+
+  </Step>
+</Steps>
+
+## Run development servers
+
+Run the Bun backend and Vite client in separate terminals:
+
+<CodeGroup>
+
+```bash Backend
+bun run --cwd apps/dashboard start
+```
+
+```bash Frontend
+bun x --cwd apps/dashboard vite
+```
+
+</CodeGroup>
+
+Vite proxies `/api`, `/healthz`, `/openapi.json`, and `/docs` to the Bun backend. Alternatively, `bun run --cwd apps/dashboard dev` runs the backend with hot reload; use the separate Vite process for the client.
+
+## Preview the documentation
+
+```bash
+bun run --cwd website dev
+```
+
+Validate documentation changes before submitting them:
+
+```bash
+bun run --cwd website build
+bun run --cwd website links
+bun run --cwd website a11y
+```
+
+## Verify changes
+
+Run the checks relevant to your change:
+
+```bash
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+helm lint infrastructure/charts/enschedule
+```
+
+For browser tests, install Chromium and run Playwright:
+
+```bash
+bun x playwright install chromium --with-deps
+bun run playwright -- test
+```

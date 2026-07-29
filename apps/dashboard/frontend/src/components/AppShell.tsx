@@ -8,6 +8,7 @@ import {
   AppBar,
   Box,
   Button,
+  Chip,
   Divider,
   Drawer,
   IconButton,
@@ -69,7 +70,7 @@ export function AppShell({ children, title, subtitle, actions, breadcrumbs, tabs
       <Divider />
       <ListSubheader>On worker</ListSubheader>
       <List>{navItems(workerNav)}</List>
-      {user?.admin && <><Divider /><List><ListItemButton component={RouteLink} to="/admin" selected={currentPath.startsWith("/admin")}><ListItemText primary="Admin area" /></ListItemButton></List></>}
+      {(user?.admin || session.data?.payload.noAuth) && <><Divider /><List><ListItemButton component={RouteLink} to="/admin" selected={currentPath.startsWith("/admin")}><ListItemText primary="Admin area" /></ListItemButton></List></>}
     </>
   );
 
@@ -80,7 +81,7 @@ export function AppShell({ children, title, subtitle, actions, breadcrumbs, tabs
           <IconButton color="inherit" edge="start" onClick={() => setMobileOpen(true)} sx={{ mr: 2, display: { sm: "none" } }}><MenuIcon /></IconButton>
           <Box flex={1}>{breadcrumbs?.length ? <AppBreadcrumbs breadcrumbs={breadcrumbs} /> : null}</Box>
           <IconButton color="inherit" onClick={() => setMode(mode === "dark" ? "light" : "dark")} aria-label="Toggle theme">{mode === "dark" ? <Brightness7 /> : <Brightness4 />}</IconButton>
-          {user ? <IconButton component={RouteLink} to="/profile" color="inherit" data-testid="profile-link"><AccountCircle /></IconButton> : <Button component={RouteLink} to="/login" color="inherit" data-testid="login-link">Login</Button>}
+          {session.isLoading ? null : session.data?.payload.noAuth ? <Chip label="No auth" size="small" variant="outlined" /> : user ? <IconButton component={RouteLink} to="/profile" color="inherit" data-testid="profile-link"><AccountCircle /></IconButton> : <Button component={RouteLink} to="/login" color="inherit" data-testid="login-link">Login</Button>}
         </Toolbar>
       </AppBar>
       <Box component="nav" width={{ sm: drawerWidth }} flexShrink={{ sm: 0 }}>

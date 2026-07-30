@@ -1,5 +1,5 @@
 ---
-title: "Run and configure Enschedule workers"
+title: "Run and configure Enschedule workers for production"
 sidebarTitle: "Workers"
 description: "Start a worker with the worker CLI or the Worker class, configure identity and polling, expose the API, and scale worker replicas safely."
 ---
@@ -68,7 +68,7 @@ A schedule without a `workerId` set can be claimed by any worker that registers 
 
 ## Scale workers
 
-Run multiple replicas of the same `workerId` simultaneously. Workers compete to claim due schedules using PostgreSQL's `FOR UPDATE SKIP LOCKED` — only one replica processes each schedule occurrence. Add more replicas to increase throughput without any coordination overhead.
+Run multiple replicas of the same `workerId` simultaneously. Each due schedule is claimed by exactly one replica — only one worker processes each schedule occurrence. Add more replicas to increase throughput without any coordination overhead.
 
 ## Monitor worker health
 

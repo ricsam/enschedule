@@ -1,7 +1,7 @@
 ---
 title: "Core concepts: functions, workers, schedules, and runs"
 sidebarTitle: "Concepts"
-description: "Learn the four key building blocks of Enschedule and how they work together to schedule, execute, and record job runs."
+description: "Understand function definitions, workers, schedules, and runs — the four building blocks of Enschedule and how they interact at runtime."
 ---
 
 Enschedule separates the code that performs work from the records that decide when that work runs. You write function definitions in your codebase and deploy workers that register them. Separately, you create schedules — in the dashboard, via the CLI, or through the API — that pair a function with a payload and an execution policy. When a schedule comes due, a worker claims it, runs the function, and writes the result to PostgreSQL as a run record. Four building blocks make this work: **function definitions**, **workers**, **schedules**, and **runs**.
@@ -90,8 +90,8 @@ This lets you deploy updated workers alongside older ones during a rolling upgra
 | Component | Supported |
 | --- | --- |
 | Runtime | Bun 1.3+ |
-| Database | PostgreSQL with Drizzle ORM |
+| Database | PostgreSQL |
 | Dashboard | React 19 and Vite |
-| API | Richie RPC at `/api` |
+| API | REST API at `/api` |
 | API description | OpenAPI 3.1 at `/openapi.json` |
 | Authentication | Session cookie, JWT, or API key |

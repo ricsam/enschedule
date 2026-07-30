@@ -4,7 +4,7 @@ sidebarTitle: "Workers"
 description: "List registered Enschedule workers, view their status and registered function definitions, and check worker health via the REST API."
 ---
 
-Workers register themselves in PostgreSQL when they start. Use the workers API to see which workers are currently registered, their reported status, and the function IDs and versions they expose.
+Workers register themselves when they start. Use the workers API to see which workers are currently registered, their reported status, and the function IDs and versions they expose.
 
 ## List workers — `GET /api/workers`
 
@@ -17,6 +17,10 @@ Returns an array of worker objects.
 
 ### Response fields
 
+<ResponseField name="id" type="number">
+  The numeric database ID of the worker record.
+</ResponseField>
+
 <ResponseField name="workerId" type="string">
   The stable identifier for the worker class. Shared across all running instances of the same worker.
 </ResponseField>
@@ -25,7 +29,7 @@ Returns an array of worker objects.
   A unique ID for this specific running process. Changes each time the process restarts.
 </ResponseField>
 
-<ResponseField name="name" type="string">
+<ResponseField name="title" type="string">
   The human-readable display name for the worker.
 </ResponseField>
 
@@ -33,12 +37,20 @@ Returns an array of worker objects.
   The current worker status: `UP`, `PENDING`, or `DOWN`.
 </ResponseField>
 
-<ResponseField name="lastSeenAt" type="string">
+<ResponseField name="lastReached" type="string | null">
   ISO 8601 timestamp of the most recent heartbeat received from this worker.
 </ResponseField>
 
+<ResponseField name="hostname" type="string">
+  The hostname of the machine running this worker process.
+</ResponseField>
+
+<ResponseField name="pollInterval" type="number">
+  The polling interval in milliseconds this worker uses to check for new runs.
+</ResponseField>
+
 <ResponseField name="definitions" type="array">
-  The list of function definitions this worker has registered, each containing a `functionId` and `functionVersion`.
+  The list of function definitions this worker has registered, each containing an `id`, `version`, and `title`.
 </ResponseField>
 
 ## Worker statuses

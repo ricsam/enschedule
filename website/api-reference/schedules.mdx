@@ -1,5 +1,5 @@
 ---
-title: "REST API endpoints for schedule management"
+title: "Schedules REST API — create, list, update, and delete"
 sidebarTitle: "Schedules"
 description: "Create, list, get, update, trigger, unschedule, and delete Enschedule schedules via the REST API. All endpoints require authentication."
 ---
@@ -27,40 +27,50 @@ Returns an array of schedule objects.
   The version of the function to run.
 </ParamField>
 
-<ParamField body="title" type="string" required>
-  A display name for the schedule, shown in the dashboard and run history.
+<ParamField body="data" type="any" required>
+  JSON payload passed to the function at runtime. Validated against the function's JSON schema.
 </ParamField>
 
-<ParamField body="data" type="object">
-  JSON payload passed to the function at runtime. Validated against the function's `dataSchema`.
-</ParamField>
+<ParamField body="options" type="object" required>
+  Scheduling options for the new schedule.
 
-<ParamField body="eventId" type="string">
-  A stable unique name used for idempotent creates and updates. If a schedule with this `eventId` already exists, the request updates it instead of creating a duplicate.
-</ParamField>
+  <Expandable title="options fields">
+    <ParamField body="title" type="string" required>
+      A display name for the schedule, shown in the dashboard and run history.
+    </ParamField>
 
-<ParamField body="runNow" type="boolean">
-  When `true`, the schedule runs immediately on the next available worker rather than waiting for a scheduled time.
-</ParamField>
+    <ParamField body="runAt" type="string | null" required>
+      ISO 8601 timestamp for a one-time scheduled run, or `null` if not scheduling by time.
+    </ParamField>
 
-<ParamField body="runAt" type="string">
-  ISO 8601 timestamp for a one-time scheduled run.
-</ParamField>
+    <ParamField body="cronExpression" type="string">
+      Standard 5-field cron expression for recurring runs (e.g. `0 10 * * 1-5`).
+    </ParamField>
 
-<ParamField body="cronExpression" type="string">
-  Standard 5-field cron expression for recurring runs (e.g. `0 10 * * 1-5`).
-</ParamField>
+    <ParamField body="eventId" type="string">
+      A stable unique name used for idempotent creates and updates. If a schedule with this `eventId` already exists, the request updates it instead of creating a duplicate.
+    </ParamField>
 
-<ParamField body="workerId" type="string">
-  Restrict execution to a specific worker class. When omitted, any available worker that exposes the function can claim the run.
-</ParamField>
+    <ParamField body="description" type="string">
+      An optional longer description of what the schedule does.
+    </ParamField>
 
-<ParamField body="retries" type="integer">
-  Number of additional attempts to make if the run fails.
-</ParamField>
+    <ParamField body="runNow" type="boolean">
+      When `true`, the schedule runs immediately on the next available worker rather than waiting for a scheduled time.
+    </ParamField>
 
-<ParamField body="retryDelay" type="integer">
-  Seconds to wait between retry attempts.
+    <ParamField body="workerId" type="string">
+      Restrict execution to a specific worker. When omitted, any available worker that exposes the function can claim the run.
+    </ParamField>
+
+    <ParamField body="retryFailedJobs" type="boolean">
+      When `true`, failed runs are automatically retried up to `maxRetries` times.
+    </ParamField>
+
+    <ParamField body="maxRetries" type="number">
+      Maximum number of retry attempts for a failed run. Only applied when `retryFailedJobs` is `true`.
+    </ParamField>
+  </Expandable>
 </ParamField>
 
 ### Example request
@@ -73,9 +83,12 @@ curl --request POST \
   --data '{
     "functionId": "send-receipt",
     "functionVersion": 1,
-    "title": "Send receipt for ord_123",
     "data": { "orderId": "ord_123", "email": "customer@example.com" },
-    "runNow": true
+    "options": {
+      "title": "Send receipt for ord_123",
+      "runAt": null,
+      "runNow": true
+    }
   }'
 ```
 
@@ -88,16 +101,16 @@ curl https://enschedule.example.com/api/schedules/42 \
 
 The `:id` is the numeric database ID returned when you create or list schedules.
 
-## Update a schedule — `PUT /api/schedules/:id`
+## Update a schedule — `PATCH /api/schedules/:id`
 
-Send only the fields you want to change. The request body accepts the same shape as POST.
+Send only the fields you want to change. Accepted fields: `runAt`, `title`, `data`, `description`, `retryFailedJobs`, `maxRetries`, `runNow`.
 
 ```bash
-curl --request PUT \
+curl --request PATCH \
   --url https://enschedule.example.com/api/schedules/42 \
   --header 'X-API-Key: your-api-key' \
   --header 'Content-Type: application/json' \
-  --data '{"cronExpression": "0 10 * * 1-5"}'
+  --data '{"runAt": "2025-06-01T10:00:00Z"}'
 ```
 
 ## Delete a schedule — `DELETE /api/schedules/:id`

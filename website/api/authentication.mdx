@@ -1,5 +1,5 @@
 ---
-title: "Authenticate requests to the Enschedule API"
+title: "Enschedule API authentication: keys, JWTs, and sessions"
 sidebarTitle: "Authentication"
 description: "Enschedule supports API key, JWT access token, and dashboard session cookie authentication. Learn how to obtain and use each credential type."
 ---
@@ -8,7 +8,7 @@ Enschedule supports three authentication methods: an API key for service-to-serv
 
 ## API key
 
-Use the `X-API-Key` header for service-to-service requests. The worker compares this value with the `ENSCHEDULE_API_KEY` environment variable and grants administrative access on a match.
+Use the `X-API-Key` header for service-to-service requests. Matching the configured API key grants administrative access to all endpoints.
 
 ```bash
 curl https://enschedule.example.com/api/schedules \

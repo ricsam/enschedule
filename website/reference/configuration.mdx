@@ -1,7 +1,7 @@
 ---
-title: "Enschedule configuration environment variables"
+title: "Enschedule environment variable configuration reference"
 sidebarTitle: "Configuration"
-description: "Environment variables for the Enschedule dashboard, worker, database connection, and CLI. Use secrets management in production."
+description: "Environment variables for the Enschedule dashboard, worker, database connection, and CLI. Use a secrets manager in production environments."
 ---
 
 Enschedule is configured through environment variables. The tables below cover the dashboard, worker, database, and CLI. Use a secrets manager in production — never commit secrets to source control.
@@ -37,7 +37,7 @@ Enschedule is configured through environment variables. The tables below cover t
 | `ENSCHEDULE_WORKER_DESCRIPTION` | Empty | Worker description. |
 | `ENSCHEDULE_POLL_INTERVAL` | `10` | Poll interval in seconds. |
 | `ENSCHEDULE_FUNCTIONS` | Empty | Space- or comma-separated Bun ESM module paths to load. |
-| `ENSCHEDULE_API` | `false` | Enable the worker Richie RPC API. |
+| `ENSCHEDULE_API` | `false` | Enable the worker HTTP API. |
 | `ENSCHEDULE_API_HOSTNAME` | `localhost` | API bind address. |
 | `ENSCHEDULE_API_PORT` | `3000` | API bind port. |
 | `ENSCHEDULE_MIGRATE` | `false` | Run database migration on startup. |

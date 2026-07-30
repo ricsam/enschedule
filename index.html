@@ -155,7 +155,10 @@
 helm repo update enschedule
 helm upgrade --install enschedule enschedule/enschedule \
   --namespace enschedule \
-  --create-namespace</code></pre>
+  --create-namespace \
+  --set database.persistence.enabled=false \
+  --set worker.persistence.enabled=false \
+  --set storage.enabled=false</code></pre>
       </section>
 
       <div class="actions">

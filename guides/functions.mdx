@@ -4,11 +4,11 @@ sidebarTitle: "Functions"
 description: "Learn how to define, validate, version, and migrate job functions that run in Enschedule workers using Zod schemas and TypeScript."
 ---
 
-A function is the executable unit in Enschedule. Register it on a worker with `worker.registerJob()` inside a Bun-compatible ESM module, and Enschedule takes care of scheduling, payload validation, and result capture.
+A function is the executable unit in Enschedule. Register it on a worker with `worker.registerJob()`. Define it in a Bun-compatible ESM module.
 
 ## Define a function
 
-Create an ESM module that exports a default async `register` function. Pass each job definition to `worker.registerJob()`:
+The following example shows a complete function definition:
 
 ```typescript functions.ts
 import { z } from "zod";
@@ -34,9 +34,7 @@ export default async function register(worker) {
 }
 ```
 
-<Note>
-  The module must be Bun-compatible ESM. A named `register` export is also accepted by the worker CLI in addition to the default export.
-</Note>
+The module must be Bun-compatible ESM and export a default registration function. A named `register` export is also accepted.
 
 ## Definition fields
 
@@ -59,7 +57,7 @@ export default async function register(worker) {
 
 ## Validate payloads
 
-Set `dataSchema` to a Zod schema. Enschedule validates each payload before the job runs and converts the schema to JSON Schema for editor validation and dashboard display. Prefer precise schemas:
+`dataSchema` runs before the job callback executes and describes the expected payload shape to the dashboard. Prefer precise schemas so that errors surface at schedule creation time rather than at runtime:
 
 ```typescript
 const payload = z.object({
@@ -71,6 +69,8 @@ const payload = z.object({
   format: z.enum(["csv", "json"]).default("csv"),
 });
 ```
+
+Enschedule converts the Zod schema to JSON Schema for editor validation and function metadata. The JSON Schema is stored alongside the function definition and is visible in the dashboard when authoring a schedule payload.
 
 ## Handle output and errors
 
@@ -86,11 +86,11 @@ job: async ({ orderId }) => {
 }
 ```
 
-All `console.log` and `console.error` output emitted during the callback is captured in the run log. Avoid logging secrets or sensitive payload fields — logs are visible to any user with access to that run.
+All `console.log` and `console.error` output emitted during the callback is captured in the run log. Avoid logging secrets or sensitive payload fields — captured logs are visible to any user with access to the run record.
 
 ## Version a function
 
-Increment `version` when existing schedule payloads are not directly compatible with new code:
+Increment `version` when existing schedule payloads are not directly compatible with your new code. Workers register each `id` + `version` pair as a distinct definition:
 
 ```typescript
 worker.registerJob({
@@ -107,7 +107,7 @@ worker.registerJob({
 });
 ```
 
-Existing schedules continue to reference their stored version. Register a migration when you want the worker to upgrade those payloads automatically:
+Existing schedules continue to reference their stored version. Register a migration when the worker should upgrade those payloads automatically:
 
 ```typescript
 await worker.migrateHandler(

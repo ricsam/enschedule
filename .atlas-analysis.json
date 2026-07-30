@@ -1,0 +1,110 @@
+{
+  "projectType": "saas",
+  "projectName": "Enschedule",
+  "projectDescription": "Enschedule is an open-source PostgreSQL-backed job scheduler that lets you define typed functions in code, run distributed Bun workers, and manage schedules and run history from a React dashboard or the REST API.",
+  "theme": "luma",
+  "primaryColor": "#0E6336",
+  "lightColor": "#3ECC5F",
+  "darkColor": "#148347",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "concepts"
+            ]
+          },
+          {
+            "group": "Build",
+            "pages": [
+              "guides/functions",
+              "guides/workers",
+              "guides/schedules",
+              "guides/runs"
+            ]
+          },
+          {
+            "group": "Deploy",
+            "pages": [
+              "deployment/docker",
+              "deployment/helm",
+              "deployment/upgrades"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/configuration",
+              "reference/cli",
+              "reference/statuses"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/health",
+              "api-reference/schedules",
+              "api-reference/runs",
+              "api-reference/workers",
+              "api-reference/definitions"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Typed job functions with Zod payload validation",
+    "PostgreSQL-backed schedule and run persistence",
+    "Distributed workers with row-locking to prevent duplicate execution",
+    "Recurring cron, one-time, and immediate schedule types",
+    "React dashboard for inspecting workers, schedules, and run logs",
+    "CLI for declarative schedule management with idempotent apply",
+    "OpenAPI 3.1 specification and interactive API reference",
+    "JWT and API key authentication",
+    "Docker Compose and Helm deployment support",
+    "Function versioning and payload migration"
+  ],
+  "publicApiSurface": [
+    "worker.registerJob({ id, version, title, dataSchema, job })",
+    "worker.migrateHandler(id, fromDef, toDef, migrateFn)",
+    "worker.startPolling()",
+    "worker.serve({ port, hostname })",
+    "worker.close()",
+    "GET /api/healthz",
+    "POST /api/auth/login",
+    "POST /api/auth/refresh",
+    "POST /api/auth/logout",
+    "GET /api/schedules",
+    "POST /api/schedules",
+    "GET /api/schedules/:id",
+    "PUT /api/schedules/:id",
+    "DELETE /api/schedules/:id",
+    "GET /api/runs",
+    "GET /api/runs/:id",
+    "GET /api/workers",
+    "GET /api/definitions",
+    "enschedule apply --file <path>",
+    "enschedule create schedule",
+    "enschedule get schedules",
+    "enschedule update schedule",
+    "enschedule delete schedule"
+  ]
+}

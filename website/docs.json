@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "luma",
   "name": "Enschedule",
   "description": "Build, schedule, and operate PostgreSQL-backed jobs with Bun workers.",
   "colors": {
@@ -23,10 +23,6 @@
   "background": {
     "decoration": "gradient"
   },
-  "styling": {
-    "eyebrows": "breadcrumbs",
-    "codeblocks": "system"
-  },
   "navigation": {
     "tabs": [
       {
@@ -34,9 +30,9 @@
         "icon": "book-open",
         "groups": [
           {
-            "group": "Get started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
               "concepts"
             ]
@@ -51,7 +47,7 @@
             ]
           },
           {
-            "group": "Operate",
+            "group": "Deploy",
             "pages": [
               "deployment/docker",
               "deployment/helm",
@@ -65,17 +61,11 @@
               "reference/cli",
               "reference/statuses"
             ]
-          },
-          {
-            "group": "Contribute",
-            "pages": [
-              "development/contributing"
-            ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "icon": "braces",
         "groups": [
           {
@@ -87,10 +77,13 @@
           },
           {
             "group": "Endpoints",
-            "openapi": {
-              "source": "openapi.json",
-              "directory": "api-reference"
-            }
+            "pages": [
+              "api-reference/health",
+              "api-reference/schedules",
+              "api-reference/runs",
+              "api-reference/workers",
+              "api-reference/definitions"
+            ]
           }
         ]
       }
@@ -117,35 +110,17 @@
       {
         "header": "Learn",
         "items": [
-          {
-            "label": "Quickstart",
-            "href": "/quickstart"
-          },
-          {
-            "label": "Core concepts",
-            "href": "/concepts"
-          },
-          {
-            "label": "API reference",
-            "href": "/api/overview"
-          }
+          { "label": "Quickstart", "href": "/quickstart" },
+          { "label": "Core concepts", "href": "/concepts" },
+          { "label": "API reference", "href": "/api/overview" }
         ]
       },
       {
         "header": "Project",
         "items": [
-          {
-            "label": "GitHub",
-            "href": "https://github.com/ricsam/enschedule"
-          },
-          {
-            "label": "Issues",
-            "href": "https://github.com/ricsam/enschedule/issues"
-          },
-          {
-            "label": "Dashboard demo",
-            "href": "https://demo-irqfaf85i4ig.r5d.app"
-          }
+          { "label": "GitHub", "href": "https://github.com/ricsam/enschedule" },
+          { "label": "Issues", "href": "https://github.com/ricsam/enschedule/issues" },
+          { "label": "Dashboard demo", "href": "https://demo-irqfaf85i4ig.r5d.app" }
         ]
       }
     ]
@@ -153,61 +128,14 @@
   "api": {
     "openapi": "openapi.json",
     "playground": {
-      "display": "interactive",
-      "proxy": true
-    },
-    "params": {
-      "expanded": "closed"
+      "display": "interactive"
     },
     "examples": {
-      "languages": [
-        "curl",
-        "javascript",
-        "python"
-      ],
-      "defaults": "required",
-      "prefill": true
-    },
-    "url": "full"
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "download-spec",
-      "chatgpt",
-      "claude",
-      "cursor"
-    ]
+      "languages": ["curl", "javascript", "python"],
+      "defaults": "required"
+    }
   },
   "search": {
     "prompt": "Search Enschedule docs"
-  },
-  "metadata": {
-    "timestamp": true
-  },
-  "seo": {
-    "indexing": "navigable",
-    "organization": {
-      "name": "Enschedule",
-      "url": "https://github.com/ricsam/enschedule",
-      "sameAs": [
-        "https://github.com/ricsam/enschedule"
-      ]
-    }
-  },
-  "markdown": {
-    "schema": true,
-    "instructions": [
-      "Use Enschedule 2 examples based on Bun and PostgreSQL.",
-      "Use /api as the supported API base path; do not use the removed /api/v1 contract."
-    ]
-  },
-  "errors": {
-    "404": {
-      "redirect": false,
-      "title": "Page not found",
-      "description": "Return to the [Enschedule introduction](/)."
-    }
   }
 }

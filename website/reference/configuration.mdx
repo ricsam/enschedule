@@ -1,80 +1,74 @@
 ---
-title: "Configuration"
-description: "Environment variables for the Enschedule dashboard, worker, database, and CLI."
+title: "Enschedule configuration environment variables"
+sidebarTitle: "Configuration"
+description: "Environment variables for the Enschedule dashboard, worker, database connection, and CLI. Use secrets management in production."
 ---
 
-Use secrets management in production. The values below are names and semantics, not safe defaults.
+Enschedule is configured through environment variables. The tables below cover the dashboard, worker, database, and CLI. Use a secrets manager in production — never commit secrets to source control.
 
-## Shared runtime
+## Database connection
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | Recommended | PostgreSQL connection URL. Takes precedence over split `DB_*` variables. |
+| `DATABASE_URL` | Recommended | PostgreSQL connection URL. Takes precedence over split `DB_*` variables. Example: `postgres://user:password@host:5432/db` |
 | `DB_USER` | Fallback | PostgreSQL user. Defaults to `postgres`. |
 | `DB_PASSWORD` | Fallback | PostgreSQL password. Defaults to `postgres`. |
 | `DB_HOST` | Fallback | PostgreSQL host. Defaults to `127.0.0.1`. |
 | `DB_PORT` | Fallback | PostgreSQL port. Defaults to `5432`. |
-| `DB_DATABASE` | Fallback | PostgreSQL database. Defaults to `postgres`. |
-| `DB_POOL_SIZE` | No | Maximum PostgreSQL pool size. Defaults to `20`. |
-| `ENSCHEDULE_ACCESS_TOKEN_SECRET` | Yes | Secret for short-lived access JWTs. |
-| `ENSCHEDULE_REFRESH_TOKEN_SECRET` | Yes | Secret for rotating refresh JWTs. |
-| `ENSCHEDULE_API_KEY` | API mode | Shared key for service-to-service API access. |
-| `NAFS_URI` | Yes | Log storage URI, such as `file:///var/log/enschedule`. |
-| `ADMIN_ACCOUNT` | No | Creates an admin during worker migration; format is `username:password`. |
+| `DB_DATABASE` | Fallback | PostgreSQL database name. Defaults to `postgres`. |
+| `DB_POOL_SIZE` | No | Maximum connection pool size. Defaults to `20`. |
 
-## Worker CLI
+## Shared secrets
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `ENSCHEDULE_ACCESS_TOKEN_SECRET` | Yes | Secret for short-lived access JWTs. Use a long random string. |
+| `ENSCHEDULE_REFRESH_TOKEN_SECRET` | Yes | Secret for rotating refresh JWTs. Use a different value from the access secret. |
+| `ENSCHEDULE_API_KEY` | API mode | Shared key for service-to-service API access. Required when `ENSCHEDULE_API=true`. |
+| `NAFS_URI` | Yes | Log storage URI. Use `file:///var/log/enschedule` for local storage. |
+| `ADMIN_ACCOUNT` | No | Creates an admin user on first migration. Format: `username:password`. |
+
+## Worker CLI variables
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `ENSCHEDULE_WORKER_ID` | Required | Stable worker ID used for routing and grouping replicas. |
-| `ENSCHEDULE_WORKER_NAME` | Required | Display name. |
+| `ENSCHEDULE_WORKER_ID` | Required | Stable worker ID for routing and grouping replicas. |
+| `ENSCHEDULE_WORKER_NAME` | Required | Display name shown in the dashboard. |
 | `ENSCHEDULE_WORKER_DESCRIPTION` | Empty | Worker description. |
-| `ENSCHEDULE_POLL_INTERVAL` | `10` | Poll interval in seconds in the CLI. |
-| `ENSCHEDULE_FUNCTIONS` | Empty | Space- or comma-separated Bun ESM module paths. |
+| `ENSCHEDULE_POLL_INTERVAL` | `10` | Poll interval in seconds. |
+| `ENSCHEDULE_FUNCTIONS` | Empty | Space- or comma-separated Bun ESM module paths to load. |
 | `ENSCHEDULE_API` | `false` | Enable the worker Richie RPC API. |
-| `ENSCHEDULE_API_HOSTNAME` | `localhost` | API bind host. |
+| `ENSCHEDULE_API_HOSTNAME` | `localhost` | API bind address. |
 | `ENSCHEDULE_API_PORT` | `3000` | API bind port. |
-| `ENSCHEDULE_MIGRATE` | `false` | Run database migration on worker startup. |
+| `ENSCHEDULE_MIGRATE` | `false` | Run database migration on startup. |
 | `ENSCHEDULE_DISABLE_POLLING` | `false` | Serve the API without polling for work. |
 
-Boolean values accept `true`, `false`, `yes`, `no`, `1`, `0`, and an empty value.
+<Tip>
+Boolean variables accept `true`, `false`, `yes`, `no`, `1`, `0`, and an empty value.
+</Tip>
 
-## Dashboard
+## Dashboard variables
 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `ENSCHEDULE_WORKER_URL` | No | Base URL of an external worker. Without it, the dashboard creates an integrated worker. |
 | `ENSCHEDULE_API_KEY` | External worker | Key used by the dashboard to call an external worker. |
 | `ENSCHEDULE_COOKIE_SESSION_SECRET` | Production | Comma-separated signing keys for the HttpOnly session cookie. The first key signs new cookies. |
-| `ENSCHEDULE_HTTPS_ONLY_COOKIES` | No | Set `true` to add the `Secure` cookie attribute. |
-| `ENSCHEDULE_PUBLIC_ORIGIN` | Proxied deployments | Comma-separated origins allowed for browser mutations. |
-| `ENSCHEDULE_NO_AUTH` | No | Set `true` to disable login and grant every visitor API-key-level access. Requires `ENSCHEDULE_API_KEY`; use only for disposable demos. |
+| `ENSCHEDULE_HTTPS_ONLY_COOKIES` | No | Set `true` to add the `Secure` cookie attribute. Required when serving over HTTPS. |
+| `ENSCHEDULE_PUBLIC_ORIGIN` | Proxied | Comma-separated origins allowed for browser mutations. |
+| `ENSCHEDULE_NO_AUTH` | No | Set `true` to disable login. Requires `ENSCHEDULE_API_KEY`. Use only for disposable demos. |
 | `PORT` | `3000` | Dashboard backend port. |
 | `HOST` | `0.0.0.0` | Dashboard backend bind address. |
-| `NODE_ENV` | Development | Set `production` to serve built Vite assets. |
+| `NODE_ENV` | Dev | Set `production` to serve built Vite assets. |
 
 <Tip>
-  Rotate cookie signing keys by prepending a new value while retaining the previous key temporarily: `new-secret,old-secret`.
+Rotate cookie signing keys by prepending a new value while retaining the previous key temporarily: `new-secret,old-secret`.
 </Tip>
 
-## Enschedule management CLI
+## Management CLI variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `ENSCHEDULE_API_ENDPOINT` | Yes | Worker or dashboard origin without the `/api` suffix. |
-| `ENSCHEDULE_API_KEY` | Yes | API key. A bare value is converted to `Api-Key <value>`. |
-| `ENSCHEDULE_API_VERSION` | Yes | CLI configuration version. Use `1`. This is not the removed HTTP `/api/v1` path. |
-
-You may instead store these fields in `~/.enschedule/config.json`:
-
-```json
-{
-  "apiEndpoint": "https://enschedule.example.com",
-  "apiKey": "your-api-key",
-  "apiVersion": "1"
-}
-```
-
-## Generate secrets
-
-Generate independent, high-entropy values for access tokens, refresh tokens, cookies, and API keys. Do not reuse the PostgreSQL password as an application signing secret.
+| Variable | Description |
+| --- | --- |
+| `ENSCHEDULE_API_ENDPOINT` | Base URL of the Enschedule API, e.g. `https://enschedule.example.com` |
+| `ENSCHEDULE_API_KEY` | API key for authenticating CLI requests |
+| `ENSCHEDULE_API_VERSION` | Must be `1` for the management CLI |

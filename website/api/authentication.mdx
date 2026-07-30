@@ -1,26 +1,25 @@
 ---
-title: "Authentication"
-description: "Authenticate to Enschedule with API keys, JWTs, or the dashboard session cookie."
+title: "Authenticate requests to the Enschedule API"
+sidebarTitle: "Authentication"
+description: "Enschedule supports API key, JWT access token, and dashboard session cookie authentication. Learn how to obtain and use each credential type."
 ---
 
-Enschedule supports service credentials, user access tokens, and same-origin dashboard sessions.
+Enschedule supports three authentication methods: an API key for service-to-service requests, JWT access and refresh tokens for user sessions, and a signed HttpOnly cookie managed automatically by the dashboard.
 
 ## API key
 
-Use `X-API-Key` for service-to-service requests:
+Use the `X-API-Key` header for service-to-service requests. The worker compares this value with the `ENSCHEDULE_API_KEY` environment variable and grants administrative access on a match.
 
 ```bash
 curl https://enschedule.example.com/api/schedules \
   --header 'X-API-Key: your-api-key'
 ```
 
-You may also use the authorization form:
+The API key is also accepted via the `Authorization` header using the `Api-Key` scheme:
 
 ```http
 Authorization: Api-Key your-api-key
 ```
-
-The worker compares this credential with `ENSCHEDULE_API_KEY` and grants administrative service access on a match.
 
 <Warning>
   Treat the API key as a secret. Store it in a secrets manager, send it only over HTTPS, and rotate it when exposure is suspected.
@@ -28,7 +27,7 @@ The worker compares this credential with `ENSCHEDULE_API_KEY` and grants adminis
 
 ## User login and JWT
 
-Exchange a username and password for an access and refresh token:
+Exchange a username and password for access and refresh tokens:
 
 ```bash
 curl --request POST \
@@ -44,15 +43,19 @@ curl --request POST \
 }
 ```
 
-Send the access token with the `Jwt` authorization scheme:
+Use the access token with the `Jwt` scheme on subsequent requests:
 
 ```http
 Authorization: Jwt eyJ...
 ```
 
-Access tokens expire after 15 minutes. Refresh tokens expire after seven days and rotate when used.
+<Info>
+  Access tokens expire after 15 minutes. Refresh tokens expire after seven days and rotate when used.
+</Info>
 
 ## Refresh a token
+
+Send the current refresh token to obtain a new access token and a rotated refresh token:
 
 ```bash
 curl --request POST \
@@ -61,7 +64,9 @@ curl --request POST \
   --data '{"refreshToken":"eyJ..."}'
 ```
 
-Persist the returned refresh token and discard the previous one.
+<Note>
+  Persist the returned refresh token and discard the previous one. Each refresh token is single-use.
+</Note>
 
 ## Log out
 
@@ -72,20 +77,8 @@ curl --request POST \
   --data '{"refreshToken":"eyJ...","allDevices":false}'
 ```
 
-Set `allDevices` to `true` to invalidate every stored refresh session for that user.
+Set `allDevices` to `true` to invalidate every stored refresh session for that user across all devices.
 
 ## Dashboard session
 
-The dashboard backend stores access and refresh tokens in a signed `HttpOnly`, `SameSite=Strict` cookie. Browser JavaScript cannot read the cookie. The backend refreshes an expiring access token and rotates the refresh token.
-
-For production:
-
-- Set `ENSCHEDULE_COOKIE_SESSION_SECRET` to a strong independent secret.
-- Set `ENSCHEDULE_HTTPS_ONLY_COOKIES=true`.
-- Serve the dashboard only over HTTPS.
-- Set `ENSCHEDULE_PUBLIC_ORIGIN` when a reverse proxy changes the public origin.
-
-## Authorization failures
-
-- `401 Unauthorized` means the credential is missing, expired, or invalid.
-- `403 Forbidden` means the authenticated identity lacks access to the resource or action.
+The dashboard backend stores access and refresh tokens in a signed `HttpOnly`, `SameSite=Strict` cookie. Browser JavaScript cannot read the cookie. The backend automatically refreshes an expiring access token before forwarding API requests, so you do not need to manage token lifecycle when using the dashboard UI.

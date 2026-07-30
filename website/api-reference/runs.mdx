@@ -1,0 +1,66 @@
+---
+title: "REST API endpoints for run history and logs"
+sidebarTitle: "Runs"
+description: "List and inspect job run records, statuses, and captured logs via the Enschedule REST API. Runs are created automatically when schedules execute."
+---
+
+Runs are created automatically whenever a schedule is claimed and executed. Use the runs API to retrieve status, timing, and captured output for any execution attempt.
+
+## List runs — `GET /api/runs`
+
+```bash
+curl https://enschedule.example.com/api/runs \
+  --header 'X-API-Key: your-api-key'
+```
+
+Returns an array of run objects with status, start time, end time, and worker information.
+
+## Get a run — `GET /api/runs/:id`
+
+```bash
+curl https://enschedule.example.com/api/runs/42 \
+  --header 'X-API-Key: your-api-key'
+```
+
+### Response fields
+
+<ResponseField name="id" type="integer">
+  The unique run ID.
+</ResponseField>
+
+<ResponseField name="scheduleId" type="integer">
+  The ID of the parent schedule that produced this run.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  The current run status: `RUNNING`, `SUCCESS`, `FAILED`, or `LOST`.
+</ResponseField>
+
+<ResponseField name="startedAt" type="string">
+  ISO 8601 timestamp of when the worker began executing the run.
+</ResponseField>
+
+<ResponseField name="finishedAt" type="string">
+  ISO 8601 timestamp of when the run completed, or `null` if the run is still in progress.
+</ResponseField>
+
+<ResponseField name="workerId" type="string">
+  The stable ID of the worker that claimed and executed this run.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The JSON payload that was passed to the function for this run.
+</ResponseField>
+
+<ResponseField name="logs" type="string">
+  Captured console output produced during the run.
+</ResponseField>
+
+## Run statuses
+
+| Status | Meaning |
+| --- | --- |
+| `RUNNING` | Run has started, no finish timestamp yet |
+| `SUCCESS` | Completed without error |
+| `FAILED` | Threw an error or exited non-zero |
+| `LOST` | No finish timestamp and worker is unavailable |

@@ -1,0 +1,109 @@
+---
+title: "REST API endpoints for schedule management"
+sidebarTitle: "Schedules"
+description: "Create, list, get, update, trigger, unschedule, and delete Enschedule schedules via the REST API. All endpoints require authentication."
+---
+
+The schedules API lets you programmatically create and manage every type of schedule — one-time, immediate, recurring, or unscheduled. All endpoints require an `X-API-Key` header or valid JWT.
+
+## List schedules — `GET /api/schedules`
+
+```bash
+curl https://enschedule.example.com/api/schedules \
+  --header 'X-API-Key: your-api-key'
+```
+
+Returns an array of schedule objects.
+
+## Create a schedule — `POST /api/schedules`
+
+### Request body
+
+<ParamField body="functionId" type="string" required>
+  The ID of the function to run. Must match a definition published by an available worker.
+</ParamField>
+
+<ParamField body="functionVersion" type="integer" required>
+  The version of the function to run.
+</ParamField>
+
+<ParamField body="title" type="string" required>
+  A display name for the schedule, shown in the dashboard and run history.
+</ParamField>
+
+<ParamField body="data" type="object">
+  JSON payload passed to the function at runtime. Validated against the function's `dataSchema`.
+</ParamField>
+
+<ParamField body="eventId" type="string">
+  A stable unique name used for idempotent creates and updates. If a schedule with this `eventId` already exists, the request updates it instead of creating a duplicate.
+</ParamField>
+
+<ParamField body="runNow" type="boolean">
+  When `true`, the schedule runs immediately on the next available worker rather than waiting for a scheduled time.
+</ParamField>
+
+<ParamField body="runAt" type="string">
+  ISO 8601 timestamp for a one-time scheduled run.
+</ParamField>
+
+<ParamField body="cronExpression" type="string">
+  Standard 5-field cron expression for recurring runs (e.g. `0 10 * * 1-5`).
+</ParamField>
+
+<ParamField body="workerId" type="string">
+  Restrict execution to a specific worker class. When omitted, any available worker that exposes the function can claim the run.
+</ParamField>
+
+<ParamField body="retries" type="integer">
+  Number of additional attempts to make if the run fails.
+</ParamField>
+
+<ParamField body="retryDelay" type="integer">
+  Seconds to wait between retry attempts.
+</ParamField>
+
+### Example request
+
+```bash
+curl --request POST \
+  --url https://enschedule.example.com/api/schedules \
+  --header 'X-API-Key: your-api-key' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "functionId": "send-receipt",
+    "functionVersion": 1,
+    "title": "Send receipt for ord_123",
+    "data": { "orderId": "ord_123", "email": "customer@example.com" },
+    "runNow": true
+  }'
+```
+
+## Get a schedule — `GET /api/schedules/:id`
+
+```bash
+curl https://enschedule.example.com/api/schedules/42 \
+  --header 'X-API-Key: your-api-key'
+```
+
+The `:id` is the numeric database ID returned when you create or list schedules.
+
+## Update a schedule — `PUT /api/schedules/:id`
+
+Send only the fields you want to change. The request body accepts the same shape as POST.
+
+```bash
+curl --request PUT \
+  --url https://enschedule.example.com/api/schedules/42 \
+  --header 'X-API-Key: your-api-key' \
+  --header 'Content-Type: application/json' \
+  --data '{"cronExpression": "0 10 * * 1-5"}'
+```
+
+## Delete a schedule — `DELETE /api/schedules/:id`
+
+```bash
+curl --request DELETE \
+  --url https://enschedule.example.com/api/schedules/42 \
+  --header 'X-API-Key: your-api-key'
+```

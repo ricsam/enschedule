@@ -1,73 +1,96 @@
 ---
-title: "Upgrades and migrations"
-description: "Back up PostgreSQL, run idempotent migrations, and move to Enschedule 2."
+title: "Upgrade Enschedule and migrate the database"
+sidebarTitle: "Upgrades"
+description: "Back up PostgreSQL, run the idempotent database migration, and deploy the new Enschedule images to upgrade to a new version safely."
 ---
 
-## Upgrade procedure
+Upgrading Enschedule involves updating the container images and running the database migration. The migration is idempotent — running it more than once is safe — but always take a database backup first.
 
-<Steps>
-  <Step title="Back up PostgreSQL">
-    Create and verify a restorable backup before changing application or database versions.
-  </Step>
-  <Step title="Stop or drain writers">
-    Prevent older workers from writing incompatible data during the upgrade window.
-  </Step>
-  <Step title="Run migrations">
-
-    ```bash
-    DATABASE_URL=postgres://user:password@host:5432/database \
-      bun packages/pg-driver/migrate.ts
-    ```
-
-  </Step>
-  <Step title="Deploy matching components">
-    Deploy dashboard and worker versions that expect the migrated schema. Keep shared package versions aligned.
-  </Step>
-  <Step title="Verify the system">
-    Check migration output, worker registration, schedule claiming, a test run, logs, and the public health endpoint.
-  </Step>
-</Steps>
-
-## Migration behavior
-
-The migration runner:
-
-1. Creates `drizzle.__drizzle_migrations` if needed.
-2. Sorts SQL migration files by name.
-3. Skips files already recorded by hash.
-4. Applies each new file in a transaction.
-5. Records the file only after its SQL succeeds.
-
-The baseline migration uses existing table and column names and `IF NOT EXISTS`. This lets an existing Sequelize and Umzug database adopt the Drizzle journal without deleting application rows. Legacy migration metadata may remain in place.
+## Before you upgrade
 
 <Warning>
-  Idempotent SQL does not replace a backup. Always test the exact upgrade against a restored copy of production data.
+  Back up your PostgreSQL database before any upgrade. Enschedule migrations apply changes to live tables and cannot be automatically reversed.
 </Warning>
 
-## Breaking changes in version 2
+Complete these steps before pulling new images or running `helm upgrade`:
 
-- Bun 1.3 or later is required.
-- PostgreSQL is the only supported database.
-- Drizzle replaces Sequelize and Umzug in active runtime paths.
-- The dashboard is a Vite React SPA with a Bun backend.
-- The supported API base path is `/api`.
-- The former `/api/v1` contract is removed.
-- Function registration modules must be Bun-compatible ESM.
-- Remix loaders and actions, Express serving, and SQLite fixtures are not supported runtime paths.
+- Take a `pg_dump` snapshot or use your cloud provider's automated backup feature
+- Note the current chart or image version so you can roll back if needed
+- Review the changelog for any breaking changes between your current version and the target version
 
-## Update function payloads
+## Run the database migration
 
-Database migrations update Enschedule's own schema. Function payload migrations are separate. Use `worker.migrateHandler()` when a new function version changes stored schedule payloads.
+### With Docker
 
-See [Functions](/guides/functions#version-a-function) for an example.
+Run the migration as a standalone container against your existing database:
 
-## Roll back
+```bash
+docker run --rm \
+  -e DATABASE_URL=postgres://user:password@host:5432/database \
+  ghcr.io/ricsam/enschedule-worker:latest \
+  bun packages/pg-driver/migrate.ts
+```
 
-If verification fails:
+Replace the `DATABASE_URL` value with your actual connection string before running the command.
 
-1. Stop the new workers.
-2. Restore the previous application images.
-3. Restore PostgreSQL when the new migration is not backward compatible.
-4. Verify worker and schedule health before reopening traffic.
+### With Helm
 
-Do not assume that rolling back a container image also rolls back the database.
+Set `migration.enabled=true` in your values file. The chart runs the migration as a Kubernetes Job before the worker Deployment rolls out, so you do not need to invoke it manually:
+
+```yaml
+migration:
+  enabled: true
+```
+
+## Upgrade with Helm
+
+Pull the latest chart index, then upgrade your release with your existing values file:
+
+```bash
+helm repo update enschedule
+helm upgrade enschedule enschedule/enschedule \
+  --namespace enschedule \
+  --values values-production.yaml \
+  --wait
+```
+
+The chart's migration Job runs automatically before the worker Deployment rolls out new pods.
+
+## Upgrade with Docker Compose
+
+Pull the latest images and recreate the containers in one step:
+
+```bash
+docker compose pull
+docker compose up -d --wait
+```
+
+If `ENSCHEDULE_MIGRATE=true` is set on the worker service, the migration runs automatically when the container starts.
+
+## Breaking changes in 2.0
+
+<Info>
+  If you are upgrading from a 1.x release, review the following changes before proceeding:
+
+  - **Remix, Express, Sequelize, Umzug, and SQLite were removed.** Enschedule 2 requires Bun and PostgreSQL.
+  - **The supported API base path is `/api`.** The old `/api/v1` contract is no longer available.
+  - **Bun and PostgreSQL are required** for both the worker and the database driver.
+  - **Function registration modules must be Bun-compatible ESM.** CommonJS modules are not supported.
+  - **The Drizzle-based migration uses existing table names with `IF NOT EXISTS`.** Sequelize or Umzug metadata tables left over from a previous installation remain harmlessly in place and do not need to be removed.
+</Info>
+
+## Verify after upgrade
+
+Check that the API is healthy:
+
+```bash
+curl https://enschedule.example.com/api/healthz
+```
+
+Expected response:
+
+```json
+{"message":"Endpoint is healthy","runtime":"bun"}
+```
+
+Open the dashboard and confirm that your workers appear as `UP` and that schedules are executing as expected.

@@ -1,11 +1,14 @@
 ---
-title: "Workers"
-description: "Run, configure, scale, and monitor Enschedule workers."
+title: "Run and configure Enschedule workers"
+sidebarTitle: "Workers"
+description: "Start a worker with the worker CLI or the Worker class, configure identity and polling, expose the API, and scale worker replicas safely."
 ---
 
-Workers load function definitions, publish their capabilities to PostgreSQL, and claim schedules that are ready to run.
+Workers load function definitions, publish their capabilities to PostgreSQL, and claim schedules that are ready to run. You can start a worker using the CLI with environment variables, or directly through the `Worker` class in your own Bun application.
 
 ## Run with the worker CLI
+
+Set environment variables and start the worker CLI:
 
 ```bash
 ENSCHEDULE_WORKER_ID=mail-worker \
@@ -32,6 +35,8 @@ The worker health endpoint is `GET /api/healthz`.
 
 ## Use the Worker class
 
+For more control, use the `Worker` class directly in your Bun application:
+
 ```typescript worker.ts
 import { Worker } from "@enschedule/worker";
 import register from "./functions";
@@ -50,40 +55,29 @@ await worker.startPolling();
 worker.serve({ port: 8000, hostname: "0.0.0.0" });
 ```
 
-Call `worker.close()` during shutdown to stop polling and close the PostgreSQL connection.
+Call `worker.close()` during graceful shutdown to stop polling and close the PostgreSQL connection.
 
 ## Worker identity
 
-`workerId` is stable and user-provided. Use the same value for interchangeable replicas. `instanceId` is generated for each process and distinguishes individual registrations.
+Two identifiers distinguish workers:
 
-A schedule with `workerId` set can be claimed only by a worker with that stable ID. A schedule without it can be claimed by any worker that implements the required function ID and version.
+- **`workerId`** — stable, user-provided. Use the same value for all replicas of the same worker class. A schedule with a matching `workerId` can only be claimed by workers with that ID.
+- **`instanceId`** — generated automatically for each running process. Distinguishes individual process registrations in the dashboard.
 
-## Polling and availability
-
-Workers update their `lastReached` timestamp while polling.
-
-- `UP`: the worker checked in within the expected interval.
-- `PENDING`: the worker is late but still inside the failure threshold.
-- `DOWN`: the worker has missed the threshold.
-
-Set `ENSCHEDULE_POLL_INTERVAL` in seconds. A short interval reduces dispatch latency but increases database traffic.
+A schedule without a `workerId` set can be claimed by any worker that registers the required `functionId` and `functionVersion`.
 
 ## Scale workers
 
-Multiple workers can safely poll the same PostgreSQL database. Enschedule uses transactional row locking with `FOR UPDATE SKIP LOCKED` while claiming due schedules.
+Run multiple replicas of the same `workerId` simultaneously. Workers compete to claim due schedules using PostgreSQL's `FOR UPDATE SKIP LOCKED` — only one replica processes each schedule occurrence. Add more replicas to increase throughput without any coordination overhead.
 
-For horizontal scaling:
+## Monitor worker health
 
-1. Run the same function module on each interchangeable replica.
-2. Use the same stable `workerId`.
-3. Give every replica access to the same PostgreSQL database.
-4. Use shared log storage, such as Enstore or a compatible `NAFS_URI`, when logs must be readable from another process.
-5. Keep worker clocks synchronized.
+Each worker sends a heartbeat to PostgreSQL on every poll interval. The dashboard shows three status values under **Workers**:
 
-<Info>
-  Local `file://` log storage is appropriate for one worker. It is not shared between replicas unless the path is backed by a shared volume.
-</Info>
+| Status | Meaning |
+| --- | --- |
+| `UP` | Checked in within the normal polling window |
+| `PENDING` | Missed the normal interval but not yet timed out |
+| `DOWN` | Has not checked in before the down threshold |
 
-## Worker versions
-
-Enschedule derives a worker version hash from its title, description, poll interval, definitions, and default access policy. Changing those values produces a new logical worker version in the dashboard.
+The threshold includes the configured poll interval and a small grace period. A `PENDING` worker may still be alive but delayed — check its logs before assuming it has crashed.

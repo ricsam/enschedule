@@ -1,0 +1,34 @@
+---
+title: "GET /api/healthz — Enschedule health endpoint"
+sidebarTitle: "Health"
+description: "GET /api/healthz returns the API health status and runtime. Use this endpoint to check that Enschedule is running and responsive."
+---
+
+The health endpoint confirms that the Enschedule API is running and returns the runtime name. Use it for liveness probes, uptime monitors, and post-deployment checks.
+
+**Endpoint:** `GET /api/healthz` — no authentication required
+
+## Request
+
+```bash
+curl https://enschedule.example.com/api/healthz
+```
+
+## Response — 200
+
+```json
+{
+  "message": "Endpoint is healthy",
+  "runtime": "bun"
+}
+```
+
+### Response fields
+
+<ResponseField name="message" type="string">
+  Always `"Endpoint is healthy"`.
+</ResponseField>
+
+<ResponseField name="runtime" type="string">
+  Always `"bun"` for Enschedule 2.
+</ResponseField>

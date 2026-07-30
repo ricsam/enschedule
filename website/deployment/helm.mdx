@@ -1,13 +1,52 @@
 ---
-title: "Helm"
-description: "Deploy Enschedule, PostgreSQL, workers, and the dashboard to Kubernetes."
+title: "Deploy Enschedule on Kubernetes with Helm"
+sidebarTitle: "Helm"
+description: "Install Enschedule, PostgreSQL, workers, and the dashboard on Kubernetes using the official Helm chart with production configuration."
 ---
 
-The public chart repository can deploy PostgreSQL, a worker, shared log storage, the dashboard, and a migration job. Browse released versions at [ricsam.github.io/enschedule](https://ricsam.github.io/enschedule/).
+The official Enschedule Helm chart deploys PostgreSQL, a worker, shared log storage, the dashboard, and a migration job to any Kubernetes cluster. Browse released chart versions at [ricsam.github.io/enschedule](https://ricsam.github.io/enschedule).
 
-## Install the chart
+## Prerequisites
 
-Create a values file instead of passing production secrets on the command line:
+- A running Kubernetes cluster
+- [Helm 3](https://helm.sh/docs/intro/install/) installed locally
+- `kubectl` configured to target that cluster
+
+## Add the chart repository
+
+```bash
+helm repo add enschedule https://ricsam.github.io/enschedule
+helm repo update enschedule
+```
+
+## Quickstart (evaluation)
+
+<Warning>
+  The quickstart command uses ephemeral (non-persistent) storage. Use it for evaluation only — all data is lost when pods restart.
+</Warning>
+
+```bash
+helm upgrade --install enschedule enschedule/enschedule \
+  --namespace enschedule \
+  --create-namespace \
+  --set database.persistence.enabled=false \
+  --set worker.persistence.enabled=false \
+  --set storage.enabled=false \
+  --wait \
+  --timeout 10m
+```
+
+Once all pods are ready, forward the dashboard port to your local machine:
+
+```bash
+kubectl --namespace enschedule port-forward service/dashboard-service 3000:3000
+```
+
+Then open [http://localhost:3000](http://localhost:3000).
+
+## Production values
+
+Pass configuration through a values file rather than on the command line so that secrets are not recorded in your shell history. Create `values-production.yaml`:
 
 ```yaml values-production.yaml
 config:
@@ -46,87 +85,71 @@ worker:
     mountPath: /var/log/enschedule
 ```
 
+Then install or upgrade:
+
 ```bash
-helm repo add enschedule https://ricsam.github.io/enschedule
-helm repo update enschedule
 helm upgrade --install enschedule enschedule/enschedule \
   --namespace enschedule \
   --create-namespace \
-  --values values-production.yaml
+  --values values-production.yaml \
+  --wait
 ```
 
-<Warning>
-  Defaults are suitable for evaluation, not production. Replace all credentials, choose an appropriate storage class, and configure ingress and backups explicitly.
-</Warning>
+<Tip>
+  Use Kubernetes Secrets or an external secrets operator such as [External Secrets Operator](https://external-secrets.io) to inject credentials instead of storing plain text values in `values-production.yaml`.
+</Tip>
 
-## Choose a topology
+## Ingress
 
-### Separate workloads
+Enable ingress for the dashboard by setting `dashboard.ingress.enabled=true`. The chart supports any ingress controller — set `dashboard.ingress.className` to match your controller (for example `nginx` or `traefik`).
 
-The default topology runs PostgreSQL, worker, storage, and dashboard as separate Kubernetes workloads. Use this for independent resource sizing and network policy.
-
-### Single Pod
-
-Set `singlePod.enabled: true` for a small single-replica installation. PostgreSQL, worker, and dashboard share one Pod and one Service.
-
-The single-Pod Deployment uses the `Recreate` strategy because its `ReadWriteOnce` volumes cannot be mounted by old and new Pods concurrently. Expect brief downtime during upgrades.
-
-## Run an open dashboard
-
-Set `dashboard.noAuth: true` to disable dashboard login. Every visitor receives API-key-level access through the dashboard server.
+Configure TLS under the `dashboard.ingress.tls` key:
 
 ```yaml
 dashboard:
-  noAuth: true
+  ingress:
+    enabled: true
+    className: nginx
+    tls:
+      - secretName: enschedule-tls
+        hosts:
+          - enschedule.example.com
+    hosts:
+      - host: enschedule.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+```
+
+## Storage classes
+
+The chart defaults to `rook-ceph-block` for both database and worker persistent volumes. Set `database.persistence.storageClass` and `worker.persistence.storageClass` to a storage class available in your cluster:
+
+```bash
+# List available storage classes
+kubectl get storageclass
+```
+
+Then update your values file accordingly before installing or upgrading.
+
+## Remove installation
+
+```bash
+helm uninstall enschedule --namespace enschedule
+kubectl delete namespace enschedule
 ```
 
 <Warning>
-  No-auth mode exposes all dashboard operations, including creating and deleting schedules, runs, workers, and data. Use it only for disposable demos with no sensitive data.
+  Deleting the namespace removes all PersistentVolumeClaims, which may trigger deletion of the underlying PersistentVolumes depending on your reclaim policy. Back up your database before uninstalling.
 </Warning>
 
-## Persist data
+## Next steps
 
-PostgreSQL persistence is enabled by default. Worker log persistence is optional. For normal single-writer storage, use a `ReadWriteOnce` volume.
-
-Do not mount a PVC, ConfigMap, or Secret with `subPath` on Kata-based clusters. Mount the complete volume at a dedicated directory and configure Enschedule to use a child path.
-
-## Use private images
-
-Set image pull secrets for each enabled workload:
-
-```yaml
-dashboard:
-  imagePullSecrets:
-    - name: ghcr-pull
-worker:
-  imagePullSecrets:
-    - name: ghcr-pull
-migrationJob:
-  imagePullSecrets:
-    - name: ghcr-pull
-```
-
-## Verify an installation
-
-```bash
-kubectl -n enschedule get deployment,pod,service,ingress,pvc,job
-kubectl -n enschedule rollout status deployment/dashboard --timeout=10m
-kubectl -n enschedule logs job/migrations --all-containers --tail=200
-```
-
-For single-Pod mode, wait for `deployment/enschedule` instead.
-
-Check both health endpoints when the worker is separately reachable:
-
-```bash
-curl --fail https://enschedule.example.com/healthz
-curl --fail http://worker-service.enschedule.svc.cluster.local:8000/api/healthz
-```
-
-## Upgrade safely
-
-1. Back up PostgreSQL.
-2. Pin new dashboard, worker, and migration image tags.
-3. Run `helm upgrade --dry-run=server` with the exact values you intend to apply.
-4. Apply the upgrade with `--wait` and a timeout.
-5. Verify the migration job, rollout, logs, events, and public health endpoint.
+<CardGroup cols={2}>
+  <Card title="Upgrade guide" icon="arrow-up-circle" href="/deployment/upgrades">
+    Back up, migrate, and roll out new Enschedule versions safely.
+  </Card>
+  <Card title="Configuration reference" icon="settings" href="/reference/configuration">
+    Browse every environment variable and configuration option.
+  </Card>
+</CardGroup>

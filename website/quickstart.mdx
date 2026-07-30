@@ -1,84 +1,70 @@
 ---
-title: "Quickstart"
-description: "Run Enschedule with Docker Compose or install it on Kubernetes with Helm."
+title: "Get started with Enschedule in minutes"
+sidebarTitle: "Quickstart"
+description: "Run the complete Enschedule stack locally with Docker Compose or on Kubernetes with Helm, then schedule and execute your first job."
 ---
 
-Choose Docker for a local evaluation or Helm for a Kubernetes cluster. Both options start PostgreSQL, a worker with sample functions, log storage, and the dashboard.
+You have two options for running Enschedule locally. Use **Docker Compose** for a fast local evaluation with no cluster required. Use **Helm** if you already have a Kubernetes cluster and want to evaluate Enschedule in that environment. Both options start PostgreSQL, a sample worker with pre-registered functions, and the dashboard — ready to use in a single command.
 
 <Warning>
-  These quickstarts use public alpha images and evaluation credentials. Do not expose either installation to an untrusted network. Follow the deployment guides before running Enschedule in production.
+  These quickstarts use public alpha images and evaluation credentials. Do not expose either setup to an untrusted network. See [Deploy with Helm](/deployment/helm) for production-ready configuration.
 </Warning>
 
 <Tabs>
   <Tab title="Docker Compose">
-
-    ### Prerequisites
-
-    Install [Docker](https://docs.docker.com/get-docker/) with Docker Compose v2.
+    **Prerequisites:** Docker with Compose v2 (`docker compose version` should print `v2.x` or later).
 
     <Steps>
       <Step title="Download the Compose file">
-
         ```bash
-        curl --fail --remote-name \
-          https://raw.githubusercontent.com/ricsam/enschedule/main/docker-compose.quickstart.yml
+        curl --fail --remote-name https://raw.githubusercontent.com/ricsam/enschedule/main/docker-compose.quickstart.yml
         ```
-
       </Step>
       <Step title="Start Enschedule">
-
         ```bash
         docker compose -f docker-compose.quickstart.yml up -d --wait
         ```
 
-        Docker creates named volumes for PostgreSQL data and run logs.
-
+        Docker creates named volumes for PostgreSQL data and worker run logs. The `--wait` flag blocks until all services report healthy, so the dashboard is ready as soon as the command returns.
       </Step>
       <Step title="Open the dashboard">
+        Go to [http://localhost:3000](http://localhost:3000) and sign in with:
 
-        Open [http://localhost:3000](http://localhost:3000) and log in with:
-
-        - Username: `adm1n`
-        - Password: `s3cr3t`
-
+        | Field | Value |
+        | --- | --- |
+        | Username | `adm1n` |
+        | Password | `s3cr3t` |
       </Step>
     </Steps>
 
-    To inspect or remove the stack:
+    **Inspect logs and tear down**
 
+    Stream logs from all services:
     ```bash
     docker compose -f docker-compose.quickstart.yml logs -f
+    ```
+
+    Stop and remove containers (data volumes are preserved):
+    ```bash
     docker compose -f docker-compose.quickstart.yml down
     ```
 
-    Add `--volumes` to the `down` command only when you also want to delete the PostgreSQL data and run logs.
-
+    Add `--volumes` only when you want to delete PostgreSQL data and run logs:
+    ```bash
+    docker compose -f docker-compose.quickstart.yml down --volumes
+    ```
   </Tab>
   <Tab title="Helm">
-
-    ### Prerequisites
-
-    You need:
-
-    - A Kubernetes cluster
-    - [Helm 3](https://helm.sh/docs/intro/install/)
-    - `kubectl` configured for that cluster
+    **Prerequisites:** A running Kubernetes cluster, Helm 3, and `kubectl` configured to point at it.
 
     <Steps>
       <Step title="Add the chart repository">
-
         ```bash
         helm repo add enschedule https://ricsam.github.io/enschedule
         helm repo update enschedule
         ```
-
-        Browse available chart versions at [ricsam.github.io/enschedule](https://ricsam.github.io/enschedule/).
-
       </Step>
       <Step title="Install Enschedule">
-
-        This evaluation install uses ephemeral PostgreSQL and log storage so it works without selecting a cluster-specific storage class:
-
         ```bash
         helm upgrade --install enschedule enschedule/enschedule \
           --namespace enschedule \
@@ -89,61 +75,56 @@ Choose Docker for a local evaluation or Helm for a Kubernetes cluster. Both opti
           --wait \
           --timeout 10m
         ```
-
       </Step>
       <Step title="Open the dashboard">
-
-        Forward the dashboard Service in a terminal:
+        Forward the dashboard service to your local machine:
 
         ```bash
-        kubectl --namespace enschedule \
-          port-forward service/dashboard-service 3000:3000
+        kubectl --namespace enschedule port-forward service/dashboard-service 3000:3000
         ```
 
-        Open [http://localhost:3000](http://localhost:3000) and log in as `adm1n` with password `s3cr3t`.
+        Go to [http://localhost:3000](http://localhost:3000) and sign in with:
 
+        | Field | Value |
+        | --- | --- |
+        | Username | `adm1n` |
+        | Password | `s3cr3t` |
       </Step>
     </Steps>
 
-    Remove the evaluation installation with:
+    **Remove the installation**
 
     ```bash
     helm uninstall enschedule --namespace enschedule
     kubectl delete namespace enschedule
     ```
 
-    For persistent storage, ingress, secret management, and production values, continue to [Deploy with Helm](/deployment/helm).
-
+    <Info>
+      This quickstart disables persistent storage to minimize cluster requirements. For persistent volumes and production-ready values, continue to [Deploy with Helm](/deployment/helm).
+    </Info>
   </Tab>
 </Tabs>
 
 ## Run a sample function
 
-Both installations register a **Log message** sample function.
+Both installations register a **Log message** sample function that writes a payload field to the run log. Use it to verify the scheduler is working end to end:
 
-1. Open **Functions** and select **Log message**.
-2. Create a schedule with a title and this payload:
-
-   ```json
-   {
-     "message": "Hello from Enschedule"
-   }
-   ```
-
-3. Choose **Run now**.
-4. Open the new run to inspect its status and captured output.
+1. Open **Functions** in the dashboard sidebar and select **Log message**.
+2. Click **Create schedule**, enter the payload `{"message": "Hello from Enschedule"}`, and save.
+3. Choose **Run now** to trigger an immediate execution.
+4. Open the new run from the **Runs** list to inspect its status, timestamps, and captured log output.
 
 <Check>
-  Enschedule is running and your first scheduled function has completed.
+  Enschedule is running and your first scheduled function has completed. The run detail page shows a green status and the message you provided in the log output.
 </Check>
 
 ## Next steps
 
-<Columns cols={2}>
-  <Card title="Define your functions" icon="code-xml" href="/guides/functions">
-    Replace the sample functions with Bun-compatible job code.
+<CardGroup cols={2}>
+  <Card title="Define your functions" href="/guides/functions" icon="code-xml">
+    Write typed job functions with Zod schemas and register them on your own worker.
   </Card>
-  <Card title="Prepare a deployment" icon="ship-wheel" href="/deployment/helm">
-    Configure persistent storage, secrets, images, and ingress.
+  <Card title="Prepare a deployment" href="/deployment/helm" icon="ship-wheel">
+    Configure persistent storage, secrets, and ingress for a production Helm deployment.
   </Card>
-</Columns>
+</CardGroup>

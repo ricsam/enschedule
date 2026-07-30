@@ -1,73 +1,97 @@
 ---
-title: "Core concepts"
-description: "Understand functions, workers, schedules, and runs in Enschedule."
+title: "Core concepts: functions, workers, schedules, and runs"
+sidebarTitle: "Concepts"
+description: "Learn the four key building blocks of Enschedule and how they work together to schedule, execute, and record job runs."
 ---
 
-Enschedule separates the code that performs work from the records that decide when that work runs.
+Enschedule separates the code that performs work from the records that decide when that work runs. You write function definitions in your codebase and deploy workers that register them. Separately, you create schedules — in the dashboard, via the CLI, or through the API — that pair a function with a payload and an execution policy. When a schedule comes due, a worker claims it, runs the function, and writes the result to PostgreSQL as a run record. Four building blocks make this work: **function definitions**, **workers**, **schedules**, and **runs**.
 
 ## Function definition
 
-A **function definition** describes executable code. It has a stable string `id`, a positive integer `version`, a display title, an optional Zod payload schema, and a `job` callback.
+A **function definition** describes a unit of executable code. Every definition carries:
 
-The same function ID and version can be registered on multiple workers. Any eligible worker can claim a matching schedule.
+- A stable string `id` that identifies the logical operation across deployments.
+- A positive integer `version` that tracks breaking changes to the payload shape or behavior.
+- A human-readable `title` displayed in the dashboard.
+- An optional Zod `dataSchema` that validates the incoming payload and generates JSON Schema for dashboard forms.
+- A `job` callback that receives the validated payload and executes the work.
+
+The same function ID and version can be registered on multiple workers. Any eligible worker can claim a schedule that references that function — there is no affinity between a specific worker process and a specific function unless you explicitly target a `workerId`.
 
 ## Worker
 
-A **worker** is a running Bun process that registers function definitions and polls PostgreSQL for due schedules. Each process has:
+A **worker** is a running Bun process that registers function definitions and polls PostgreSQL for due schedules. Each worker process has:
 
-- a stable `workerId` that identifies the worker class
-- a generated `instanceId` for the running process
-- a poll interval
-- a list of registered function IDs and versions
-- a reported `UP`, `PENDING`, or `DOWN` status
+- `workerId` — a stable identifier you assign that names the worker class (for example, `email-worker`).
+- `instanceId` — a value generated for the running process so each instance is individually addressable.
+- A configurable poll interval that controls how frequently the worker checks for due schedules.
+- A list of registered function IDs and versions the worker is prepared to execute.
+- A reported status: `UP` while healthy, `PENDING` while starting, and `DOWN` once the process exits or misses heartbeats.
 
-Workers use `FOR UPDATE SKIP LOCKED` while claiming due schedules. This lets multiple workers poll concurrently without claiming the same schedule.
+Workers use `SELECT ... FOR UPDATE SKIP LOCKED` when claiming due schedules. This means multiple workers can poll the same PostgreSQL table concurrently without interfering — each worker locks only the rows it is about to claim, and other workers skip those rows and move on.
 
 ## Schedule
 
-A **schedule** connects a function ID and version to a JSON payload and execution policy. It can be:
+A **schedule** connects a function ID and version to a JSON payload and an execution policy. Enschedule supports four schedule types:
 
-- **One-time:** set `runAt` to a timezone-aware timestamp.
-- **Immediate:** set `runNow` to `true`.
-- **Recurring:** set `cronExpression`.
-- **Unscheduled:** omit a future time, a cron expression, and `runNow`.
+- **One-time** — set `runAt` to a timezone-aware timestamp. The schedule fires once at that time.
+- **Immediate** — set `runNow` to `true`. A worker claims the schedule on its next poll.
+- **Recurring** — set `cronExpression`. Enschedule advances the next run time after each execution.
+- **Unscheduled** — omit a future time, cron expression, and `runNow`. The schedule exists in the database but never fires automatically; you trigger it manually from the dashboard or API.
 
-A schedule can also retry failures, target a specific stable worker ID, trigger another schedule after failure, and define access for its runs.
+A schedule can also:
+
+- Retry failures a configurable number of times with a delay between attempts.
+- Target a specific worker class by stable `workerId`, so only that worker picks it up.
+- Trigger a follow-on schedule after a failure for alerting or compensating workflows.
+- Define access controls that restrict which users or API keys can view or modify its runs.
 
 ## Run
 
-A **run** records one execution attempt. It contains the scheduled time, start and finish times, status, payload, worker, and captured logs.
+A **run** records one execution attempt of a schedule. Each run contains:
 
-Retries produce additional runs for the same schedule. A recurring schedule also produces a run for every occurrence.
+- The scheduled time the job was due.
+- The actual start and finish timestamps.
+- The exit status (success, failure, or timeout).
+- The payload the job received.
+- The worker instance that executed it.
+- All log output captured during execution, viewable in the dashboard.
+
+Retries produce additional run records for the same schedule — you can see every attempt and its outcome in the run list. A recurring schedule produces a new run record for every occurrence.
 
 ## Identity and idempotency
 
-There are two schedule identifiers:
+Every schedule has two identifiers:
 
-- `id` is the database-generated numeric ID.
-- `eventId` is a caller-provided stable name.
+- `id` — a numeric primary key generated by the database. Use it when you already have the schedule and need to reference it directly.
+- `eventId` — an optional stable name you provide. When you create a schedule with an `eventId` that already exists in the database, Enschedule updates the existing schedule instead of creating a duplicate.
 
-When you create a schedule with an existing `eventId`, Enschedule updates that schedule instead of creating a duplicate. This makes declarative `enschedule apply` workflows idempotent.
+The `eventId` field is what makes declarative `enschedule apply` workflows idempotent. Apply the same configuration on every deployment and Enschedule converges to the desired state without accumulating duplicate schedules.
 
 <Info>
-  The CLI calls `eventId` the schedule name. Choose a value that remains stable across deployments, such as `daily-usage-report`.
+  The CLI refers to `eventId` as the schedule **name**. Choose a value that stays stable across deployments, such as `daily-usage-report` or `weekly-invoice-sync`.
 </Info>
 
-Without an `eventId`, Enschedule compares a generated signature from the function, run time or cron expression, and payload. An unclaimed match is returned unchanged.
+When you create a schedule without an `eventId`, Enschedule computes a signature from the function ID, the run time or cron expression, and the payload. Submitting identical parameters a second time finds the existing schedule rather than creating a new one.
 
 ## Function versions
 
-A schedule stores both `functionId` and `functionVersion`. A worker claims the schedule only when it has that exact version or a registered migration path from that version.
+A schedule stores both `functionId` and `functionVersion`. A worker claims the schedule only when it has registered that exact version, or has registered a migration path from the stored version to one it supports.
 
-Increment the version when the accepted payload or behavior changes. Keep the function ID stable when the definition is still the same logical operation.
+Follow this rule when managing versions:
+
+- **Increment the version** when the accepted payload shape or the observable behavior of the job changes in a way that makes old and new workers incompatible.
+- **Keep the function ID stable** when you are changing the implementation but the logical operation and payload contract remain the same.
+
+This lets you deploy updated workers alongside older ones during a rolling upgrade — old workers keep running their version while new workers pick up schedules that target the new version.
 
 ## Supported runtime
 
-| Component | Supported implementation |
+| Component | Supported |
 | --- | --- |
-| Runtime and package manager | Bun 1.3+ |
+| Runtime | Bun 1.3+ |
 | Database | PostgreSQL with Drizzle ORM |
 | Dashboard | React 19 and Vite |
 | API | Richie RPC at `/api` |
 | API description | OpenAPI 3.1 at `/openapi.json` |
-| Authentication | Signed same-origin session cookie, JWT, or API key |
+| Authentication | Session cookie, JWT, or API key |

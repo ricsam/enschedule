@@ -1,23 +1,34 @@
 ---
-title: "CLI reference"
-description: "Manage Enschedule schedules from the command line."
+title: "Enschedule CLI reference for schedule management"
+sidebarTitle: "CLI"
+description: "Use the enschedule CLI to apply declarative schedules, create, list, update, and delete schedules from the command line. Supports YAML and JSON files."
 ---
 
-The `enschedule` CLI manages schedules through an Enschedule API. Configure `ENSCHEDULE_API_ENDPOINT`, `ENSCHEDULE_API_KEY`, and `ENSCHEDULE_API_VERSION=1` before running commands.
+The `enschedule` CLI manages schedules through the Enschedule API. Set three environment variables before using any command.
+
+## Configure the CLI
+
+```bash
+export ENSCHEDULE_API_ENDPOINT=https://enschedule.example.com
+export ENSCHEDULE_API_KEY=your-api-key
+export ENSCHEDULE_API_VERSION=1
+```
 
 <Note>
-  The CLI's configuration version is `1`; the supported HTTP base path is still `/api`, not `/api/v1`.
+The CLI's configuration version is `1`; the supported HTTP base path is still `/api`, not `/api/v1`.
 </Note>
 
 ## Apply declarative schedules
+
+`enschedule apply` creates or updates schedules from YAML or JSON files. The `metadata.name` field becomes the schedule `eventId`, so re-running apply updates the existing schedule rather than creating a duplicate.
 
 ```bash
 enschedule apply --file schedules/
 ```
 
-The file can be YAML, JSON, a glob, or a directory of `.yaml`, `.yml`, and `.json` files.
+The `--file` argument accepts a single file path, a glob pattern, or a directory. When you pass a directory, `apply` loads all `.yaml`, `.yml`, and `.json` files it finds inside.
 
-```yaml schedules/weekday-report.yaml
+```yaml title="schedules/weekday-report.yaml"
 apiVersion: v1
 kind: schedule
 metadata:
@@ -33,9 +44,7 @@ spec:
     cronExpression: "0 9 * * 1-5"
 ```
 
-`metadata.name` becomes the schedule `eventId`, so reapplying the file updates the existing schedule.
-
-## Create a schedule
+## create schedule
 
 ```bash
 enschedule create schedule \
@@ -47,26 +56,24 @@ enschedule create schedule \
   --run-now
 ```
 
-Use `--update` to replace a schedule with the same stable name.
+<Note>
+Use `--update` to replace a schedule that already exists with the same stable name.
+</Note>
 
-## List schedules
+## get schedules / get schedule
 
 ```bash
+# List all schedules
 enschedule get schedules
 enschedule get schedules --output wide
 enschedule get schedules --output json
-```
 
-## Get one schedule
-
-Use an event ID or prefix the numeric database ID with `db:`:
-
-```bash
+# Get one schedule (event ID or db: prefix for numeric ID)
 enschedule get schedule weekday-report
 enschedule get schedule db:42 --output json
 ```
 
-## Update a schedule
+## update schedule
 
 ```bash
 enschedule update schedule weekday-report \
@@ -74,24 +81,26 @@ enschedule update schedule weekday-report \
   --run-now
 ```
 
-## Delete schedules
+## delete schedule
 
 ```bash
 enschedule delete schedule weekday-report db:42
 ```
 
-## Reset Enschedule
+You can delete multiple schedules in one command by listing their names or `db:ID` values as separate arguments.
 
-```bash
-enschedule reset
-```
+## Common flags
 
-The command asks for confirmation. Skip the prompt only in controlled automation:
-
-```bash
-enschedule reset --force
-```
-
-<Danger>
-  Reset deletes schedules, runs, and worker records from the database. It is an administrative, destructive operation.
-</Danger>
+| Flag | Description |
+| --- | --- |
+| `--name` | Schedule `eventId` / stable name |
+| `--function-id` | Target function ID |
+| `--function-version` | Target function version |
+| `--title` | Schedule display title |
+| `--data` | JSON-encoded payload |
+| `--cron` | Cron expression for recurring schedules |
+| `--run-now` | Trigger an immediate run |
+| `--run-at` | ISO 8601 timestamp for a one-time run |
+| `--update` | Update existing schedule with same name |
+| `--output` | Output format: `table`, `wide`, `json` |
+| `--file` | Path, glob, or directory for `apply` |

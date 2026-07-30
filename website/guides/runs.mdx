@@ -1,73 +1,48 @@
 ---
-title: "Runs and logs"
-description: "Inspect execution attempts, statuses, retries, and captured logs."
+title: "Inspect and manage job run history in Enschedule"
+sidebarTitle: "Runs"
+description: "View run status, captured logs, timing, and retry state for every job execution from the Enschedule dashboard or API."
 ---
 
-Every execution attempt creates a run. One schedule may have many runs because it recurs or retries after failures.
+Every time a schedule is claimed and executed by a worker, Enschedule creates a run record. Runs store the start and finish times, status, captured console output, and the exact payload used — giving you complete visibility into every execution attempt.
 
-## Run lifecycle
+## View runs in the dashboard
 
-1. A worker claims a due schedule.
-2. Enschedule records a run with `startedAt` and `scheduledToRunAt`.
-3. The worker executes the registered callback.
-4. Enschedule captures output and stores `finishedAt` plus the exit signal.
-5. The run resolves to `SUCCESS`, `FAILED`, `RUNNING`, or `LOST`.
+Navigate to **Runs** for a global list of all executions, or open any schedule to see runs for that schedule only. Each row shows status, start time, duration, and the claiming worker. Click a run to open its detail page, including the full captured log.
 
-## Inspect runs
-
-Use the dashboard to filter runs by schedule, open an individual attempt, and stream its log. Through the API:
-
-```bash
-curl --request GET \
-  --url 'https://enschedule.example.com/api/runs?scheduleId=12&limit=25&order=startedAt-DESC' \
-  --header 'X-API-Key: your-api-key'
-```
-
-The list response contains `count` and `rows`.
-
-## Statuses
+## Run statuses
 
 | Status | Meaning |
 | --- | --- |
-| `RUNNING` | The callback has started and has not finished. |
-| `SUCCESS` | The callback completed without throwing. |
-| `FAILED` | The callback threw or returned a non-zero exit signal. |
-| `LOST` | The run has not finished and its worker is unavailable. |
+| `RUNNING` | The run has started but has no finish timestamp yet |
+| `SUCCESS` | The run finished successfully |
+| `FAILED` | The run finished with an error or non-zero exit |
+| `LOST` | The run has no finish timestamp and its worker is unavailable |
 
 ## Captured logs
 
-Enschedule temporarily captures `console.log` and `console.error` while a job callback runs. Each line receives an ISO timestamp and is written to the configured `NAFS_URI`.
+All `console.log` and `console.error` output emitted during a job callback is stored with the run. Open the run detail page to view the full log.
 
-```typescript
-job: async ({ accountId }) => {
-  console.log("Starting export", accountId);
-  await createExport(accountId);
-  console.log("Export complete", accountId);
-}
-```
+<Tip>
+  Avoid logging sensitive data in your job functions — logs are visible to any user with access to that run.
+</Tip>
 
-<Warning>
-  Do not print secrets, credentials, tokens, or regulated personal data. Anyone with run-log access may be able to read captured output.
-</Warning>
+## Retries
 
-## Log storage
+When a schedule has retries configured, a failed run triggers another run after the configured delay. The schedule shows `RETRYING` status while waiting for the next attempt. Each retry is a separate run record — you can compare attempts on the schedule's run list to trace what changed between executions.
 
-Use a `file://` URI for a single worker:
+## View runs via API
 
 ```bash
-export NAFS_URI=file:///var/log/enschedule
+# List all runs
+curl https://enschedule.example.com/api/runs \
+  --header 'X-API-Key: your-api-key'
+
+# Get a specific run by its numeric ID
+curl https://enschedule.example.com/api/runs/42 \
+  --header 'X-API-Key: your-api-key'
 ```
 
-Use shared object or file storage when multiple workers or a separate dashboard must read the same logs. The Helm chart can deploy Enstore and constructs an `enstore://` URI by default.
+## LOST runs
 
-## Retry history
-
-A failed schedule with retries enabled is moved to `RETRYING`, assigned a future `runAt`, and unclaimed. Every retry creates a separate run, preserving the full attempt history.
-
-## Delete run records
-
-Delete one run with `DELETE /api/runs/{id}` or several runs with `DELETE /api/runs` and an `ids` body.
-
-<Danger>
-  Deletion is permanent. Confirm that your retention and audit requirements allow removing run history and logs.
-</Danger>
+A run becomes `LOST` when a worker crashes or goes `DOWN` with an in-flight run. Enschedule detects this when the worker's last-seen timestamp exceeds the down threshold. A lost run does not automatically retry unless the schedule has retries configured with remaining attempts. You can view lost runs in the dashboard to decide whether to re-trigger the schedule manually.

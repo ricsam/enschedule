@@ -1,0 +1,65 @@
+---
+title: "Enschedule: PostgreSQL-backed job scheduler for Bun"
+sidebarTitle: "Introduction"
+description: "Enschedule lets you define typed job functions in code, run distributed Bun workers, and manage schedules and run history from a dashboard or REST API."
+---
+
+Enschedule is an open-source job scheduler built for Bun and backed by PostgreSQL. You define typed job functions in code, deploy one or more workers that register those functions, and create schedules that tell Enschedule when and with what payload to run them. Workers claim due schedules using PostgreSQL row locking, execute the job, and write the result — including captured logs — back to the database. A built-in dashboard and REST API let you inspect every worker, schedule, and run without leaving the browser.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/quickstart" icon="rocket">
+    Run the full stack locally with Docker Compose or on Kubernetes with Helm in minutes.
+  </Card>
+  <Card title="Core Concepts" href="/concepts" icon="blocks">
+    Understand function definitions, workers, schedules, and runs before you write any code.
+  </Card>
+  <Card title="Define Functions" href="/guides/functions" icon="code-xml">
+    Write typed job functions with Zod schemas and register them on a worker.
+  </Card>
+  <Card title="API Reference" href="/api/overview" icon="braces">
+    Explore the full REST API surface for managing schedules and querying run history.
+  </Card>
+</CardGroup>
+
+## Why Enschedule
+
+- **Typed at the boundary** — Zod schemas validate job payloads and generate JSON Schema for the dashboard so the form fields match your function's expected input exactly.
+- **PostgreSQL-backed** — Schedules, workers, and run history persist in PostgreSQL. There is no separate message broker or in-memory state to keep in sync.
+- **Safe for multiple workers** — Workers claim due schedules with PostgreSQL row locking (`FOR UPDATE SKIP LOCKED`) so a schedule is never claimed twice, even under concurrent load.
+- **Operationally visible** — Inspect workers, definitions, schedules, runs, and captured logs in one dashboard without SSH-ing into a server or parsing log files.
+- **Bun-native** — The worker runtime and dashboard backend run on Bun 1.3+, giving you fast startup, native TypeScript support, and a single binary dependency.
+
+## How it works
+
+<Steps>
+  <Step title="Register a function">
+    Define a job function in TypeScript, attach a Zod schema to validate the payload, and register it on a `Worker` instance. The worker advertises the function ID and version to PostgreSQL on startup.
+  </Step>
+  <Step title="Create a schedule">
+    Create a schedule through the dashboard, the CLI, or the API. Provide the function ID, version, a JSON payload, and an execution policy — a one-time timestamp, a cron expression, or run-now.
+  </Step>
+  <Step title="Claim and execute">
+    Workers poll PostgreSQL for due schedules that match their registered functions. The first worker to lock a due schedule claims it, executes the job callback, and writes the result back to the database.
+  </Step>
+  <Step title="Inspect the result">
+    Open the run in the dashboard to see the scheduled time, start and finish times, exit status, and the full log output captured during execution.
+  </Step>
+</Steps>
+
+<Note>
+  Enschedule 2 supports Bun and PostgreSQL. The former Remix, Express, Sequelize, SQLite, and `/api/v1` paths are not part of the supported runtime.
+</Note>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/quickstart" icon="play" horizontal>
+    Get the full stack running locally in minutes.
+  </Card>
+  <Card title="Core concepts" href="/concepts" icon="blocks" horizontal>
+    Learn the building blocks before you write code.
+  </Card>
+  <Card title="Deploy" href="/deployment/helm" icon="ship-wheel" horizontal>
+    Deploy to Kubernetes with the official Helm chart.
+  </Card>
+</CardGroup>

@@ -1,131 +1,104 @@
 ---
-title: "Schedules"
-description: "Create one-time, immediate, recurring, and retrying schedules."
+title: "Create and manage schedules in Enschedule"
+sidebarTitle: "Schedules"
+description: "Create one-time, immediate, and recurring cron schedules, use event IDs for idempotency, set retries, and manage schedules from the dashboard or CLI."
 ---
 
-A schedule binds a function version to a payload and decides when Enschedule should execute it.
+A schedule connects a function definition to a JSON payload and an execution policy. You create schedules from the dashboard, the CLI, or the API. Once a schedule is due, a compatible worker claims it, validates the payload, and runs the function.
 
-## Schedule modes
+## Schedule types
 
-<Columns cols={2}>
-  <Card title="Run once" icon="calendar">
-    Set `runAt` to a timezone-aware ISO timestamp.
-  </Card>
-  <Card title="Run now" icon="play">
-    Set `runNow` to `true` or invoke the run action later.
-  </Card>
-  <Card title="Run on a cron" icon="repeat-2">
-    Set `cronExpression`; Enschedule calculates the next occurrence.
-  </Card>
-  <Card title="Keep unscheduled" icon="pause">
-    Omit execution timing until you are ready to trigger it.
-  </Card>
-</Columns>
+Enschedule supports four execution policies:
 
-## Create a schedule with the API
+| Type | How to set it | Description |
+| --- | --- | --- |
+| **One-time** | `runAt` | Runs once at the specified timezone-aware timestamp |
+| **Immediate** | `runNow: true` | Runs as soon as a compatible worker picks it up |
+| **Recurring** | `cronExpression` | Runs on a standard 5-field cron schedule |
+| **Unscheduled** | _(omit all three)_ | Stored but not queued; useful for templates or manual triggers |
+
+## Create from the dashboard
+
+<Steps>
+  <Step title="Open Functions">
+    Go to **Functions** and select the definition you want to schedule.
+  </Step>
+  <Step title="Create a schedule">
+    Click **Create schedule** and fill in the title, payload, and execution policy.
+  </Step>
+  <Step title="Save">
+    Save the schedule. It appears in **Schedules** with its current status.
+  </Step>
+</Steps>
+
+## Create via API
+
+Send a `POST` request to `/api/schedules`:
 
 ```bash
 curl --request POST \
   --url https://enschedule.example.com/api/schedules \
-  --header 'Content-Type: application/json' \
   --header 'X-API-Key: your-api-key' \
+  --header 'Content-Type: application/json' \
   --data '{
     "functionId": "send-receipt",
     "functionVersion": 1,
-    "data": {
-      "orderId": "ord_123",
-      "email": "customer@example.com"
-    },
-    "options": {
-      "eventId": "receipt-ord-123",
-      "title": "Send receipt for ord_123",
-      "runNow": true
-    }
+    "title": "Send receipt for order ord_123",
+    "data": { "orderId": "ord_123", "email": "customer@example.com" },
+    "runNow": true
   }'
 ```
 
-The response status reports whether the schedule was `created`, `updated`, or `unchanged`.
+## Use event IDs for idempotency
 
-## Run at a specific time
+Set `eventId` to a stable string. If you create a schedule with an existing `eventId`, Enschedule updates the existing record instead of creating a duplicate. This makes deploying schedules idempotent:
 
-Use a timestamp with timezone information:
-
-```json
-{
-  "runAt": "2026-08-01T09:00:00+02:00",
-  "title": "Send morning report"
-}
+```bash
+curl --request POST \
+  --url https://enschedule.example.com/api/schedules \
+  --header 'X-API-Key: your-api-key' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "functionId": "build-report",
+    "functionVersion": 1,
+    "eventId": "weekday-report",
+    "title": "Weekday report",
+    "data": { "accountId": "acct_123" },
+    "cronExpression": "0 9 * * 1-5"
+  }'
 ```
 
-<Warning>
-  Always include `Z` or an explicit UTC offset in date strings. A timezone-free timestamp is rejected.
-</Warning>
-
-## Use cron expressions
-
-```json
-{
-  "cronExpression": "0 9 * * 1-5",
-  "title": "Weekday report"
-}
-```
-
-Enschedule normalizes the expression and stores the next occurrence in `runAt`. After each completed run, it calculates and stores the following occurrence.
-
-## Choose a stable schedule name
-
-Set `eventId` when a schedule is managed by code or configuration:
-
-```json
-{
-  "eventId": "weekday-sales-report"
-}
-```
-
-A later create request with the same `eventId` updates the existing schedule. This is the mechanism behind declarative CLI apply.
+<Info>
+  The CLI calls `eventId` the schedule **name**. Choose a value that stays stable across deployments, such as `daily-usage-report`. Without an `eventId`, Enschedule compares a generated signature (function, run time or cron, and payload) and returns an unclaimed match unchanged.
+</Info>
 
 ## Retry failed runs
 
-```json
-{
-  "retryFailedJobs": true,
-  "maxRetries": 5,
-  "title": "Sync billing records"
-}
+Schedules can retry automatically when a run fails. Set `retries` (number of additional attempts) and `retryDelay` (seconds between attempts) on the schedule. Each retry produces a separate run record.
+
+```bash
+curl --request POST \
+  --url https://enschedule.example.com/api/schedules \
+  --header 'X-API-Key: your-api-key' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "functionId": "send-receipt",
+    "functionVersion": 1,
+    "title": "Send receipt with retries",
+    "data": { "orderId": "ord_456", "email": "user@example.com" },
+    "runNow": true,
+    "retries": 3,
+    "retryDelay": 60
+  }'
 ```
 
-Retries use exponential backoff. The default strategy starts at one minute and caps the delay at five minutes. A value of `-1` for `maxRetries` means unlimited retries.
+## Target a specific worker
 
-<Note>
-  `maxRetries` counts the configured retry budget used by the runtime. Choose a finite value for jobs that can fail permanently.
-</Note>
+Set `workerId` on a schedule to restrict execution to workers with that stable ID. Without it, any worker that registers the required function ID and version can claim the schedule.
 
-## Target one worker class
+## Unschedule and delete
 
-Set `workerId` to the stable worker ID when a function should execute only on a particular worker class:
+- **Unschedule** — clears the next run time and stops recurrence but keeps the schedule record and its run history
+- **Delete** — permanently removes the schedule and all associated runs
 
-```json
-{
-  "workerId": "gpu-worker",
-  "title": "Build image embeddings"
-}
-```
-
-The selected worker must also register the exact function ID and version.
-
-## Trigger another schedule after failure
-
-Set `failureTrigger` to the numeric ID of another schedule. Enschedule marks that schedule to run after the current schedule exhausts its retry path and fails.
-
-## Unschedule or run later
-
-Use `POST /api/schedules/actions` for bulk actions:
-
-```json
-{
-  "ids": [12, 13],
-  "action": "unschedule"
-}
-```
-
-Supported actions are `run`, `unschedule`, and `delete`.
+Both actions are available from the dashboard, the CLI (`enschedule delete schedule`), and the API (`DELETE /api/schedules/:id`).

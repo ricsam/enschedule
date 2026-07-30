@@ -1,0 +1,50 @@
+---
+title: "Inspect and manage job run history in Enschedule"
+sidebarTitle: "Runs"
+description: "View run status, captured logs, timing, and retry state for every job execution from the Enschedule dashboard or API."
+---
+
+Every time a schedule is claimed and executed by a worker, Enschedule creates a run record. Runs store the start and finish times, status, captured output, and the exact payload that was used.
+
+## View runs in the dashboard
+
+Navigate to **Runs** for a global list of all executions across every schedule. Open any individual schedule to see only the runs for that schedule. Each row shows the status, start time, duration, and the worker that claimed it. Click a run to open its detail page, which includes the full captured log, payload, and timing breakdown.
+
+## Run statuses
+
+| Status | Meaning |
+| --- | --- |
+| `RUNNING` | The run has started but has no finish timestamp |
+| `SUCCESS` | The run finished successfully |
+| `FAILED` | The run finished with an error |
+| `LOST` | The run has no finish timestamp and its worker is unavailable |
+
+## Captured logs
+
+All `console.log` and `console.error` output emitted during a job callback is stored with the run record. Open the run detail page to view the full log in the order it was written.
+
+<Tip>
+  Avoid logging sensitive data in your job functions — captured logs are visible to any user with access to the run record.
+</Tip>
+
+## Retries
+
+When a schedule has retries configured, a failed run triggers another run after the configured delay. The schedule shows `RETRYING` status while it waits for the next attempt. Each attempt is a separate run record — you can compare them side by side in the schedule's run list to trace how an error evolved or was resolved.
+
+## View runs via API
+
+Use the runs endpoint to fetch run records programmatically:
+
+```bash
+# List all runs
+curl https://enschedule.example.com/api/runs \
+  --header 'X-API-Key: your-api-key'
+
+# Get a specific run
+curl https://enschedule.example.com/api/runs/42 \
+  --header 'X-API-Key: your-api-key'
+```
+
+## LOST runs
+
+A run becomes `LOST` when a worker crashes or transitions to `DOWN` while the run is still in progress. Enschedule detects this when the worker's last-seen timestamp exceeds the down threshold. A lost run does not automatically retry unless the schedule has retries configured with remaining attempts still available.

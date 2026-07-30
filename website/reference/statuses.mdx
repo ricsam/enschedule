@@ -1,46 +1,63 @@
 ---
-title: "Statuses"
-description: "Reference for worker, schedule, and run statuses."
+title: "Worker, schedule, and run status reference"
+sidebarTitle: "Statuses"
+description: "Reference for every status value that workers, schedules, and runs can report in Enschedule, including typical state transitions."
 ---
+
+Enschedule tracks the health and lifecycle of workers, schedules, and runs using a set of well-defined status values. Understanding these statuses helps you diagnose problems and build reliable alerting.
 
 ## Worker statuses
 
 | Status | Meaning |
 | --- | --- |
-| `UP` | The worker checked in within its normal polling window. |
-| `PENDING` | The worker missed its normal interval but has not crossed the down threshold. |
-| `DOWN` | The worker has not checked in before the down threshold. |
+| `UP` | The worker checked in within its normal polling window |
+| `PENDING` | The worker missed its normal interval but has not crossed the down threshold |
+| `DOWN` | The worker has not checked in before the down threshold |
 
-The threshold includes the configured poll interval and a small grace period.
+The threshold includes the configured poll interval and a small grace period. A `PENDING` worker may still be alive but delayed. A `DOWN` worker may have crashed or lost its database connection.
 
 ## Schedule statuses
 
 | Status | Meaning |
 | --- | --- |
-| `UNSCHEDULED` | No future run, immediate run, or active recurrence is waiting. |
-| `SCHEDULED` | The schedule has a due time or `runNow` request and a compatible worker exists. |
-| `NO_WORKER` | The schedule is ready but no available worker exposes the required function version. |
-| `RUNNING` | The latest run is still in progress. |
-| `RETRYING` | The latest attempt failed and another retry is scheduled. |
-| `SUCCESS` | The latest completed attempt succeeded. |
-| `FAILED` | The latest attempt failed or was lost without another retry pending. |
+| `UNSCHEDULED` | No future run, immediate run, or active recurrence is waiting |
+| `SCHEDULED` | The schedule has a due time or `runNow` request and a compatible worker exists |
+| `NO_WORKER` | The schedule is ready but no available worker exposes the required function version |
+| `RUNNING` | The latest run is still in progress |
+| `RETRYING` | The latest attempt failed and another retry is scheduled |
+| `SUCCESS` | The latest completed attempt succeeded |
+| `FAILED` | The latest attempt failed or was lost without another retry pending |
 
 ## Run statuses
 
 | Status | Meaning |
 | --- | --- |
-| `RUNNING` | The run has started but has no finish timestamp. |
-| `SUCCESS` | The run finished with exit signal `0`. |
-| `FAILED` | The run finished with a non-zero exit signal. |
-| `LOST` | The run has no finish timestamp and its worker is unavailable. |
+| `RUNNING` | The run has started but has no finish timestamp |
+| `SUCCESS` | The run finished with exit signal `0` |
+| `FAILED` | The run finished with a non-zero exit signal |
+| `LOST` | The run has no finish timestamp and its worker is unavailable |
 
 ## Common transitions
 
-```text
-UNSCHEDULED -> SCHEDULED -> RUNNING -> SUCCESS
-                           |          -> FAILED
-                           |          -> RETRYING -> RUNNING
-                           -> NO_WORKER
+A schedule typically moves through these states over its lifetime:
+
+```
+UNSCHEDULED → SCHEDULED → RUNNING → SUCCESS
+                          ↓           ↓
+                        NO_WORKER    FAILED
+                          ↓
+                        RETRYING → RUNNING
 ```
 
-A recurring schedule may show `SUCCESS` after a completed occurrence while retaining a future `runAt`. Use `runAt`, `cronExpression`, and run history alongside the display status when diagnosing timing.
+<Info>
+A recurring schedule may show `SUCCESS` after a completed occurrence while still retaining a future `runAt`. Use `runAt`, `cronExpression`, and run history alongside the display status when diagnosing timing issues.
+</Info>
+
+## Diagnose NO_WORKER
+
+When a schedule shows `NO_WORKER`, work through the following steps:
+
+1. Check the **Workers** page — are any workers `UP`?
+2. Verify the worker registers the required `functionId` and `functionVersion`.
+3. If the schedule has a `workerId` set, ensure a worker with that stable ID is running.
+4. Check worker logs for registration errors.

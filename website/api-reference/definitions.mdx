@@ -1,0 +1,52 @@
+---
+title: "REST API endpoints for function definitions"
+sidebarTitle: "Definitions"
+description: "List the function definitions currently published by available Enschedule workers, including their IDs, versions, titles, and JSON schemas."
+---
+
+Function definitions are published to PostgreSQL when workers start. Use the definitions API to discover which function IDs and versions are available before creating schedules.
+
+## List definitions — `GET /api/definitions`
+
+```bash
+curl https://enschedule.example.com/api/definitions \
+  --header 'X-API-Key: your-api-key'
+```
+
+Returns an array of function definition objects.
+
+### Response fields
+
+<ResponseField name="id" type="string">
+  The stable function identifier used when creating schedules.
+</ResponseField>
+
+<ResponseField name="version" type="integer">
+  The payload and implementation version of the function.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The human-readable display name for the function.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  An optional explanation of what the function does.
+</ResponseField>
+
+<ResponseField name="schema" type="object">
+  The JSON Schema derived from the function's Zod `dataSchema`. Use this to validate payloads before submitting a schedule.
+</ResponseField>
+
+<ResponseField name="example" type="object">
+  An example payload, if one was provided during registration.
+</ResponseField>
+
+<ResponseField name="workerId" type="string">
+  The stable ID of the worker that published this definition.
+</ResponseField>
+
+## Use definitions when creating schedules
+
+<Tip>
+  Query definitions first to confirm that the function ID and version you intend to schedule are currently available on a running worker. Schedules referencing unavailable definitions will enter `NO_WORKER` status until a matching worker comes online.
+</Tip>

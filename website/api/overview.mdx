@@ -1,9 +1,10 @@
 ---
-title: "API overview"
-description: "Call the Enschedule Richie RPC API and use its OpenAPI 3.1 specification."
+title: "Enschedule REST API overview and base paths"
+sidebarTitle: "Overview"
+description: "The Enschedule API is a JSON HTTP API generated from a Richie RPC contract, with an OpenAPI 3.1 spec at /openapi.json. Base path is /api."
 ---
 
-Enschedule serves a JSON HTTP API generated from a shared Richie RPC contract.
+Enschedule serves a JSON HTTP API generated from a shared Richie RPC contract. All first-party clients — the dashboard, CLI, and worker — use this same API. The base path is `/api`.
 
 ## Base paths
 
@@ -14,8 +15,6 @@ Enschedule serves a JSON HTTP API generated from a shared Richie RPC contract.
 | Dashboard health | `/healthz` |
 | OpenAPI 3.1 document | `/openapi.json` |
 | Built-in Scalar reference | `/docs` |
-
-The API reference in this site is generated from the same contract.
 
 ## Check health
 
@@ -30,7 +29,7 @@ curl https://enschedule.example.com/api/healthz
 }
 ```
 
-## Send JSON requests
+## Send requests
 
 ```bash
 curl --request GET \
@@ -38,7 +37,7 @@ curl --request GET \
   --header 'X-API-Key: your-api-key'
 ```
 
-Request and response bodies use JSON. Streaming run logs use the Richie RPC streaming transport.
+Request and response bodies use JSON. Include `Content-Type: application/json` on all POST and PUT requests.
 
 ## Error shape
 
@@ -52,29 +51,36 @@ Standard API errors use this form:
 }
 ```
 
-`issues` is optional. Common response statuses include `400`, `401`, `403`, `404`, `409`, and `500`.
+Common response codes:
+
+| Code | Meaning |
+| --- | --- |
+| `400` | Bad request or validation error |
+| `401` | Unauthenticated |
+| `403` | Forbidden |
+| `404` | Resource not found |
+| `409` | Conflict (e.g. duplicate event ID) |
+| `500` | Internal server error |
 
 ## API groups
 
-<Columns cols={2}>
-  <Card title="Authentication" icon="key-round" href="/api/authentication">
-    Log in, refresh, log out, or provide an API key.
+<CardGroup cols={2}>
+  <Card title="Authentication" href="/api/authentication" icon="key-round">
+    Log in, refresh, log out, or provide an API key
   </Card>
-  <Card title="Definitions" icon="function-square">
-    List the functions currently published by available workers.
+  <Card title="Schedules" href="/api-reference/schedules" icon="calendar-clock">
+    Create, update, trigger, and delete schedules
   </Card>
-  <Card title="Schedules" icon="calendar-clock">
-    Create, update, trigger, unschedule, and delete schedules.
+  <Card title="Runs" href="/api-reference/runs" icon="list-checks">
+    Inspect attempts, statuses, and captured logs
   </Card>
-  <Card title="Runs" icon="list-checks">
-    Inspect attempts, statuses, and captured logs.
+  <Card title="Workers" href="/api-reference/workers" icon="server">
+    View registered workers and their status
   </Card>
-</Columns>
-
-<Note>
-  The exact generated endpoint URLs are controlled by Mintlify's OpenAPI renderer. Use the **API reference** tab when a direct card link changes after a Mintlify upgrade.
-</Note>
+</CardGroup>
 
 ## OpenAPI document
 
-Use **Download API spec** in the page menu, or fetch `/openapi.json` from a running Enschedule dashboard. The checked-in `openapi.json` document is OpenAPI 3.1 and is generated from `packages/types/contract.ts`.
+<Tip>
+  Use **Download API spec** in the page menu, or fetch `/openapi.json` from a running Enschedule dashboard. The spec is OpenAPI 3.1 and generated from the Richie RPC contract.
+</Tip>

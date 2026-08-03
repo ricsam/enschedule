@@ -4,6 +4,7 @@ import {
   JobDefinitionSchema,
   ListRunsOptionsSerialize,
   ListRunsOptionsSerializedSchema,
+  publicJobDefinitionSchema,
 } from "./types";
 
 describe("JobDefinitionSchema", () => {
@@ -18,6 +19,17 @@ describe("JobDefinitionSchema", () => {
       title: "Simple job",
       version: 1,
     });
+  });
+});
+
+describe("PublicJobDefinitionSchema", () => {
+  test("accepts definitions without example data", () => {
+    expect(publicJobDefinitionSchema.parse({
+      id: "simple-job",
+      title: "Simple job",
+      version: 1,
+      capabilities: { view: true, createSchedule: true },
+    }).example).toBeUndefined();
   });
 });
 

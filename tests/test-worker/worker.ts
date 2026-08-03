@@ -202,21 +202,6 @@ if (!process.env.SPECIAL_HANDLERS) {
         "This is an automatically created job which will run in 5 days",
     }
   );
-  await worker.scheduleJob(
-    `Api-Key ${apiKey}`,
-    "send-http-request",
-    10,
-    { url: "http://localhost:3000" },
-    {
-      eventId: "non_existing_function",
-      runAt: undefined,
-      defaultRunAccess: undefined,
-      access: undefined,
-      title: "Run on a non existing function version",
-      description:
-        "This is an automatically created job which will not run, because there is no function with id send-http-request and version 10",
-    }
-  );
   console.log("Worker up and running");
 })().catch((err) => {
   console.log("@err", err);

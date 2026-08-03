@@ -239,8 +239,13 @@ const reset = async (
   await page.goto(`${baseUrl.dashboardUrl}/admin`);
 
   // reset enschedule
+  await page.getByRole("tab", { name: "Danger zone" }).click();
   await page.getByTestId("reset-enschedule").click();
+  const resetResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/admin/reset") && response.request().method() === "POST"
+  );
   await page.getByTestId("confirm-reset-enschedule").click();
+  await resetResponse;
 
   // make sure tables are empty
   await page.goto(`${baseUrl.dashboardUrl}/runs`);

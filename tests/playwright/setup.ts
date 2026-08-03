@@ -80,9 +80,11 @@ export class Setup {
   }
 
   private get workerEnvs() {
+    const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT } = this.dbCreds;
     return {
       ...this.dbCreds,
       POSTGRES: "true",
+      DATABASE_URL: `postgres://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${this.TEST_DB}`,
       DEBUG: "pg-driver,worker",
       DB_DATABASE: this.TEST_DB,
       ENSCHEDULE_API_KEY: "secret_key",
@@ -299,6 +301,7 @@ export class Setup {
       ["run", "docker:start"],
       (port) => ({
         ...process.env,
+        ...this.workerEnvs,
         PORT: String(port),
         ENSCHEDULE_API_KEY: "secret_key",
         NODE_ENV: "production",

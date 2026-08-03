@@ -135,7 +135,7 @@ export const publicJobDefinitionSchema = z.object({
   version: z.number(),
   description: z.string().optional(),
   title: z.string(),
-  example: z.unknown(),
+  example: z.unknown().optional(),
   codeBlock: z.string().optional(),
   jsonSchema: z.record(z.string(), z.unknown()).optional(),
   access: nullishToUndefined(FunctionAccessSchema),

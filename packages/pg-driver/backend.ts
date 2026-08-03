@@ -182,10 +182,15 @@ const publicWorker = (worker: DbWorker, actor: RbacActor, workerRuns: DbRun[] = 
   pollInterval: worker.pollInterval,
   title: worker.title,
   description: worker.description ?? undefined,
-  definitions: worker.definitions.map((definition) => ({
-    ...definition,
-    capabilities: functionCapabilities(actor, definition.access),
-  })),
+  definitions: worker.definitions
+    .filter((definition) => functionCapabilities(actor, definition.access).view)
+    .map((definition) => ({
+      ...definition,
+      access: undefined,
+      defaultScheduleAccess: undefined,
+      defaultRunAccess: undefined,
+      capabilities: functionCapabilities(actor, definition.access),
+    })),
   instanceId: worker.instanceId,
   createdAt: worker.createdAt,
   hostname: worker.hostname,

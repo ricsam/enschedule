@@ -29,7 +29,10 @@ function Run() {
   const search = Route.useSearch();
   const definitions = api.listDefinitions.useQuery({ queryKey: ["definitions"], queryData: {} });
   const workers = api.listWorkers.useQuery({ queryKey: ["workers"], queryData: {} });
-  const schedules = api.listSchedules.useQuery({ queryKey: ["schedules", "trigger-options"], queryData: { query: {} } });
+  const schedules = api.listSchedules.useQuery({
+    queryKey: ["schedules", "trigger-options"],
+    queryData: { query: {} },
+  });
   const create = api.createSchedule.useMutation();
   const [definitionId, setDefinitionId] = React.useState(search.def ?? "");
   const [workerChoice, setWorkerChoice] = React.useState(false);
@@ -53,9 +56,10 @@ function Run() {
   const [dataValid, setDataValid] = React.useState(true);
   const [validationError, setValidationError] = React.useState("");
 
-  if (!definitions.data || !workers.data || !schedules.data) return <AppShell title="Run" breadcrumbs={[{ title: "Run", href: "/run" }]}><Loading /></AppShell>;
+  if (!definitions.data || !workers.data || (trigger === true && !schedules.data)) return <AppShell title="Run" breadcrumbs={[{ title: "Run", href: "/run" }]}><Loading /></AppShell>;
   const definition = definitions.data.payload.find(({ id }) => id === definitionId && id.length > 0);
   const schedulableDefinitions = definitions.data.payload.filter(({ capabilities }) => capabilities.createSchedule);
+  const availableSchedules = schedules.data?.payload ?? [];
   const needsData = !!definition?.jsonSchema;
   const availableWorkers = workers.data.payload.filter((worker) => worker.status === WorkerStatus.UP && worker.definitions.some(({ id }) => id === definitionId));
   const resetAfterDefinition = (nextDefinition?: typeof definitions.data.payload[number]) => { setWorkerChoice(false); setSelectWorker(false); setWorkerId(undefined); setData(JSON.stringify(nextDefinition?.example ?? {}, null, 2)); setDataConfirmed(false); setTiming(undefined); setTimingConfirmed(false); setDetailsConfirmed(false); setRetry(undefined); setRetryConfirmed(false); setTrigger(undefined); };
@@ -78,7 +82,7 @@ function Run() {
     {timingConfirmed && !detailsConfirmed && <><Bubble>Give this schedule a title and optional description.</Bubble><InputArea><Box flex={1}><TextField inputProps={{ "data-testid": "title-input" }} fullWidth required margin="dense" label="Title" value={title} onChange={(event) => setTitle(event.target.value)} /><TextField inputProps={{ "data-testid": "description-input" }} fullWidth margin="dense" label="Description" value={description} onChange={(event) => setDescription(event.target.value)} /></Box><IconButton onClick={() => title && setDetailsConfirmed(true)}><SendIcon /></IconButton></InputArea></>}
     {detailsConfirmed && !retryConfirmed && <><Bubble>Retry this schedule if a run fails?</Bubble>{retry === undefined ? <InputArea><Button data-testid="retry-no" variant="outlined" onClick={() => { setRetry(false); setRetryConfirmed(true); }}>No</Button><Button data-testid="retry-yes" variant="outlined" onClick={() => setRetry(true)}>Yes</Button></InputArea> : <InputArea><TextField fullWidth type="number" label="Max retries (-1 is unlimited)" inputProps={{ "data-testid": "max-retries-input", min: -1 }} value={maxRetries} onChange={(event) => setMaxRetries(event.target.value)} /><IconButton data-testid="submit-max-retries" onClick={() => setRetryConfirmed(true)}><SendIcon /></IconButton></InputArea>}</>}
     {retryConfirmed && trigger === undefined && <><Bubble>Run another schedule if this one fails?</Bubble><InputArea><Button data-testid="trigger-no" variant="outlined" onClick={() => setTrigger(false)}>No</Button><Button data-testid="trigger-yes" variant="outlined" onClick={() => setTrigger(true)}>Yes</Button></InputArea></>}
-    {trigger && <InputArea><Autocomplete data-testid="schedule-autocomplete" fullWidth options={schedules.data.payload} getOptionLabel={(schedule) => schedule.title} onChange={(_event, value) => setFailureTrigger(value?.id)} renderInput={(params) => <TextField {...params} label="Failure trigger schedule" />} /></InputArea>}
+    {trigger && <InputArea><Autocomplete data-testid="schedule-autocomplete" fullWidth options={availableSchedules} getOptionLabel={(schedule) => schedule.title} onChange={(_event, value) => setFailureTrigger(value?.id)} renderInput={(params) => <TextField {...params} label="Failure trigger schedule" />} /></InputArea>}
     {trigger !== undefined && (!trigger || failureTrigger) && !create.data && <><Bubble>Everything is ready.</Bubble><Button data-testid="submit-button" variant="contained" onClick={submit} disabled={create.isPending}>Create schedule</Button></>}
     {create.isError && <Alert severity="error">Could not save schedule. Check all inputs and try again.</Alert>}
     {create.data && <Alert severity="success">Schedule {create.data.payload.status}. <RouteLink to={`/schedules/${create.data.payload.schedule.id}`} data-testid="schedule-link">View schedule</RouteLink></Alert>}

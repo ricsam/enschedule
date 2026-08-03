@@ -73,7 +73,9 @@ const createRun = async (
     await page.evaluate(`${ref}.setValue(\`${options.data.data}\`)`);
   }
 
-  await page.getByTestId("SendIcon").click();
+  if (await page.getByRole("button", { name: "Confirm job data" }).isVisible()) {
+    await page.getByRole("button", { name: "Confirm job data" }).click();
+  }
 
   if (!options?.runTomorrow) {
     if (options.manual) {
@@ -100,7 +102,7 @@ const createRun = async (
   // Type in title and description
   await page.getByTestId("title-input").fill("Test Title");
   await page.getByTestId("description-input").fill("Test Description");
-  await page.getByTestId("SendIcon").click();
+  await page.getByTestId("confirm-details").click();
 
   if (options.retry) {
     await page.getByTestId("retry-yes").click();

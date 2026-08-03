@@ -28,10 +28,11 @@ export function SchedulesView({ schedules }: { schedules: PublicJobSchedule[] })
   const queryClient = useQueryClient();
   const action = api.scheduleActions.useMutation({ onSuccess: () => void queryClient.invalidateQueries() });
   const submit = (selected: PublicJobSchedule[], type: "run" | "unschedule" | "delete", clear: () => void) => action.mutate({ body: { ids: selected.map(({ id }) => id), action: type } }, { onSuccess: clear });
+  const allCan = (selected: PublicJobSchedule[], action: "edit" | "run" | "delete") => selected.every((schedule) => schedule.capabilities[action]);
   return (
     <Box width="100%" id="SchedulesTable">
       <ClientTable title="Schedules" rows={schedules} columns={columns} defaultSorting={[{ id: "runAt", desc: true }]}
-        actions={(selected, clear) => <><Button color="inherit" data-testid="ms-unschedule" onClick={() => submit(selected, "unschedule", clear)}>Unschedule</Button><Button color="inherit" data-testid="ms-run" onClick={() => submit(selected, "run", clear)}>Run</Button><Button color="inherit" data-testid="ms-delete" onClick={() => submit(selected, "delete", clear)}>Delete</Button></>}
+        actions={(selected, clear) => <>{allCan(selected, "edit") && <Button color="inherit" data-testid="ms-unschedule" onClick={() => submit(selected, "unschedule", clear)}>Unschedule</Button>}{allCan(selected, "run") && <Button color="inherit" data-testid="ms-run" onClick={() => submit(selected, "run", clear)}>Run</Button>}{allCan(selected, "delete") && <Button color="inherit" data-testid="ms-delete" onClick={() => submit(selected, "delete", clear)}>Delete</Button>}</>}
       />
     </Box>
   );

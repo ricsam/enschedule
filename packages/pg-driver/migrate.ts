@@ -21,10 +21,6 @@ export async function migrateDatabase(url = databaseUrlFromEnv()) {
       .filter((name) => name.endsWith(".sql"))
       .sort();
 
-    // Existing Sequelize/Umzug installations already have the application tables.
-    // The baseline SQL is intentionally idempotent; applying and journaling it adopts
-    // those tables without dropping rows or replaying destructive legacy migrations.
-
     for (const fileName of files) {
       const alreadyApplied = await sql`
         SELECT 1 FROM drizzle.__drizzle_migrations WHERE hash = ${fileName} LIMIT 1

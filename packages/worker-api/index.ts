@@ -2,6 +2,7 @@ import { createClient, type Client } from "@richie-rpc/client";
 import type {
   AuthHeader,
   ListRunsOptions,
+  Group,
   PublicJobDefinition,
   PublicJobRun,
   PublicJobSchedule,
@@ -55,6 +56,26 @@ export class WorkerAPI {
     return authHeader
       ? { authorization: authHeader }
       : { "x-api-key": this.apiKey };
+  }
+
+  async getGroups(authHeader: Auth): Promise<Group[]> {
+    return (await this.client.listGroups({ headers: this.headers(authHeader) })).payload;
+  }
+
+  async createGroup(authHeader: Auth, body: { key: string; title: string; description?: string; memberIds: number[] }): Promise<Group> {
+    return (await this.client.createGroup({ headers: this.headers(authHeader), body })).payload;
+  }
+
+  async updateGroup(authHeader: Auth, id: number, body: { title?: string; description?: string; memberIds?: number[] }): Promise<Group> {
+    return (await this.client.updateGroup({ headers: this.headers(authHeader), params: { id }, body })).payload;
+  }
+
+  async deleteGroup(authHeader: Auth, id: number): Promise<Group> {
+    return (await this.client.deleteGroup({ headers: this.headers(authHeader), params: { id } })).payload;
+  }
+
+  async getAccessDiagnostics(authHeader: Auth) {
+    return (await this.client.accessDiagnostics({ headers: this.headers(authHeader) })).payload;
   }
 
   async getLatestHandlers(authHeader: Auth): Promise<PublicJobDefinition[]> {
@@ -129,28 +150,28 @@ export class WorkerAPI {
     ).payload;
   }
 
-  async deleteSchedules(ids: number[]): Promise<number[]> {
+  async deleteSchedules(authHeader: Auth, ids: number[]): Promise<number[]> {
     await this.client.scheduleActions({
-      headers: this.headers(),
+      headers: this.headers(authHeader),
       body: { ids, action: "delete" },
     });
     return ids;
   }
 
-  async runScheduleNow(id: number): Promise<void> {
-    await this.client.runSchedule({ params: { id }, headers: this.headers() });
+  async runScheduleNow(authHeader: Auth, id: number): Promise<void> {
+    await this.client.runSchedule({ params: { id }, headers: this.headers(authHeader) });
   }
 
-  async runSchedulesNow(ids: number[]): Promise<void> {
+  async runSchedulesNow(authHeader: Auth, ids: number[]): Promise<void> {
     await this.client.scheduleActions({
-      headers: this.headers(),
+      headers: this.headers(authHeader),
       body: { ids, action: "run" },
     });
   }
 
-  async unschedule(ids: number[]): Promise<void> {
+  async unschedule(authHeader: Auth, ids: number[]): Promise<void> {
     await this.client.scheduleActions({
-      headers: this.headers(),
+      headers: this.headers(authHeader),
       body: { ids, action: "unschedule" },
     });
   }
@@ -159,10 +180,10 @@ export class WorkerAPI {
     return (await this.client.listWorkers({ headers: this.headers(authHeader) })).payload;
   }
 
-  async deleteWorkers(ids: number[]): Promise<number[]> {
+  async deleteWorkers(authHeader: Auth, ids: number[]): Promise<number[]> {
     return (
       await this.client.deleteWorkers({
-        headers: this.headers(),
+        headers: this.headers(authHeader),
         body: { ids },
       })
     ).payload;
@@ -201,10 +222,10 @@ export class WorkerAPI {
     ).payload;
   }
 
-  async deleteRuns(ids: number[]): Promise<number[]> {
+  async deleteRuns(authHeader: Auth, ids: number[]): Promise<number[]> {
     return (
       await this.client.deleteRuns({
-        headers: this.headers(),
+        headers: this.headers(authHeader),
         body: { ids },
       })
     ).payload;

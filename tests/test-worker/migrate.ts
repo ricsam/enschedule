@@ -23,11 +23,16 @@ worker.logJobs = true;
 
 export const migrate = async () => {
   await worker.migrateDatabase();
-  await worker.register({
+  const admin = await worker.register({
     username: "adm1n",
     name: "Admin",
     password: "s3cr3t",
     admin: true,
+  });
+  await worker.createGroup(`Jwt ${admin.access!.accessToken}`, {
+    key: "everyone",
+    title: "Everyone",
+    memberIds: [admin.user.id],
   });
 };
 

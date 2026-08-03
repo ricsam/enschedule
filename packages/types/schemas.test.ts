@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  GroupKeySchema,
   JobDefinitionSchema,
   ListRunsOptionsSerialize,
   ListRunsOptionsSerializedSchema,
@@ -17,6 +18,31 @@ describe("JobDefinitionSchema", () => {
       title: "Simple job",
       version: 1,
     });
+  });
+});
+
+describe("RBAC schemas", () => {
+  test("uses stable group keys and rejects database IDs", () => {
+    expect(GroupKeySchema.parse("finance-operators")).toBe("finance-operators");
+    expect(() => GroupKeySchema.parse("Finance Operators")).toThrow();
+    expect(() => JobDefinitionSchema.parse({
+      id: "restricted-job",
+      title: "Restricted job",
+      version: 1,
+      job: () => undefined,
+      access: { view: { groups: [1] } },
+    })).toThrow();
+  });
+
+  test("accepts group-key policies including schedule run access", () => {
+    expect(JobDefinitionSchema.parse({
+      id: "restricted-job",
+      title: "Restricted job",
+      version: 1,
+      job: () => undefined,
+      access: { view: { groups: ["finance"] } },
+      defaultScheduleAccess: { run: { groups: ["operators"] } },
+    }).defaultScheduleAccess).toEqual({ run: { groups: ["operators"] } });
   });
 });
 

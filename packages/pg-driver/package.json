@@ -24,7 +24,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun ./migrate.ts"
   },
-  "files": ["index.ts", "backend.ts", "schema.ts", "database.ts", "migrate.ts", "drizzle.config.ts", "drizzle", "dist"],
+  "files": ["index.ts", "backend.ts", "access.ts", "schema.ts", "database.ts", "migrate.ts", "drizzle.config.ts", "drizzle", "dist"],
   "dependencies": {
     "@enschedule/types": "workspace:*",
     "cron-parser": "^5.4.0",

@@ -81,16 +81,20 @@ bun run --cwd packages/worker-cli start
 
 The worker health route is `/api/healthz`.
 
-## Database upgrades
+## Role-based access control
 
-Only PostgreSQL is supported. Back up the database before upgrading, then run:
+Administrators define groups and assign existing users in the dashboard's **Admin area → Groups** tab. Worker and function code references immutable group keys in `access`, `defaultScheduleAccess`, and `defaultRunAccess`; unknown keys fail closed and are reported in the admin access diagnostics. See [`packages/worker/README.md`](packages/worker/README.md) for the declaration format and permission matrix.
+
+## Database setup
+
+Only PostgreSQL is supported. Initialize a clean database with:
 
 ```bash
 DATABASE_URL=postgres://user:password@host:5432/database \
   bun packages/pg-driver/migrate.ts
 ```
 
-The baseline migration uses the existing table and column names and `IF NOT EXISTS`, then records adoption in `drizzle.__drizzle_migrations`. Existing Sequelize/Umzug data is retained; legacy migration metadata may remain harmlessly in place.
+The baseline creates the canonical greenfield schema and records it in `drizzle.__drizzle_migrations`.
 
 ## Verify
 

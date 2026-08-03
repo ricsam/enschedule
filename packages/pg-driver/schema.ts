@@ -143,7 +143,7 @@ export const groups = pgTable(
   "Groups",
   {
     id: serial("id").primaryKey(),
-    groupName: varchar("groupName", { length: 255 }).notNull(),
+    groupName: varchar("groupName", { length: 64 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     ...auditColumns,
@@ -192,22 +192,6 @@ export const userGroupAssociation = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.groupId] })],
 );
 
-function runUserAccessTable(name: string) {
-  return pgTable(
-    name,
-    {
-      runId: integer("RunId")
-        .notNull()
-        .references(() => runs.id, { onDelete: "cascade" }),
-      userId: integer("UserId")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-      ...auditColumns,
-    },
-    (table) => [primaryKey({ columns: [table.runId, table.userId] })],
-  );
-}
-
 function runGroupAccessTable(name: string) {
   return pgTable(
     name,
@@ -215,20 +199,15 @@ function runGroupAccessTable(name: string) {
       runId: integer("RunId")
         .notNull()
         .references(() => runs.id, { onDelete: "cascade" }),
-      groupId: integer("GroupId")
-        .notNull()
-        .references(() => groups.id, { onDelete: "cascade" }),
+      groupKey: varchar("GroupKey", { length: 64 }).notNull(),
       ...auditColumns,
     },
-    (table) => [primaryKey({ columns: [table.runId, table.groupId] })],
+    (table) => [primaryKey({ columns: [table.runId, table.groupKey] })],
   );
 }
 
-export const runUserViewAccess = runUserAccessTable("RunUserViewAccess");
 export const runGroupViewAccess = runGroupAccessTable("RunGroupViewAccess");
-export const runUserViewLogsAccess = runUserAccessTable("RunUserViewLogsAccess");
 export const runGroupViewLogsAccess = runGroupAccessTable("RunGroupViewLogsAccess");
-export const runUserDeleteAccess = runUserAccessTable("RunUserDeleteAccess");
 export const runGroupDeleteAccess = runGroupAccessTable("RunGroupDeleteAccess");
 
 export const workersRelations = relations(workers, ({ many, one }) => ({

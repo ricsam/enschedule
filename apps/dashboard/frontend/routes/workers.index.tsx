@@ -37,5 +37,5 @@ function Workers() {
   const breadcrumbs = [{ title: "Workers", href: "/workers" }];
   if (query.isLoading) return <AppShell title="Workers" breadcrumbs={breadcrumbs}><Loading /></AppShell>;
   if (query.error) return <AppShell title="Workers" breadcrumbs={breadcrumbs}><ErrorPanel error={query.error} retry={() => query.refetch()} /></AppShell>;
-  return <AppShell title="Workers" subtitle="Deployed worker instances" breadcrumbs={breadcrumbs}><ClientTable id="WorkersTable" title="Workers" rows={query.data?.payload ?? []} columns={columns} defaultSorting={[{ id: "lastReached", desc: true }]} actions={(selected, clear) => <Button data-testid="ms-delete" color="inherit" onClick={() => remove.mutate({ body: { ids: selected.map(({ id }) => id) } }, { onSuccess: clear })}>Delete</Button>} /></AppShell>;
+  return <AppShell title="Workers" subtitle="Deployed worker instances" breadcrumbs={breadcrumbs}><ClientTable id="WorkersTable" title="Workers" rows={query.data?.payload ?? []} columns={columns} defaultSorting={[{ id: "lastReached", desc: true }]} actions={(selected, clear) => selected.every((worker) => worker.capabilities.delete) ? <Button data-testid="ms-delete" color="inherit" onClick={() => remove.mutate({ body: { ids: selected.map(({ id }) => id) } }, { onSuccess: clear })}>Delete</Button> : null} /></AppShell>;
 }

@@ -33,4 +33,18 @@ describe("dashboard no-auth mode", () => {
     const response = await router.fetch(new Request("http://dashboard.test/api/workers"));
     expect(response.status).toBe(401);
   });
+
+  test("forwards auth to group operations", async () => {
+    let receivedHeader: string | undefined;
+    const worker = {
+      getGroups: async (header: string) => {
+        receivedHeader = header;
+        return [];
+      },
+    } as unknown as DashboardWorker;
+    const router = createDashboardRouter(worker, { noAuth: true, apiKey: "secret" });
+    const response = await router.fetch(new Request("http://dashboard.test/api/groups"));
+    expect(response.status).toBe(200);
+    expect(receivedHeader).toBe("Api-Key secret");
+  });
 });

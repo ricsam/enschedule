@@ -126,6 +126,31 @@ export function createDashboardRouter(
         ? { status: Status.OK, body: user, headers: { "set-cookie": await commitSession(session) } }
         : { status: Status.NotFound, body: { code: "NOT_FOUND", message: "User not found" } };
     },
+    listGroups: async ({ request }) => {
+      const { session, header } = await auth(request);
+      if (!header) return unauthorized();
+      return { status: Status.OK, body: await worker.getGroups(header), headers: { "set-cookie": await commitSession(session) } };
+    },
+    createGroup: async ({ request, body }) => {
+      const { session, header } = await auth(request);
+      if (!header) return unauthorized();
+      return { status: Status.Created, body: await worker.createGroup(header, body), headers: { "set-cookie": await commitSession(session) } };
+    },
+    updateGroup: async ({ request, params, body }) => {
+      const { session, header } = await auth(request);
+      if (!header) return unauthorized();
+      return { status: Status.OK, body: await worker.updateGroup(header, params.id, body), headers: { "set-cookie": await commitSession(session) } };
+    },
+    deleteGroup: async ({ request, params }) => {
+      const { session, header } = await auth(request);
+      if (!header) return unauthorized();
+      return { status: Status.OK, body: await worker.deleteGroup(header, params.id), headers: { "set-cookie": await commitSession(session) } };
+    },
+    accessDiagnostics: async ({ request }) => {
+      const { session, header } = await auth(request);
+      if (!header) return unauthorized();
+      return { status: Status.OK, body: await worker.getAccessDiagnostics(header), headers: { "set-cookie": await commitSession(session) } };
+    },
     listWorkers: async ({ request }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
@@ -134,7 +159,7 @@ export function createDashboardRouter(
     deleteWorkers: async ({ request, body }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
-      return { status: Status.OK, body: await worker.deleteWorkers(body.ids), headers: { "set-cookie": await commitSession(session) } };
+      return { status: Status.OK, body: await worker.deleteWorkers(header, body.ids), headers: { "set-cookie": await commitSession(session) } };
     },
     listDefinitions: async ({ request }) => {
       const { session, header } = await auth(request);
@@ -144,11 +169,7 @@ export function createDashboardRouter(
     getDefinition: async ({ request, params }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
-      try {
-        return { status: Status.OK, body: await worker.getLatestHandler(params.id, header), headers: { "set-cookie": await commitSession(session) } };
-      } catch {
-        return { status: Status.NotFound, body: { code: "NOT_FOUND", message: "Function not found" } };
-      }
+      return { status: Status.OK, body: await worker.getLatestHandler(params.id, header), headers: { "set-cookie": await commitSession(session) } };
     },
     listSchedules: async ({ request, query }) => {
       const { session, header } = await auth(request);
@@ -185,15 +206,15 @@ export function createDashboardRouter(
     scheduleActions: async ({ request, body }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
-      if (body.action === "run") await worker.runSchedulesNow(body.ids);
-      if (body.action === "delete") await worker.deleteSchedules(body.ids);
-      if (body.action === "unschedule") await worker.unschedule(body.ids);
+      if (body.action === "run") await worker.runSchedulesNow(header, body.ids);
+      if (body.action === "delete") await worker.deleteSchedules(header, body.ids);
+      if (body.action === "unschedule") await worker.unschedule(header, body.ids);
       return { status: Status.OK, body: { success: true }, headers: { "set-cookie": await commitSession(session) } };
     },
     runSchedule: async ({ request, params }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
-      await worker.runScheduleNow(params.id);
+      await worker.runScheduleNow(header, params.id);
       return { status: Status.OK, body: { success: true }, headers: { "set-cookie": await commitSession(session) } };
     },
     listRuns: async ({ request, query }) => {
@@ -214,7 +235,7 @@ export function createDashboardRouter(
     deleteRuns: async ({ request, body }) => {
       const { session, header } = await auth(request);
       if (!header) return unauthorized();
-      return { status: Status.OK, body: await worker.deleteRuns(body.ids), headers: { "set-cookie": await commitSession(session) } };
+      return { status: Status.OK, body: await worker.deleteRuns(header, body.ids), headers: { "set-cookie": await commitSession(session) } };
     },
     streamLogs: async ({ request, params, stream }) => {
       const { header } = await auth(request);

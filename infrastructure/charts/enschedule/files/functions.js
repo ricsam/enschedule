@@ -9,6 +9,21 @@ export default async function register(worker) {
     job: (data) => console.log("pretending to fetch", data.url),
     description: "Provide HTTP parameters as data to send a request",
     example: { url: "https://example.com" },
+    access: {
+      view: { groups: ["demo-users"] },
+      createSchedule: { groups: ["demo-operators"] },
+    },
+    defaultScheduleAccess: {
+      view: { groups: ["demo-users"] },
+      edit: { groups: ["demo-operators"] },
+      run: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
+    defaultRunAccess: {
+      view: { groups: ["demo-users"] },
+      viewLogs: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
   });
   worker.registerJob({
     id: "log-job",
@@ -18,6 +33,21 @@ export default async function register(worker) {
     job: (data) => console.log(data.message),
     description: "Will print the message on the server",
     example: { message: "some message" },
+    access: {
+      view: { groups: ["demo-users"] },
+      createSchedule: { groups: ["demo-operators"] },
+    },
+    defaultScheduleAccess: {
+      view: { groups: ["demo-users"] },
+      edit: { groups: ["demo-operators"] },
+      run: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
+    defaultRunAccess: {
+      view: { groups: ["demo-users"] },
+      viewLogs: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
   });
   worker.registerJob({
     id: "error-job",
@@ -27,5 +57,20 @@ export default async function register(worker) {
     job: (data) => { throw new Error(data.message); },
     description: "Will throw the message as an error",
     example: { message: "some error" },
+    access: {
+      view: { groups: ["demo-users"] },
+      createSchedule: { groups: ["demo-operators"] },
+    },
+    defaultScheduleAccess: {
+      view: { groups: ["demo-users"] },
+      edit: { groups: ["demo-operators"] },
+      run: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
+    defaultRunAccess: {
+      view: { groups: ["demo-users"] },
+      viewLogs: { groups: ["demo-operators"] },
+      delete: { groups: ["demo-admins"] },
+    },
   });
 }

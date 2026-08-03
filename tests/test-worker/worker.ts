@@ -35,6 +35,10 @@ const worker = new Worker({
   refreshTokenSecret,
   apiKey,
   nafsUri,
+  access: { view: { groups: ["everyone"] }, delete: { groups: ["everyone"] } },
+  defaultFunctionAccess: { view: { groups: ["everyone"] }, createSchedule: { groups: ["everyone"] } },
+  defaultScheduleAccess: { view: { groups: ["everyone"] }, edit: { groups: ["everyone"] }, run: { groups: ["everyone"] }, delete: { groups: ["everyone"] } },
+  defaultRunAccess: { view: { groups: ["everyone"] }, viewLogs: { groups: ["everyone"] }, delete: { groups: ["everyone"] } },
 });
 worker.logJobs = true;
 worker.retryStrategy = () => 5000;
@@ -52,11 +56,6 @@ if (!process.env.SPECIAL_HANDLERS) {
     description: "Provide HTTP parameters as data to send a request",
     example: {
       url: "http://localhost:3000",
-    },
-    access: {
-      view: {
-        users: [1],
-      },
     },
   });
   worker.registerJob({

@@ -1,0 +1,135 @@
+---
+title: "Access control"
+description: "Control workers, functions, schedules, runs, and logs with admin-managed groups."
+---
+
+Enschedule uses group-based role-based access control (RBAC). Administrators create groups and assign existing users in the dashboard. Trusted worker and function code then grants actions to immutable group keys.
+
+<Info>
+  Open the live [demo dashboard](https://demo-irqfaf85i4ig.r5d.app) and select **Admin area → Groups** to see group management. The public demo runs in privileged no-auth mode, so use a private authenticated installation to test per-user restrictions.
+</Info>
+
+## Create and manage groups
+
+1. Sign in as an administrator.
+2. Open **Admin area**.
+3. Select **Groups**.
+4. Select **Create group**.
+5. Enter an immutable key such as `finance-operators`, a display title, an optional description, and members.
+6. Select **Save**.
+
+Group keys must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. Code uses the key, while the title and description remain editable.
+
+Deleting a group removes its memberships and materialized run grants. Declarations that still reference the deleted key become unresolved and deny access.
+
+## Declare worker and function policies
+
+Use group keys instead of database IDs:
+
+```typescript functions.ts
+worker.registerJob({
+  id: "billing-report",
+  version: 1,
+  title: "Billing report",
+  dataSchema: z.object({ month: z.string() }),
+  access: {
+    view: { groups: ["finance"] },
+    createSchedule: { groups: ["finance-operators"] },
+  },
+  defaultScheduleAccess: {
+    view: { groups: ["finance"] },
+    edit: { groups: ["finance-operators"] },
+    run: { groups: ["finance-operators"] },
+    delete: { groups: ["finance-admins"] },
+  },
+  defaultRunAccess: {
+    view: { groups: ["finance"] },
+    viewLogs: { groups: ["finance-operators"] },
+    delete: { groups: ["finance-admins"] },
+  },
+  job: async ({ month }) => {
+    await generateBillingReport(month);
+  },
+});
+```
+
+You can also restrict the worker and provide defaults for all functions:
+
+```typescript worker.ts
+const worker = new Worker({
+  workerId: "finance-worker",
+  name: "Finance worker",
+  access: {
+    view: { groups: ["finance"] },
+    delete: { groups: ["finance-admins"] },
+  },
+  defaultFunctionAccess: {
+    view: { groups: ["finance"] },
+    createSchedule: { groups: ["finance-operators"] },
+  },
+  defaultScheduleAccess: {
+    view: { groups: ["finance"] },
+    edit: { groups: ["finance-operators"] },
+    run: { groups: ["finance-operators"] },
+    delete: { groups: ["finance-admins"] },
+  },
+  defaultRunAccess: {
+    view: { groups: ["finance"] },
+    viewLogs: { groups: ["finance-operators"] },
+    delete: { groups: ["finance-admins"] },
+  },
+  // Database, token, API key, and log-storage options omitted.
+});
+```
+
+## Permission matrix
+
+| Resource | Actions |
+| --- | --- |
+| Worker | `view`, `delete` |
+| Function | `view`, `createSchedule` |
+| Schedule | `view`, `edit`, `run`, `delete` |
+| Run | `view`, `viewLogs`, `delete` |
+
+The API returns caller-specific `capabilities` with each visible resource. The dashboard uses these values to hide unavailable controls, while the backend independently enforces every action.
+
+## Understand inheritance
+
+Enschedule is default-deny for non-admin users.
+
+- An omitted action inherits the nearest worker or function default.
+- A declared action replaces its parent action.
+- `{ groups: [] }` explicitly denies that action.
+- A user must be able to view a resource before another action on that resource is available.
+- Schedule and run policies are snapshotted when the schedule or run is created.
+- Membership changes take effect immediately.
+
+For example, this keeps the inherited `view` grant while replacing `run`:
+
+```typescript
+{
+  defaultScheduleAccess: {
+    view: { groups: ["finance"] },
+    run: { groups: ["finance-operators"] },
+  },
+}
+```
+
+## Superuser identities
+
+Administrators and the configured system `ENSCHEDULE_API_KEY` bypass resource policies. `ENSCHEDULE_NO_AUTH=true` uses that system identity for every dashboard visitor and is therefore appropriate only for disposable public demos without sensitive data.
+
+<Warning>
+  Frontend visibility is not a security boundary. Always send requests through the Enschedule API, which validates credentials and action permissions server-side.
+</Warning>
+
+## Diagnose unknown groups
+
+Open **Admin area → Access diagnostics** to find group keys referenced by workers, functions, schedules, or runs that do not exist. Unknown keys fail closed. Either create the group with that exact key or update and redeploy the declaration.
+
+## Authorization responses
+
+- Collection endpoints omit resources the caller cannot view.
+- Unauthorized direct reads return `404 Not Found` to avoid revealing resource existence.
+- Denied mutations return `403 Forbidden`.
+- Bulk operations authorize every selected resource and do not partially apply a denied request.

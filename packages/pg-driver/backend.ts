@@ -17,7 +17,9 @@ import {
 } from "drizzle-orm";
 import type {
   AuthHeader,
+  AccessDiagnostic,
   FunctionAccess,
+  Group,
   JobDefinition,
   ListRunsOptions,
   PublicJobDefinition,
@@ -53,18 +55,35 @@ import {
   runGroupViewAccess,
   runGroupViewLogsAccess,
   runs,
-  runUserDeleteAccess,
-  runUserViewAccess,
-  runUserViewLogsAccess,
   schedules,
   sessions,
   userGroupAssociation,
   users,
   workers,
 } from "./schema";
+import {
+  AuthorizationError,
+  conflict,
+  forbidden,
+  functionCapabilities,
+  inheritFunctionAccess,
+  inheritRunAccess,
+  inheritScheduleAccess,
+  isSuperuser,
+  notFound,
+  policyGroupKeys,
+  requireCapability,
+  runCapabilities,
+  scheduleCapabilities,
+  workerCapabilities,
+  type RbacActor,
+} from "./access";
+
+export { AuthorizationError } from "./access";
 
 const DRIVER_VERSION = 2;
 const PACKAGE_VERSION = "2.0.0";
+const SYSTEM_ACTOR: RbacActor = { admin: true, system: true, groups: [] };
 
 type Auth = z.output<typeof AuthHeader>;
 type UserAuth = z.output<typeof UserAuthSchema>;
@@ -80,6 +99,7 @@ export interface BackendOptions {
   database?: DatabaseOptions;
   forkArgv?: string[];
   inlineWorker?: boolean;
+  access?: WorkerAccess;
   defaultFunctionAccess?: FunctionAccess;
   defaultScheduleAccess?: ScheduleAccess;
   defaultRunAccess?: RunAccess;
@@ -94,11 +114,6 @@ interface WorkerInstance {
   title: string;
   description?: string;
   instanceId: string;
-}
-
-interface Access {
-  users?: number[];
-  groups?: number[];
 }
 
 type CreateJobScheduleOptions = Partial<ScheduleJobOptions>;
@@ -147,26 +162,30 @@ const serializeRun = (run: RunRecord) => ({
   status: runStatus(run),
 });
 
-function workerHash(worker: Pick<DbWorker, "title" | "description" | "pollInterval" | "definitions" | "defaultFunctionAccess" | "defaultScheduleAccess" | "defaultRunAccess">) {
+function workerHash(worker: Pick<DbWorker, "title" | "description" | "pollInterval" | "definitions" | "access" | "defaultFunctionAccess" | "defaultScheduleAccess" | "defaultRunAccess">) {
   return shortHash(JSON.stringify({
     title: worker.title,
     description: worker.description,
     pollInterval: worker.pollInterval,
     definitions: [...worker.definitions].sort((a, b) => a.id.localeCompare(b.id)),
+    access: worker.access,
     defaultFunctionAccess: worker.defaultFunctionAccess,
     defaultScheduleAccess: worker.defaultScheduleAccess,
     defaultRunAccess: worker.defaultRunAccess,
   }));
 }
 
-const publicWorker = (worker: DbWorker, workerRuns: DbRun[] = []): PublicWorker => ({
+const publicWorker = (worker: DbWorker, actor: RbacActor, workerRuns: DbRun[] = []): PublicWorker => ({
   id: worker.id,
   workerId: worker.workerId,
   version: worker.version,
   pollInterval: worker.pollInterval,
   title: worker.title,
   description: worker.description ?? undefined,
-  definitions: worker.definitions,
+  definitions: worker.definitions.map((definition) => ({
+    ...definition,
+    capabilities: functionCapabilities(actor, definition.access),
+  })),
   instanceId: worker.instanceId,
   createdAt: worker.createdAt,
   hostname: worker.hostname,
@@ -181,6 +200,7 @@ const publicWorker = (worker: DbWorker, workerRuns: DbRun[] = []): PublicWorker 
   defaultScheduleAccess: worker.defaultScheduleAccess ?? undefined,
   defaultRunAccess: worker.defaultRunAccess ?? undefined,
   access: worker.access ?? undefined,
+  capabilities: workerCapabilities(actor, worker.access ?? undefined),
 });
 
 const scheduleStatus = (schedule: ScheduleRecord, hasFunction: boolean): ScheduleStatus => {
@@ -206,6 +226,7 @@ const scheduleStatus = (schedule: ScheduleRecord, hasFunction: boolean): Schedul
 const publicSchedule = (
   schedule: ScheduleRecord,
   definition: PublicJobDefinition | string,
+  actor: RbacActor,
 ): PublicJobSchedule => ({
   id: schedule.id,
   title: schedule.title,
@@ -225,9 +246,13 @@ const publicSchedule = (
   status: scheduleStatus(schedule, typeof definition !== "string"),
   eventId: schedule.eventId ?? undefined,
   defaultRunAccess: schedule.defaultRunAccess ?? undefined,
+  capabilities: scheduleCapabilities(actor, schedule.access ?? undefined),
 });
 
-export const createPublicJobDefinition = (job: JobDefinition): PublicJobDefinition => {
+export const createPublicJobDefinition = (
+  job: JobDefinition,
+  actor: RbacActor = SYSTEM_ACTOR,
+): PublicJobDefinition => {
   const jsonSchema = job.dataSchema
     ? (z.toJSONSchema(job.dataSchema, { unrepresentable: "any" }) as Record<string, unknown>)
     : undefined;
@@ -242,6 +267,7 @@ export const createPublicJobDefinition = (job: JobDefinition): PublicJobDefiniti
     access: job.access,
     defaultScheduleAccess: job.defaultScheduleAccess,
     defaultRunAccess: job.defaultRunAccess,
+    capabilities: functionCapabilities(actor, job.access),
   };
 };
 
@@ -257,6 +283,7 @@ export class PrivateBackend {
   private readonly refreshTokenSecret: string;
   private readonly nafsUri: string;
   private readonly apiKey?: string;
+  private readonly workerAccess?: WorkerAccess;
   private readonly defaultFunctionAccess?: FunctionAccess;
   private readonly defaultScheduleAccess?: ScheduleAccess;
   private readonly defaultRunAccess?: RunAccess;
@@ -281,6 +308,7 @@ export class PrivateBackend {
     this.refreshTokenSecret = options.refreshTokenSecret;
     this.nafsUri = options.nafsUri;
     this.apiKey = options.apiKey;
+    this.workerAccess = options.access;
     this.defaultFunctionAccess = options.defaultFunctionAccess;
     this.defaultScheduleAccess = options.defaultScheduleAccess;
     this.defaultRunAccess = options.defaultRunAccess;
@@ -310,7 +338,7 @@ export class PrivateBackend {
 
   private async auth(authHeader: Auth): Promise<UserAuth | undefined> {
     const [type, token] = authHeader.split(" ", 2);
-    if (type === "Api-Key" && token === this.apiKey) return { admin: true, groups: [] };
+    if (type === "Api-Key" && token === this.apiKey) return { admin: true, system: true, groups: [] };
     if (type === "Jwt") {
       try {
         const decoded = jwt.verify(token, this.accessTokenSecret) as { userId: number };
@@ -322,7 +350,8 @@ export class PrivateBackend {
         return {
           userId: user.id,
           admin: user.admin,
-          groups: user.groups.map(({ groupId }) => groupId),
+          system: false,
+          groups: await this.groupKeys(user.groups.map(({ groupId }) => groupId)),
         };
       } catch {
         return undefined;
@@ -341,25 +370,32 @@ export class PrivateBackend {
       return {
         userId: user.id,
         admin: user.admin,
-        groups: user.groups.map(({ groupId }) => groupId),
+        system: false,
+        groups: await this.groupKeys(user.groups.map(({ groupId }) => groupId)),
       };
     }
     return undefined;
+  }
+
+  private async groupKeys(ids: number[]) {
+    if (!ids.length) return [];
+    return (await this.database.db.select({ key: groups.groupName }).from(groups).where(inArray(groups.id, ids)))
+      .map(({ key }) => key);
+  }
+
+  private async requireActor(authHeader: Auth) {
+    const actor = await this.auth(authHeader);
+    if (!actor) throw new AuthorizationError(401, "UNAUTHORIZED", "Authentication required");
+    return actor;
   }
 
   async getUserAuth(authHeader: Auth) {
     return this.auth(authHeader);
   }
 
-  private canView(user: UserAuth, access?: Access) {
-    if (user.admin) return true;
-    if (user.userId && access?.users?.includes(user.userId)) return true;
-    return access?.groups?.some((id) => user.groups.includes(id)) ?? false;
-  }
-
-  private definition(functionId: string, version: number, availableWorkers: PublicWorker[]) {
+  private definition(functionId: string, version: number, availableWorkers: PublicWorker[], actor: RbacActor) {
     const local = this.definedJobs[functionId]?.[String(version)];
-    if (local) return createPublicJobDefinition(local);
+    if (local) return createPublicJobDefinition(local, actor);
     for (const worker of availableWorkers.sort((a) => (a.status === WorkerStatus.UP ? -1 : 1))) {
       const found = worker.definitions.find((entry) => entry.id === functionId && entry.version === version);
       if (found) return found;
@@ -370,35 +406,12 @@ export class PrivateBackend {
   public registerJob<T extends ZodType = ZodType>(job: JobDefinition<T>) {
     JobDefinitionSchema.parse(job);
     const versions = this.definedJobs[job.id] ?? {};
-    job.access = this.mergeAccess(this.defaultFunctionAccess, job.access, ["view", "createSchedule"]);
-    job.defaultScheduleAccess = this.mergeAccess(
-      this.defaultScheduleAccess,
-      job.defaultScheduleAccess,
-      ["view", "edit", "delete"],
-    );
-    job.defaultRunAccess = this.mergeAccess(this.defaultRunAccess, job.defaultRunAccess, ["view", "viewLogs", "delete"]);
+    job.access = inheritFunctionAccess(job.access, this.defaultFunctionAccess);
+    job.defaultScheduleAccess = inheritScheduleAccess(job.defaultScheduleAccess, this.defaultScheduleAccess);
+    job.defaultRunAccess = inheritRunAccess(job.defaultRunAccess, this.defaultRunAccess);
     versions[String(job.version)] = job as JobDefinition;
     this.definedJobs[job.id] = versions;
     return job;
-  }
-
-  private mergeAccess<T extends Record<string, Access | undefined>>(
-    parent: T | undefined,
-    child: T | undefined,
-    keys: string[],
-  ): T | undefined {
-    const result: Record<string, Access> = {};
-    for (const key of keys) {
-      const users = [...new Set([...(parent?.[key]?.users ?? []), ...(child?.[key]?.users ?? [])])];
-      const groupsList = [...new Set([...(parent?.[key]?.groups ?? []), ...(child?.[key]?.groups ?? [])])];
-      if (users.length || groupsList.length) {
-        result[key] = {
-          users: users.length ? users : undefined,
-          groups: groupsList.length ? groupsList : undefined,
-        };
-      }
-    }
-    return Object.keys(result).length ? (result as T) : undefined;
   }
 
   private getLocalHandler(id: string, version: number) {
@@ -468,7 +481,7 @@ export class PrivateBackend {
   async registerWorker(attempt = 0): Promise<DbWorker> {
     try {
       const definitions = Object.values(this.definedJobs).flatMap((versions) =>
-        Object.values(versions ?? {}).map(createPublicJobDefinition),
+        Object.values(versions ?? {}).map((job) => createPublicJobDefinition(job)),
       );
       const current = this.registeredWorker
         ? await this.database.db.query.workers.findFirst({ where: eq(workers.id, this.registeredWorker.id) })
@@ -485,6 +498,7 @@ export class PrivateBackend {
         description: this.workerInstance.description ?? null,
         pollInterval: this.pollInterval,
         definitions,
+        access: this.workerAccess ?? null,
         defaultFunctionAccess: this.defaultFunctionAccess ?? null,
         defaultScheduleAccess: this.defaultScheduleAccess ?? null,
         defaultRunAccess: this.defaultRunAccess ?? null,
@@ -499,6 +513,7 @@ export class PrivateBackend {
         instanceId: this.workerInstance.instanceId,
         version,
         definitions,
+        access: this.workerAccess,
         description: this.workerInstance.description,
         lastReached: new Date(),
         title: this.workerInstance.title,
@@ -509,7 +524,7 @@ export class PrivateBackend {
         defaultRunAccess: this.defaultRunAccess,
       }).onConflictDoUpdate({
         target: workers.instanceId,
-        set: { lastReached: new Date(), updatedAt: new Date(), definitions, version },
+        set: { lastReached: new Date(), updatedAt: new Date(), definitions, access: this.workerAccess, version },
       }).returning();
       return (this.registeredWorker = created!);
     } catch (error) {
@@ -529,28 +544,30 @@ export class PrivateBackend {
   }
 
   async getWorkers(authHeader: Auth): Promise<PublicWorker[]> {
-    const user = await this.auth(authHeader);
-    if (!user) return [];
+    const actor = await this.requireActor(authHeader);
     const allWorkers = await this.database.db.select().from(workers);
     const allRuns = await this.database.db.select().from(runs);
     return allWorkers
-      .filter((worker) => this.canView(user, worker.access?.view) || user.admin)
-      .map((worker) => publicWorker(worker, allRuns.filter((run) => run.workerId === worker.id)));
+      .filter((worker) => workerCapabilities(actor, worker.access ?? undefined).view)
+      .map((worker) => publicWorker(worker, actor, allRuns.filter((run) => run.workerId === worker.id)));
   }
 
-  async deleteWorkers(ids: number[]) {
+  async deleteWorkers(authHeader: Auth, ids: number[]) {
+    const actor = await this.requireActor(authHeader);
+    const selected = ids.length ? await this.database.db.select().from(workers).where(inArray(workers.id, ids)) : [];
+    if (selected.length !== new Set(ids).size) throw notFound("Worker");
+    for (const worker of selected) requireCapability(workerCapabilities(actor, worker.access ?? undefined).delete);
     if (ids.length) await this.database.db.delete(workers).where(inArray(workers.id, ids));
     if (this.registeredWorker && ids.includes(this.registeredWorker.id)) this.registeredWorker = undefined;
     return ids;
   }
 
   async getLatestHandlers(authHeader: Auth) {
-    const user = await this.auth(authHeader);
-    if (!user) return [];
+    const actor = await this.requireActor(authHeader);
     const result = new Map<string, PublicJobDefinition>();
     for (const worker of (await this.getWorkers(authHeader)).filter(({ status }) => status === WorkerStatus.UP)) {
       for (const definition of worker.definitions) {
-        if (!user.admin && !this.canView(user, definition.access?.view)) continue;
+        if (!functionCapabilities(actor, definition.access).view) continue;
         const current = result.get(definition.id);
         if (!current || definition.version > current.version) result.set(definition.id, definition);
       }
@@ -560,7 +577,7 @@ export class PrivateBackend {
 
   async getLatestHandler(functionId: string, authHeader: Auth) {
     const definition = (await this.getLatestHandlers(authHeader)).find(({ id }) => id === functionId);
-    if (!definition) throw new Error("Function not found");
+    if (!definition) throw notFound("Function");
     return definition;
   }
 
@@ -635,7 +652,15 @@ export class PrivateBackend {
     data: unknown,
     options: ScheduleJobOptions,
   ): Promise<ScheduleJobResult> {
+    const actor = await this.requireActor(authHeader);
     const functionId = typeof definition === "string" ? definition : definition.id;
+    const declared = this.definedJobs[functionId]?.[String(functionVersion)] ??
+      (await this.getLatestHandlers(authHeader)).find((entry) => entry.id === functionId && entry.version === functionVersion);
+    if (!declared) throw notFound("Function");
+    requireCapability(functionCapabilities(actor, declared.access).createSchedule);
+    if (!isSuperuser(actor) && (options.access !== undefined || options.defaultRunAccess !== undefined)) {
+      throw forbidden("Only administrators may override schedule access");
+    }
     let runAt = options.runAt;
     if (options.cronExpression) runAt = CronExpressionParser.parse(options.cronExpression).next().toDate();
     const [schedule, status] = await this.createJobSchedule({
@@ -644,16 +669,22 @@ export class PrivateBackend {
       description: options.description,
       functionVersion,
       data,
-      options: { ...options, runAt },
+      options: {
+        ...options,
+        runAt,
+        access: inheritScheduleAccess(options.access, declared.defaultScheduleAccess),
+        defaultRunAccess: inheritRunAccess(options.defaultRunAccess, declared.defaultRunAccess),
+      },
     });
     const record = (await this.scheduleRecord(schedule.id))!;
     return {
-      schedule: publicSchedule(record, this.definition(record.functionId, record.functionVersion, await this.getWorkers(authHeader))),
+      schedule: publicSchedule(record, this.definition(record.functionId, record.functionVersion, await this.getWorkers(authHeader), actor), actor),
       status,
     };
   }
 
   async getSchedules(authHeader: Auth, filter: z.output<typeof SchedulesFilterSchema> = {}) {
+    const actor = await this.requireActor(authHeader);
     const allWorkers = await this.getWorkers(authHeader);
     const where = and(
       filter.functionId ? eq(schedules.functionId, filter.functionId) : undefined,
@@ -664,23 +695,29 @@ export class PrivateBackend {
       orderBy: [desc(schedules.createdAt)],
       with: { lastRun: { with: { worker: true } } },
     });
-    return records.map((schedule) =>
-      publicSchedule(
-        schedule as ScheduleRecord,
-        this.definition(schedule.functionId, schedule.functionVersion, allWorkers),
-      ),
-    );
+    return records
+      .filter((schedule) => scheduleCapabilities(actor, schedule.access ?? undefined).view)
+      .map((schedule) =>
+        publicSchedule(
+          schedule as ScheduleRecord,
+          this.definition(schedule.functionId, schedule.functionVersion, allWorkers, actor),
+          actor,
+        ),
+      );
   }
 
   async getSchedule(authHeader: Auth, id: number) {
+    const actor = await this.requireActor(authHeader);
     const record = await this.scheduleRecord(id);
-    if (!record) return undefined;
-    return publicSchedule(record, this.definition(record.functionId, record.functionVersion, await this.getWorkers(authHeader)));
+    if (!record || !scheduleCapabilities(actor, record.access ?? undefined).view) return undefined;
+    return publicSchedule(record, this.definition(record.functionId, record.functionVersion, await this.getWorkers(authHeader), actor), actor);
   }
 
   async updateSchedule(authHeader: Auth, payload: z.output<typeof ScheduleUpdatePayloadSchema>) {
+    const actor = await this.requireActor(authHeader);
     const existing = await this.scheduleRecord(payload.id);
-    if (!existing) throw new Error("Schedule not found");
+    if (!existing) throw notFound("Schedule");
+    requireCapability(scheduleCapabilities(actor, existing.access ?? undefined).edit);
     const values: Partial<typeof schedules.$inferInsert> = { updatedAt: new Date() };
     if (payload.title !== undefined) values.title = payload.title;
     if (payload.description !== undefined) values.description = payload.description;
@@ -696,30 +733,41 @@ export class PrivateBackend {
     return (await this.getSchedule(authHeader, payload.id))!;
   }
 
-  async runScheduleNow(id: number) {
-    const result = await this.database.db.update(schedules).set({ runNow: true, claimed: false, updatedAt: new Date() })
-      .where(eq(schedules.id, id)).returning({ id: schedules.id });
-    if (!result.length) throw new Error("Schedule not found");
+  private async authorizeSchedules(authHeader: Auth, ids: number[], action: "edit" | "run" | "delete") {
+    const actor = await this.requireActor(authHeader);
+    const selected = ids.length ? await this.database.db.select().from(schedules).where(inArray(schedules.id, ids)) : [];
+    if (selected.length !== new Set(ids).size) throw notFound("Schedule");
+    for (const schedule of selected) requireCapability(scheduleCapabilities(actor, schedule.access ?? undefined)[action]);
   }
 
-  async runSchedulesNow(ids: number[]) {
+  async runScheduleNow(authHeader: Auth, id: number) {
+    await this.authorizeSchedules(authHeader, [id], "run");
+    await this.database.db.update(schedules).set({ runNow: true, claimed: false, updatedAt: new Date() })
+      .where(eq(schedules.id, id));
+  }
+
+  async runSchedulesNow(authHeader: Auth, ids: number[]) {
+    await this.authorizeSchedules(authHeader, ids, "run");
     if (ids.length) await this.database.db.update(schedules).set({ runNow: true, claimed: false, updatedAt: new Date() })
       .where(inArray(schedules.id, ids));
   }
 
-  async unschedule(ids: number[]) {
+  async unschedule(authHeader: Auth, ids: number[]) {
+    await this.authorizeSchedules(authHeader, ids, "edit");
     if (ids.length) await this.database.db.update(schedules).set({ runAt: null, runNow: false, claimed: false, updatedAt: new Date() })
       .where(inArray(schedules.id, ids));
   }
 
-  async deleteSchedules(ids: number[]) {
+  async deleteSchedules(authHeader: Auth, ids: number[]) {
+    await this.authorizeSchedules(authHeader, ids, "delete");
     if (ids.length) await this.database.db.delete(schedules).where(inArray(schedules.id, ids));
     return ids;
   }
 
   async deleteSchedule(authHeader: Auth, id: number) {
     const current = await this.getSchedule(authHeader, id);
-    if (!current) throw new Error("Schedule not found");
+    if (!current) throw notFound("Schedule");
+    requireCapability(current.capabilities.delete);
     await this.database.db.delete(schedules).where(eq(schedules.id, id));
     return current;
   }
@@ -762,17 +810,14 @@ export class PrivateBackend {
   private async addRunAccess(runId: number, access?: RunAccess) {
     const now = new Date();
     const inserts = [
-      [runUserViewAccess, access?.view?.users, "userId"],
-      [runGroupViewAccess, access?.view?.groups, "groupId"],
-      [runUserViewLogsAccess, access?.viewLogs?.users, "userId"],
-      [runGroupViewLogsAccess, access?.viewLogs?.groups, "groupId"],
-      [runUserDeleteAccess, access?.delete?.users, "userId"],
-      [runGroupDeleteAccess, access?.delete?.groups, "groupId"],
+      [runGroupViewAccess, access?.view?.groups],
+      [runGroupViewLogsAccess, access?.viewLogs?.groups],
+      [runGroupDeleteAccess, access?.delete?.groups],
     ] as const;
-    for (const [table, ids, column] of inserts) {
-      if (!ids?.length) continue;
+    for (const [table, keys] of inserts) {
+      if (!keys?.length) continue;
       await this.database.db.insert(table).values(
-        ids.map((id) => ({ runId, [column]: id, createdAt: now, updatedAt: now })) as never,
+        keys.map((groupKey) => ({ runId, groupKey, createdAt: now, updatedAt: now })) as never,
       ).onConflictDoNothing();
     }
   }
@@ -867,14 +912,17 @@ export class PrivateBackend {
         if (retry) {
           const record = (await this.scheduleRecord(schedule.id))!;
           await this.database.db.update(schedules).set({
-            runAt: new Date(Date.now() + this.retryStrategy(publicSchedule(record, schedule.functionId))),
+            runAt: new Date(Date.now() + this.retryStrategy(publicSchedule(record, schedule.functionId, SYSTEM_ACTOR))),
             claimed: false,
             retries: schedule.retries + 1,
             updatedAt: new Date(),
           }).where(eq(schedules.id, schedule.id));
           continue;
         }
-        if (failed && schedule.failureTriggerId) await this.runScheduleNow(schedule.failureTriggerId);
+        if (failed && schedule.failureTriggerId) {
+          await this.database.db.update(schedules).set({ runNow: true, claimed: false, updatedAt: new Date() })
+            .where(eq(schedules.id, schedule.failureTriggerId));
+        }
         const set: Partial<typeof schedules.$inferInsert> = { updatedAt: new Date() };
         if (schedule.cronExpression) {
           set.runAt = CronExpressionParser.parse(schedule.cronExpression).next().toDate();
@@ -890,20 +938,15 @@ export class PrivateBackend {
   }
 
   async getRuns(options: ListRunsOptions): Promise<{ count: number; rows: PublicJobRun[] }> {
-    if (!options.authHeader) return { count: 0, rows: [] };
-    const user = await this.auth(options.authHeader);
-    if (!user) return { count: 0, rows: [] };
+    if (!options.authHeader) throw new AuthorizationError(401, "UNAUTHORIZED", "Authentication required");
+    const actor = await this.requireActor(options.authHeader);
     let allowedIds: number[] | undefined;
-    if (!user.admin) {
-      const direct = user.userId
-        ? await this.database.db.select({ id: runUserViewAccess.runId }).from(runUserViewAccess)
-            .where(eq(runUserViewAccess.userId, user.userId))
-        : [];
-      const groupRows = user.groups.length
+    if (!isSuperuser(actor)) {
+      const groupRows = actor.groups.length
         ? await this.database.db.select({ id: runGroupViewAccess.runId }).from(runGroupViewAccess)
-            .where(inArray(runGroupViewAccess.groupId, user.groups))
+            .where(inArray(runGroupViewAccess.groupKey, actor.groups))
         : [];
-      allowedIds = [...new Set([...direct, ...groupRows].map(({ id }) => id))];
+      allowedIds = [...new Set(groupRows.map(({ id }) => id))];
       if (!allowedIds.length) return { count: 0, rows: [] };
     }
     const where = and(
@@ -925,46 +968,55 @@ export class PrivateBackend {
       const schedule = run.scheduleId ? await this.scheduleRecord(run.scheduleId) : undefined;
       return {
         ...serializeRun({ ...run, worker }),
-        worker: worker ? publicWorker(worker, []) : run.workerTitle,
+        worker: worker ? publicWorker(worker, actor, []) : run.workerTitle,
         jobSchedule: schedule
-          ? publicSchedule(schedule, this.definition(run.functionId, run.functionVersion, availableWorkers))
+          ? publicSchedule(schedule, this.definition(run.functionId, run.functionVersion, availableWorkers, actor), actor)
           : run.scheduleTitle,
-        jobDefinition: this.definition(run.functionId, run.functionVersion, availableWorkers),
+        jobDefinition: this.definition(run.functionId, run.functionVersion, availableWorkers, actor),
+        capabilities: await this.getRunCapabilities(actor, run.id),
       } satisfies PublicJobRun;
     }));
     return { count: countRow?.count ?? 0, rows: publicRuns };
   }
 
+  private async getRunCapabilities(actor: RbacActor, runId: number) {
+    if (isSuperuser(actor)) return runCapabilities(actor);
+    const rows = await Promise.all([
+      this.database.db.select({ key: runGroupViewAccess.groupKey }).from(runGroupViewAccess).where(eq(runGroupViewAccess.runId, runId)),
+      this.database.db.select({ key: runGroupViewLogsAccess.groupKey }).from(runGroupViewLogsAccess).where(eq(runGroupViewLogsAccess.runId, runId)),
+      this.database.db.select({ key: runGroupDeleteAccess.groupKey }).from(runGroupDeleteAccess).where(eq(runGroupDeleteAccess.runId, runId)),
+    ]);
+    return runCapabilities(actor, {
+      view: { groups: rows[0].map(({ key }) => key) },
+      viewLogs: { groups: rows[1].map(({ key }) => key) },
+      delete: { groups: rows[2].map(({ key }) => key) },
+    });
+  }
+
   async getRun(authHeader: Auth, id: number): Promise<PublicJobRun> {
-    const result = await this.getRuns({ authHeader, scheduleId: undefined, limit: 1, offset: 0, order: [["id", "DESC"]] });
-    const direct = result.rows.find((run) => run.id === id);
-    if (direct) return direct;
-    const run = await this.runRecord(id);
-    if (!run) throw new Error("Run not found");
-    const availableWorkers = await this.getWorkers(authHeader);
-    const schedule = run.scheduleId ? await this.scheduleRecord(run.scheduleId) : undefined;
-    return {
-      ...serializeRun(run),
-      worker: run.worker ? publicWorker(run.worker, []) : run.workerTitle,
-      jobSchedule: schedule ? publicSchedule(schedule, this.definition(run.functionId, run.functionVersion, availableWorkers)) : run.scheduleTitle,
-      jobDefinition: this.definition(run.functionId, run.functionVersion, availableWorkers),
-    };
+    const result = await this.getRuns({ authHeader, limit: 10_000, offset: 0, order: [["id", "DESC"]] });
+    const run = result.rows.find((entry) => entry.id === id);
+    if (!run) throw notFound("Run");
+    return run;
   }
 
   async deleteRun(authHeader: Auth, id: number) {
     const current = await this.getRun(authHeader, id);
+    requireCapability(current.capabilities.delete);
     await this.database.db.delete(runs).where(eq(runs.id, id));
     return current;
   }
 
-  async deleteRuns(ids: number[]) {
+  async deleteRuns(authHeader: Auth, ids: number[]) {
+    const selected = await Promise.all(ids.map((id) => this.getRun(authHeader, id)));
+    for (const run of selected) requireCapability(run.capabilities.delete);
     if (ids.length) await this.database.db.delete(runs).where(inArray(runs.id, ids));
     return ids;
   }
 
   async reset(authHeader: Auth) {
-    const user = await this.auth(authHeader);
-    if (!user?.admin) return false;
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
     await this.database.db.transaction(async (tx) => {
       await tx.delete(runs);
       await tx.delete(schedules);
@@ -984,14 +1036,16 @@ export class PrivateBackend {
   }
 
   async streamLogs(authHeader: Auth, id: number): Promise<Readable | undefined> {
-    if (!(await this.auth(authHeader))) return undefined;
+    const actor = await this.requireActor(authHeader);
+    if (!(await this.getRunCapabilities(actor, id)).viewLogs) throw notFound("Run");
     const run = await this.runRecord(id);
     if (!run?.logFile) return undefined;
     return (await this.getNafs()).createReadStream(run.logFile);
   }
 
   async getLogs(authHeader: Auth, id: number) {
-    if (!(await this.auth(authHeader))) return undefined;
+    const actor = await this.requireActor(authHeader);
+    if (!(await this.getRunCapabilities(actor, id)).viewLogs) throw notFound("Run");
     const run = await this.runRecord(id);
     if (!run?.logFile) return undefined;
     return (await (await this.getNafs()).promises.readFile(run.logFile, "utf8")).toString();
@@ -1079,9 +1133,110 @@ export class PrivateBackend {
   }
 
   async getUsers(authHeader: Auth) {
-    const auth = await this.auth(authHeader);
-    if (!auth?.admin) return [];
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
     return (await this.database.db.select().from(users)).map(createPublicUser);
+  }
+
+  private async publicGroup(group: typeof groups.$inferSelect): Promise<Group> {
+    const memberships = await this.database.db.select({ userId: userGroupAssociation.userId })
+      .from(userGroupAssociation).where(eq(userGroupAssociation.groupId, group.id));
+    return {
+      id: group.id,
+      key: group.groupName,
+      title: group.title,
+      description: group.description ?? undefined,
+      memberIds: memberships.map(({ userId }) => userId),
+      createdAt: group.createdAt,
+    };
+  }
+
+  async getGroups(authHeader: Auth) {
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
+    return Promise.all((await this.database.db.select().from(groups).orderBy(asc(groups.title)))
+      .map((group) => this.publicGroup(group)));
+  }
+
+  async createGroup(authHeader: Auth, input: { key: string; title: string; description?: string; memberIds: number[] }) {
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
+    if (await this.database.db.query.groups.findFirst({ where: eq(groups.groupName, input.key) })) {
+      throw conflict(`Group key ${input.key} already exists`);
+    }
+    return this.database.db.transaction(async (tx) => {
+      const members = input.memberIds.length ? await tx.select({ id: users.id }).from(users).where(inArray(users.id, input.memberIds)) : [];
+      if (members.length !== new Set(input.memberIds).size) throw notFound("User");
+      const [created] = await tx.insert(groups).values({ groupName: input.key, title: input.title, description: input.description }).returning();
+      if (input.memberIds.length) await tx.insert(userGroupAssociation).values(input.memberIds.map((userId) => ({ userId, groupId: created!.id })));
+      return this.publicGroup(created!);
+    });
+  }
+
+  async updateGroup(authHeader: Auth, id: number, input: { title?: string; description?: string; memberIds?: number[] }) {
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
+    return this.database.db.transaction(async (tx) => {
+      const existing = await tx.select().from(groups).where(eq(groups.id, id));
+      if (!existing[0]) throw notFound("Group");
+      if (input.memberIds) {
+        const members = input.memberIds.length ? await tx.select({ id: users.id }).from(users).where(inArray(users.id, input.memberIds)) : [];
+        if (members.length !== new Set(input.memberIds).size) throw notFound("User");
+        await tx.delete(userGroupAssociation).where(eq(userGroupAssociation.groupId, id));
+        if (input.memberIds.length) await tx.insert(userGroupAssociation).values(input.memberIds.map((userId) => ({ userId, groupId: id })));
+      }
+      const values: Partial<typeof groups.$inferInsert> = { updatedAt: new Date() };
+      if (input.title !== undefined) values.title = input.title;
+      if (input.description !== undefined) values.description = input.description;
+      const [updated] = await tx.update(groups).set(values).where(eq(groups.id, id)).returning();
+      return this.publicGroup(updated!);
+    });
+  }
+
+  async deleteGroup(authHeader: Auth, id: number) {
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
+    const existing = await this.database.db.query.groups.findFirst({ where: eq(groups.id, id) });
+    if (!existing) throw notFound("Group");
+    const result = await this.publicGroup(existing);
+    await this.database.db.transaction(async (tx) => {
+      await tx.delete(runGroupViewAccess).where(eq(runGroupViewAccess.groupKey, existing.groupName));
+      await tx.delete(runGroupViewLogsAccess).where(eq(runGroupViewLogsAccess.groupKey, existing.groupName));
+      await tx.delete(runGroupDeleteAccess).where(eq(runGroupDeleteAccess.groupKey, existing.groupName));
+      await tx.delete(groups).where(eq(groups.id, id));
+    });
+    return result;
+  }
+
+  async getAccessDiagnostics(authHeader: Auth): Promise<AccessDiagnostic[]> {
+    const actor = await this.requireActor(authHeader);
+    if (!isSuperuser(actor)) throw forbidden("Administrator access required");
+    const existing = new Set((await this.database.db.select({ key: groups.groupName }).from(groups)).map(({ key }) => key));
+    const references = new Map<string, Set<string>>();
+    const add = (policy: unknown, reference: string) => {
+      for (const key of policyGroupKeys(policy)) {
+        if (existing.has(key)) continue;
+        const values = references.get(key) ?? new Set<string>();
+        values.add(reference);
+        references.set(key, values);
+      }
+    };
+    for (const worker of await this.database.db.select().from(workers)) {
+      add(worker.access, `worker:${worker.workerId}`);
+      add(worker.defaultFunctionAccess, `worker:${worker.workerId}:functions`);
+      add(worker.defaultScheduleAccess, `worker:${worker.workerId}:schedules`);
+      add(worker.defaultRunAccess, `worker:${worker.workerId}:runs`);
+      for (const definition of worker.definitions) {
+        add(definition.access, `function:${definition.id}:v${definition.version}`);
+        add(definition.defaultScheduleAccess, `function:${definition.id}:v${definition.version}:schedules`);
+        add(definition.defaultRunAccess, `function:${definition.id}:v${definition.version}:runs`);
+      }
+    }
+    for (const schedule of await this.database.db.select().from(schedules)) {
+      add(schedule.access, `schedule:${schedule.id}`);
+      add(schedule.defaultRunAccess, `schedule:${schedule.id}:runs`);
+    }
+    return [...references].map(([key, values]) => ({ key, references: [...values].sort() }));
   }
 
   async startPolling({ dontMigrate = false }: { dontMigrate?: boolean } = {}) {

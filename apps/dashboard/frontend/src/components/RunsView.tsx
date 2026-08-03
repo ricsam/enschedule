@@ -50,6 +50,6 @@ export function RunsView({ runs }: { runs: PublicJobRun[] }) {
   const remove = api.deleteRuns.useMutation({ onSuccess: () => void queryClient.invalidateQueries() });
   return <ClientTable id="RunsTable" title="Runs" rows={runs} columns={columns} defaultSorting={[{ id: "startedAt", desc: true }]}
     renderRow={(row) => <RunDetails run={row.original} />}
-    actions={(selected, clear) => <Button data-testid="ms-delete" color="inherit" onClick={() => remove.mutate({ body: { ids: selected.map(({ id }) => id) } }, { onSuccess: clear })}>Delete</Button>}
+    actions={(selected, clear) => selected.every((run) => run.capabilities.delete) ? <Button data-testid="ms-delete" color="inherit" onClick={() => remove.mutate({ body: { ids: selected.map(({ id }) => id) } }, { onSuccess: clear })}>Delete</Button> : null}
   />;
 }

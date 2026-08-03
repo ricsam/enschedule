@@ -17,7 +17,7 @@ function DefinitionLayout() {
   const breadcrumbs = [{ title: "Functions", href: "/definitions" }, { title: `${definition.title} (v${definition.version})`, href: `/definitions/${functionId}` }];
   const tabs = [{ label: "Schema", to: `/definitions/${functionId}` }, { label: "Schedules", to: `/definitions/${functionId}/schedules` }];
   return (
-    <AppShell title={definition.title} subtitle={definition.description} breadcrumbs={breadcrumbs} tabs={tabs} actions={<Button component={RouteLink} to={`/run?def=${encodeURIComponent(definition.id)}`} variant="contained">Create schedule</Button>}>
+    <AppShell title={definition.title} subtitle={definition.description} breadcrumbs={breadcrumbs} tabs={tabs} actions={definition.capabilities.createSchedule ? <Button component={RouteLink} to={`/run?def=${encodeURIComponent(definition.id)}`} variant="contained">Create schedule</Button> : undefined}>
       <Outlet />
     </AppShell>
   );

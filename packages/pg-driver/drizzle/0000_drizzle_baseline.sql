@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "EnscheduleMeta" (
+CREATE TABLE "EnscheduleMeta" (
   "id" serial PRIMARY KEY,
   "driverVersion" integer NOT NULL,
   "enscheduleVersion" varchar(255) NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "EnscheduleMeta" (
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS "Workers" (
+CREATE TABLE "Workers" (
   "id" serial PRIMARY KEY,
   "workerId" varchar(255) NOT NULL,
   "version" integer NOT NULL,
@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS "Workers" (
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "workers_instance_id_unique" ON "Workers" ("instanceId");
-CREATE INDEX IF NOT EXISTS "workers_worker_id_idx" ON "Workers" ("workerId");
+CREATE UNIQUE INDEX "workers_instance_id_unique" ON "Workers" ("instanceId");
+CREATE INDEX "workers_worker_id_idx" ON "Workers" ("workerId");
 
-CREATE TABLE IF NOT EXISTS "Schedules" (
+CREATE TABLE "Schedules" (
   "id" serial PRIMARY KEY,
   "workerId" varchar(255),
   "functionId" varchar(255) NOT NULL,
@@ -54,11 +54,11 @@ CREATE TABLE IF NOT EXISTS "Schedules" (
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "schedules_eventid_unique" ON "Schedules" ("eventId");
-CREATE INDEX IF NOT EXISTS "schedules_due_idx" ON "Schedules" ("claimed", "runAt");
-CREATE INDEX IF NOT EXISTS "schedules_function_idx" ON "Schedules" ("functionId", "functionVersion");
+CREATE UNIQUE INDEX "schedules_eventid_unique" ON "Schedules" ("eventId");
+CREATE INDEX "schedules_due_idx" ON "Schedules" ("claimed", "runAt");
+CREATE INDEX "schedules_function_idx" ON "Schedules" ("functionId", "functionVersion");
 
-CREATE TABLE IF NOT EXISTS "Runs" (
+CREATE TABLE "Runs" (
   "id" serial PRIMARY KEY,
   "logFile" text,
   "logFileSize" integer,
@@ -77,10 +77,10 @@ CREATE TABLE IF NOT EXISTS "Runs" (
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS "runs_schedule_idx" ON "Runs" ("scheduleId");
-CREATE INDEX IF NOT EXISTS "runs_started_idx" ON "Runs" ("startedAt");
+CREATE INDEX "runs_schedule_idx" ON "Runs" ("scheduleId");
+CREATE INDEX "runs_started_idx" ON "Runs" ("startedAt");
 
-CREATE TABLE IF NOT EXISTS "Users" (
+CREATE TABLE "Users" (
   "id" serial PRIMARY KEY,
   "username" varchar(255) NOT NULL UNIQUE,
   "name" varchar(255) NOT NULL,
@@ -90,22 +90,22 @@ CREATE TABLE IF NOT EXISTS "Users" (
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE TABLE IF NOT EXISTS "Groups" (
+CREATE TABLE "Groups" (
   "id" serial PRIMARY KEY,
-  "groupName" varchar(255) NOT NULL UNIQUE,
+  "groupName" varchar(64) NOT NULL UNIQUE,
   "title" varchar(255) NOT NULL,
   "description" text,
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE TABLE IF NOT EXISTS "Sessions" (
+CREATE TABLE "Sessions" (
   "id" serial PRIMARY KEY,
   "userId" integer NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "refreshToken" text NOT NULL,
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE TABLE IF NOT EXISTS "ApiKeys" (
+CREATE TABLE "ApiKeys" (
   "id" serial PRIMARY KEY,
   "userId" integer NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "key" text NOT NULL,
@@ -113,9 +113,9 @@ CREATE TABLE IF NOT EXISTS "ApiKeys" (
   "createdAt" timestamptz NOT NULL DEFAULT now(),
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "api_keys_key_unique" ON "ApiKeys" ("key");
+CREATE UNIQUE INDEX "api_keys_key_unique" ON "ApiKeys" ("key");
 
-CREATE TABLE IF NOT EXISTS "UserGroupAssociation" (
+CREATE TABLE "UserGroupAssociation" (
   "UserId" integer NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "GroupId" integer NOT NULL REFERENCES "Groups"("id") ON DELETE CASCADE,
   "createdAt" timestamptz NOT NULL DEFAULT now(),
@@ -123,20 +123,27 @@ CREATE TABLE IF NOT EXISTS "UserGroupAssociation" (
   PRIMARY KEY ("UserId", "GroupId")
 );
 
-DO $$
-DECLARE access_table text;
-BEGIN
-  FOREACH access_table IN ARRAY ARRAY[
-    'RunUserViewAccess', 'RunUserViewLogsAccess', 'RunUserDeleteAccess'
-  ] LOOP
-    EXECUTE format('CREATE TABLE IF NOT EXISTS %I ("RunId" integer NOT NULL REFERENCES "Runs"("id") ON DELETE CASCADE, "UserId" integer NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE, "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now(), PRIMARY KEY ("RunId", "UserId"))', access_table);
-  END LOOP;
-  FOREACH access_table IN ARRAY ARRAY[
-    'RunGroupViewAccess', 'RunGroupViewLogsAccess', 'RunGroupDeleteAccess'
-  ] LOOP
-    EXECUTE format('CREATE TABLE IF NOT EXISTS %I ("RunId" integer NOT NULL REFERENCES "Runs"("id") ON DELETE CASCADE, "GroupId" integer NOT NULL REFERENCES "Groups"("id") ON DELETE CASCADE, "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now(), PRIMARY KEY ("RunId", "GroupId"))', access_table);
-  END LOOP;
-END $$;
+CREATE TABLE "RunGroupViewAccess" (
+  "RunId" integer NOT NULL REFERENCES "Runs"("id") ON DELETE CASCADE,
+  "GroupKey" varchar(64) NOT NULL,
+  "createdAt" timestamptz NOT NULL DEFAULT now(),
+  "updatedAt" timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY ("RunId", "GroupKey")
+);
+CREATE TABLE "RunGroupViewLogsAccess" (
+  "RunId" integer NOT NULL REFERENCES "Runs"("id") ON DELETE CASCADE,
+  "GroupKey" varchar(64) NOT NULL,
+  "createdAt" timestamptz NOT NULL DEFAULT now(),
+  "updatedAt" timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY ("RunId", "GroupKey")
+);
+CREATE TABLE "RunGroupDeleteAccess" (
+  "RunId" integer NOT NULL REFERENCES "Runs"("id") ON DELETE CASCADE,
+  "GroupKey" varchar(64) NOT NULL,
+  "createdAt" timestamptz NOT NULL DEFAULT now(),
+  "updatedAt" timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY ("RunId", "GroupKey")
+);
 
 DO $$ BEGIN
   ALTER TABLE "Runs" ADD CONSTRAINT "fk_run_schedule" FOREIGN KEY ("scheduleId") REFERENCES "Schedules"("id") ON DELETE SET NULL;

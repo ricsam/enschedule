@@ -43,7 +43,8 @@
               "guides/functions",
               "guides/workers",
               "guides/schedules",
-              "guides/runs"
+              "guides/runs",
+              "guides/access-control"
             ]
           },
           {
@@ -137,5 +138,12 @@
   },
   "search": {
     "prompt": "Search Enschedule docs"
+  },
+  "markdown": {
+    "instructions": [
+      "Use Enschedule 2 examples based on Bun and PostgreSQL.",
+      "Use /api as the supported API base path; do not use the removed /api/v1 contract.",
+      "Describe access control with immutable admin-managed group keys, default-deny policies, and server-enforced resource capabilities."
+    ]
   }
 }

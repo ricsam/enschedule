@@ -969,10 +969,17 @@
                     "admin": {
                       "type": "boolean"
                     },
+                    "system": {
+                      "default": false,
+                      "type": "boolean"
+                    },
                     "groups": {
                       "type": "array",
                       "items": {
-                        "type": "number"
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9-]*$"
                       }
                     },
                     "userId": {
@@ -981,6 +988,7 @@
                   },
                   "required": [
                     "admin",
+                    "system",
                     "groups"
                   ],
                   "additionalProperties": false
@@ -1639,6 +1647,1272 @@
         ]
       }
     },
+    "/api/groups": {
+      "get": {
+        "operationId": "listGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "memberIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "createdAt": {}
+                    },
+                    "required": [
+                      "id",
+                      "key",
+                      "title",
+                      "memberIds",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Groups",
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createGroup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "memberIds": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                },
+                "required": [
+                  "key",
+                  "title",
+                  "memberIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "key": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "memberIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "createdAt": {}
+                  },
+                  "required": [
+                    "id",
+                    "key",
+                    "title",
+                    "memberIds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create Group",
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/groups/{id}": {
+      "patch": {
+        "operationId": "updateGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "memberIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "key": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "memberIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "createdAt": {}
+                  },
+                  "required": [
+                    "id",
+                    "key",
+                    "title",
+                    "memberIds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update Group",
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deleteGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "key": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "memberIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "createdAt": {}
+                  },
+                  "required": [
+                    "id",
+                    "key",
+                    "title",
+                    "memberIds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Delete Group",
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/admin/access-diagnostics": {
+      "get": {
+        "operationId": "accessDiagnostics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "references": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "references"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Access Diagnostics",
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
     "/api/workers": {
       "get": {
         "operationId": "listWorkers",
@@ -1708,7 +2982,23 @@
                             },
                             "access": {},
                             "defaultScheduleAccess": {},
-                            "defaultRunAccess": {}
+                            "defaultRunAccess": {},
+                            "capabilities": {
+                              "type": "object",
+                              "properties": {
+                                "view": {
+                                  "type": "boolean"
+                                },
+                                "createSchedule": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "view",
+                                "createSchedule"
+                              ],
+                              "additionalProperties": false
+                            }
                           },
                           "required": [
                             "id",
@@ -1717,7 +3007,8 @@
                             "example",
                             "access",
                             "defaultScheduleAccess",
-                            "defaultRunAccess"
+                            "defaultRunAccess",
+                            "capabilities"
                           ],
                           "additionalProperties": false
                         }
@@ -1811,7 +3102,23 @@
                       "defaultFunctionAccess": {},
                       "defaultScheduleAccess": {},
                       "defaultRunAccess": {},
-                      "access": {}
+                      "access": {},
+                      "capabilities": {
+                        "type": "object",
+                        "properties": {
+                          "view": {
+                            "type": "boolean"
+                          },
+                          "delete": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "view",
+                          "delete"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "required": [
                       "id",
@@ -1830,7 +3137,8 @@
                       "defaultFunctionAccess",
                       "defaultScheduleAccess",
                       "defaultRunAccess",
-                      "access"
+                      "access",
+                      "capabilities"
                     ],
                     "additionalProperties": false
                   }
@@ -2287,7 +3595,23 @@
                       },
                       "access": {},
                       "defaultScheduleAccess": {},
-                      "defaultRunAccess": {}
+                      "defaultRunAccess": {},
+                      "capabilities": {
+                        "type": "object",
+                        "properties": {
+                          "view": {
+                            "type": "boolean"
+                          },
+                          "createSchedule": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "view",
+                          "createSchedule"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "required": [
                       "id",
@@ -2296,7 +3620,8 @@
                       "example",
                       "access",
                       "defaultScheduleAccess",
-                      "defaultRunAccess"
+                      "defaultRunAccess",
+                      "capabilities"
                     ],
                     "additionalProperties": false
                   }
@@ -2537,7 +3862,23 @@
                     },
                     "access": {},
                     "defaultScheduleAccess": {},
-                    "defaultRunAccess": {}
+                    "defaultRunAccess": {},
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "view": {
+                          "type": "boolean"
+                        },
+                        "createSchedule": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "view",
+                        "createSchedule"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "required": [
                     "id",
@@ -2546,7 +3887,8 @@
                     "example",
                     "access",
                     "defaultScheduleAccess",
-                    "defaultRunAccess"
+                    "defaultRunAccess",
+                    "capabilities"
                   ],
                   "additionalProperties": false
                 }
@@ -2865,7 +4207,23 @@
                               },
                               "access": {},
                               "defaultScheduleAccess": {},
-                              "defaultRunAccess": {}
+                              "defaultRunAccess": {},
+                              "capabilities": {
+                                "type": "object",
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "createSchedule": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "view",
+                                  "createSchedule"
+                                ],
+                                "additionalProperties": false
+                              }
                             },
                             "required": [
                               "id",
@@ -2874,7 +4232,8 @@
                               "example",
                               "access",
                               "defaultScheduleAccess",
-                              "defaultRunAccess"
+                              "defaultRunAccess",
+                              "capabilities"
                             ],
                             "additionalProperties": false
                           },
@@ -2904,7 +4263,31 @@
                       "eventId": {
                         "type": "string"
                       },
-                      "defaultRunAccess": {}
+                      "defaultRunAccess": {},
+                      "capabilities": {
+                        "type": "object",
+                        "properties": {
+                          "view": {
+                            "type": "boolean"
+                          },
+                          "edit": {
+                            "type": "boolean"
+                          },
+                          "run": {
+                            "type": "boolean"
+                          },
+                          "delete": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "view",
+                          "edit",
+                          "run",
+                          "delete"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "required": [
                       "id",
@@ -2919,7 +4302,8 @@
                       "jobDefinition",
                       "numRuns",
                       "status",
-                      "defaultRunAccess"
+                      "defaultRunAccess",
+                      "capabilities"
                     ],
                     "additionalProperties": false
                   }
@@ -3290,7 +4674,23 @@
                                 },
                                 "access": {},
                                 "defaultScheduleAccess": {},
-                                "defaultRunAccess": {}
+                                "defaultRunAccess": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "createSchedule": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "createSchedule"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -3299,7 +4699,8 @@
                                 "example",
                                 "access",
                                 "defaultScheduleAccess",
-                                "defaultRunAccess"
+                                "defaultRunAccess",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -3329,7 +4730,31 @@
                         "eventId": {
                           "type": "string"
                         },
-                        "defaultRunAccess": {}
+                        "defaultRunAccess": {},
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "edit": {
+                              "type": "boolean"
+                            },
+                            "run": {
+                              "type": "boolean"
+                            },
+                            "delete": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "view",
+                            "edit",
+                            "run",
+                            "delete"
+                          ],
+                          "additionalProperties": false
+                        }
                       },
                       "required": [
                         "id",
@@ -3344,7 +4769,8 @@
                         "jobDefinition",
                         "numRuns",
                         "status",
-                        "defaultRunAccess"
+                        "defaultRunAccess",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     },
@@ -3678,7 +5104,23 @@
                             },
                             "access": {},
                             "defaultScheduleAccess": {},
-                            "defaultRunAccess": {}
+                            "defaultRunAccess": {},
+                            "capabilities": {
+                              "type": "object",
+                              "properties": {
+                                "view": {
+                                  "type": "boolean"
+                                },
+                                "createSchedule": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "view",
+                                "createSchedule"
+                              ],
+                              "additionalProperties": false
+                            }
                           },
                           "required": [
                             "id",
@@ -3687,7 +5129,8 @@
                             "example",
                             "access",
                             "defaultScheduleAccess",
-                            "defaultRunAccess"
+                            "defaultRunAccess",
+                            "capabilities"
                           ],
                           "additionalProperties": false
                         },
@@ -3717,7 +5160,31 @@
                     "eventId": {
                       "type": "string"
                     },
-                    "defaultRunAccess": {}
+                    "defaultRunAccess": {},
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "view": {
+                          "type": "boolean"
+                        },
+                        "edit": {
+                          "type": "boolean"
+                        },
+                        "run": {
+                          "type": "boolean"
+                        },
+                        "delete": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "view",
+                        "edit",
+                        "run",
+                        "delete"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "required": [
                     "id",
@@ -3732,7 +5199,8 @@
                     "jobDefinition",
                     "numRuns",
                     "status",
-                    "defaultRunAccess"
+                    "defaultRunAccess",
+                    "capabilities"
                   ],
                   "additionalProperties": false
                 }
@@ -4083,7 +5551,23 @@
                             },
                             "access": {},
                             "defaultScheduleAccess": {},
-                            "defaultRunAccess": {}
+                            "defaultRunAccess": {},
+                            "capabilities": {
+                              "type": "object",
+                              "properties": {
+                                "view": {
+                                  "type": "boolean"
+                                },
+                                "createSchedule": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "view",
+                                "createSchedule"
+                              ],
+                              "additionalProperties": false
+                            }
                           },
                           "required": [
                             "id",
@@ -4092,7 +5576,8 @@
                             "example",
                             "access",
                             "defaultScheduleAccess",
-                            "defaultRunAccess"
+                            "defaultRunAccess",
+                            "capabilities"
                           ],
                           "additionalProperties": false
                         },
@@ -4122,7 +5607,31 @@
                     "eventId": {
                       "type": "string"
                     },
-                    "defaultRunAccess": {}
+                    "defaultRunAccess": {},
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "view": {
+                          "type": "boolean"
+                        },
+                        "edit": {
+                          "type": "boolean"
+                        },
+                        "run": {
+                          "type": "boolean"
+                        },
+                        "delete": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "view",
+                        "edit",
+                        "run",
+                        "delete"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "required": [
                     "id",
@@ -4137,7 +5646,8 @@
                     "jobDefinition",
                     "numRuns",
                     "status",
-                    "defaultRunAccess"
+                    "defaultRunAccess",
+                    "capabilities"
                   ],
                   "additionalProperties": false
                 }
@@ -4446,7 +5956,23 @@
                             },
                             "access": {},
                             "defaultScheduleAccess": {},
-                            "defaultRunAccess": {}
+                            "defaultRunAccess": {},
+                            "capabilities": {
+                              "type": "object",
+                              "properties": {
+                                "view": {
+                                  "type": "boolean"
+                                },
+                                "createSchedule": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "view",
+                                "createSchedule"
+                              ],
+                              "additionalProperties": false
+                            }
                           },
                           "required": [
                             "id",
@@ -4455,7 +5981,8 @@
                             "example",
                             "access",
                             "defaultScheduleAccess",
-                            "defaultRunAccess"
+                            "defaultRunAccess",
+                            "capabilities"
                           ],
                           "additionalProperties": false
                         },
@@ -4485,7 +6012,31 @@
                     "eventId": {
                       "type": "string"
                     },
-                    "defaultRunAccess": {}
+                    "defaultRunAccess": {},
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "view": {
+                          "type": "boolean"
+                        },
+                        "edit": {
+                          "type": "boolean"
+                        },
+                        "run": {
+                          "type": "boolean"
+                        },
+                        "delete": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "view",
+                        "edit",
+                        "run",
+                        "delete"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "required": [
                     "id",
@@ -4500,7 +6051,8 @@
                     "jobDefinition",
                     "numRuns",
                     "status",
-                    "defaultRunAccess"
+                    "defaultRunAccess",
+                    "capabilities"
                   ],
                   "additionalProperties": false
                 }
@@ -5339,7 +6891,23 @@
                                               },
                                               "access": {},
                                               "defaultScheduleAccess": {},
-                                              "defaultRunAccess": {}
+                                              "defaultRunAccess": {},
+                                              "capabilities": {
+                                                "type": "object",
+                                                "properties": {
+                                                  "view": {
+                                                    "type": "boolean"
+                                                  },
+                                                  "createSchedule": {
+                                                    "type": "boolean"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "view",
+                                                  "createSchedule"
+                                                ],
+                                                "additionalProperties": false
+                                              }
                                             },
                                             "required": [
                                               "id",
@@ -5348,7 +6916,8 @@
                                               "example",
                                               "access",
                                               "defaultScheduleAccess",
-                                              "defaultRunAccess"
+                                              "defaultRunAccess",
+                                              "capabilities"
                                             ],
                                             "additionalProperties": false
                                           },
@@ -5378,7 +6947,31 @@
                                       "eventId": {
                                         "type": "string"
                                       },
-                                      "defaultRunAccess": {}
+                                      "defaultRunAccess": {},
+                                      "capabilities": {
+                                        "type": "object",
+                                        "properties": {
+                                          "view": {
+                                            "type": "boolean"
+                                          },
+                                          "edit": {
+                                            "type": "boolean"
+                                          },
+                                          "run": {
+                                            "type": "boolean"
+                                          },
+                                          "delete": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "view",
+                                          "edit",
+                                          "run",
+                                          "delete"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "required": [
                                       "id",
@@ -5393,7 +6986,8 @@
                                       "jobDefinition",
                                       "numRuns",
                                       "status",
-                                      "defaultRunAccess"
+                                      "defaultRunAccess",
+                                      "capabilities"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -5432,7 +7026,23 @@
                                       },
                                       "access": {},
                                       "defaultScheduleAccess": {},
-                                      "defaultRunAccess": {}
+                                      "defaultRunAccess": {},
+                                      "capabilities": {
+                                        "type": "object",
+                                        "properties": {
+                                          "view": {
+                                            "type": "boolean"
+                                          },
+                                          "createSchedule": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "view",
+                                          "createSchedule"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "required": [
                                       "id",
@@ -5441,7 +7051,8 @@
                                       "example",
                                       "access",
                                       "defaultScheduleAccess",
-                                      "defaultRunAccess"
+                                      "defaultRunAccess",
+                                      "capabilities"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -5511,7 +7122,23 @@
                                             },
                                             "access": {},
                                             "defaultScheduleAccess": {},
-                                            "defaultRunAccess": {}
+                                            "defaultRunAccess": {},
+                                            "capabilities": {
+                                              "type": "object",
+                                              "properties": {
+                                                "view": {
+                                                  "type": "boolean"
+                                                },
+                                                "createSchedule": {
+                                                  "type": "boolean"
+                                                }
+                                              },
+                                              "required": [
+                                                "view",
+                                                "createSchedule"
+                                              ],
+                                              "additionalProperties": false
+                                            }
                                           },
                                           "required": [
                                             "id",
@@ -5520,7 +7147,8 @@
                                             "example",
                                             "access",
                                             "defaultScheduleAccess",
-                                            "defaultRunAccess"
+                                            "defaultRunAccess",
+                                            "capabilities"
                                           ],
                                           "additionalProperties": false
                                         }
@@ -5614,7 +7242,23 @@
                                       "defaultFunctionAccess": {},
                                       "defaultScheduleAccess": {},
                                       "defaultRunAccess": {},
-                                      "access": {}
+                                      "access": {},
+                                      "capabilities": {
+                                        "type": "object",
+                                        "properties": {
+                                          "view": {
+                                            "type": "boolean"
+                                          },
+                                          "delete": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "view",
+                                          "delete"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "required": [
                                       "id",
@@ -5633,7 +7277,8 @@
                                       "defaultFunctionAccess",
                                       "defaultScheduleAccess",
                                       "defaultRunAccess",
-                                      "access"
+                                      "access",
+                                      "capabilities"
                                     ],
                                     "additionalProperties": false
                                   },
@@ -5641,11 +7286,32 @@
                                     "type": "string"
                                   }
                                 ]
+                              },
+                              "capabilities": {
+                                "type": "object",
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "viewLogs": {
+                                    "type": "boolean"
+                                  },
+                                  "delete": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "view",
+                                  "viewLogs",
+                                  "delete"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
                               "jobSchedule",
-                              "jobDefinition"
+                              "jobDefinition",
+                              "capabilities"
                             ],
                             "additionalProperties": false
                           }
@@ -6234,7 +7900,23 @@
                                         },
                                         "access": {},
                                         "defaultScheduleAccess": {},
-                                        "defaultRunAccess": {}
+                                        "defaultRunAccess": {},
+                                        "capabilities": {
+                                          "type": "object",
+                                          "properties": {
+                                            "view": {
+                                              "type": "boolean"
+                                            },
+                                            "createSchedule": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "view",
+                                            "createSchedule"
+                                          ],
+                                          "additionalProperties": false
+                                        }
                                       },
                                       "required": [
                                         "id",
@@ -6243,7 +7925,8 @@
                                         "example",
                                         "access",
                                         "defaultScheduleAccess",
-                                        "defaultRunAccess"
+                                        "defaultRunAccess",
+                                        "capabilities"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -6273,7 +7956,31 @@
                                 "eventId": {
                                   "type": "string"
                                 },
-                                "defaultRunAccess": {}
+                                "defaultRunAccess": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "edit": {
+                                      "type": "boolean"
+                                    },
+                                    "run": {
+                                      "type": "boolean"
+                                    },
+                                    "delete": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "edit",
+                                    "run",
+                                    "delete"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -6288,7 +7995,8 @@
                                 "jobDefinition",
                                 "numRuns",
                                 "status",
-                                "defaultRunAccess"
+                                "defaultRunAccess",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -6327,7 +8035,23 @@
                                 },
                                 "access": {},
                                 "defaultScheduleAccess": {},
-                                "defaultRunAccess": {}
+                                "defaultRunAccess": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "createSchedule": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "createSchedule"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -6336,7 +8060,8 @@
                                 "example",
                                 "access",
                                 "defaultScheduleAccess",
-                                "defaultRunAccess"
+                                "defaultRunAccess",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -6406,7 +8131,23 @@
                                       },
                                       "access": {},
                                       "defaultScheduleAccess": {},
-                                      "defaultRunAccess": {}
+                                      "defaultRunAccess": {},
+                                      "capabilities": {
+                                        "type": "object",
+                                        "properties": {
+                                          "view": {
+                                            "type": "boolean"
+                                          },
+                                          "createSchedule": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "view",
+                                          "createSchedule"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "required": [
                                       "id",
@@ -6415,7 +8156,8 @@
                                       "example",
                                       "access",
                                       "defaultScheduleAccess",
-                                      "defaultRunAccess"
+                                      "defaultRunAccess",
+                                      "capabilities"
                                     ],
                                     "additionalProperties": false
                                   }
@@ -6509,7 +8251,23 @@
                                 "defaultFunctionAccess": {},
                                 "defaultScheduleAccess": {},
                                 "defaultRunAccess": {},
-                                "access": {}
+                                "access": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "delete": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "delete"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -6528,7 +8286,8 @@
                                 "defaultFunctionAccess",
                                 "defaultScheduleAccess",
                                 "defaultRunAccess",
-                                "access"
+                                "access",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -6536,11 +8295,32 @@
                               "type": "string"
                             }
                           ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "viewLogs": {
+                              "type": "boolean"
+                            },
+                            "delete": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "view",
+                            "viewLogs",
+                            "delete"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "jobSchedule",
-                        "jobDefinition"
+                        "jobDefinition",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }
@@ -6894,7 +8674,23 @@
                                         },
                                         "access": {},
                                         "defaultScheduleAccess": {},
-                                        "defaultRunAccess": {}
+                                        "defaultRunAccess": {},
+                                        "capabilities": {
+                                          "type": "object",
+                                          "properties": {
+                                            "view": {
+                                              "type": "boolean"
+                                            },
+                                            "createSchedule": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "view",
+                                            "createSchedule"
+                                          ],
+                                          "additionalProperties": false
+                                        }
                                       },
                                       "required": [
                                         "id",
@@ -6903,7 +8699,8 @@
                                         "example",
                                         "access",
                                         "defaultScheduleAccess",
-                                        "defaultRunAccess"
+                                        "defaultRunAccess",
+                                        "capabilities"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -6933,7 +8730,31 @@
                                 "eventId": {
                                   "type": "string"
                                 },
-                                "defaultRunAccess": {}
+                                "defaultRunAccess": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "edit": {
+                                      "type": "boolean"
+                                    },
+                                    "run": {
+                                      "type": "boolean"
+                                    },
+                                    "delete": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "edit",
+                                    "run",
+                                    "delete"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -6948,7 +8769,8 @@
                                 "jobDefinition",
                                 "numRuns",
                                 "status",
-                                "defaultRunAccess"
+                                "defaultRunAccess",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -6987,7 +8809,23 @@
                                 },
                                 "access": {},
                                 "defaultScheduleAccess": {},
-                                "defaultRunAccess": {}
+                                "defaultRunAccess": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "createSchedule": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "createSchedule"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -6996,7 +8834,8 @@
                                 "example",
                                 "access",
                                 "defaultScheduleAccess",
-                                "defaultRunAccess"
+                                "defaultRunAccess",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -7066,7 +8905,23 @@
                                       },
                                       "access": {},
                                       "defaultScheduleAccess": {},
-                                      "defaultRunAccess": {}
+                                      "defaultRunAccess": {},
+                                      "capabilities": {
+                                        "type": "object",
+                                        "properties": {
+                                          "view": {
+                                            "type": "boolean"
+                                          },
+                                          "createSchedule": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "view",
+                                          "createSchedule"
+                                        ],
+                                        "additionalProperties": false
+                                      }
                                     },
                                     "required": [
                                       "id",
@@ -7075,7 +8930,8 @@
                                       "example",
                                       "access",
                                       "defaultScheduleAccess",
-                                      "defaultRunAccess"
+                                      "defaultRunAccess",
+                                      "capabilities"
                                     ],
                                     "additionalProperties": false
                                   }
@@ -7169,7 +9025,23 @@
                                 "defaultFunctionAccess": {},
                                 "defaultScheduleAccess": {},
                                 "defaultRunAccess": {},
-                                "access": {}
+                                "access": {},
+                                "capabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "view": {
+                                      "type": "boolean"
+                                    },
+                                    "delete": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "view",
+                                    "delete"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "required": [
                                 "id",
@@ -7188,7 +9060,8 @@
                                 "defaultFunctionAccess",
                                 "defaultScheduleAccess",
                                 "defaultRunAccess",
-                                "access"
+                                "access",
+                                "capabilities"
                               ],
                               "additionalProperties": false
                             },
@@ -7196,11 +9069,32 @@
                               "type": "string"
                             }
                           ]
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "viewLogs": {
+                              "type": "boolean"
+                            },
+                            "delete": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "view",
+                            "viewLogs",
+                            "delete"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "jobSchedule",
-                        "jobDefinition"
+                        "jobDefinition",
+                        "capabilities"
                       ],
                       "additionalProperties": false
                     }

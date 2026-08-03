@@ -53,6 +53,8 @@ export default async function register(worker) {
 | `defaultScheduleAccess` | No | Access inherited by newly created schedules |
 | `defaultRunAccess` | No | Access inherited by newly created runs |
 
+Access policies reference immutable group keys configured by an administrator. See [Access control](/guides/access-control) for the permission matrix, inheritance rules, and complete examples.
+
 <Note>
   Keep `id` stable across deployments. Changing it creates a different logical function and leaves existing schedules pointed at the old ID.
 </Note>

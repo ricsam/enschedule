@@ -1,6 +1,7 @@
 import { createDocsResponse, generateOpenAPISpec } from "@richie-rpc/openapi";
 import { RouteNotFoundError, ValidationError } from "@richie-rpc/server";
 import { handleSpaRequest } from "@richie-router/server";
+import { AuthorizationError } from "@enschedule/pg-driver";
 import { enscheduleContract } from "@enschedule/types/contract";
 import spaRoutes from "../shared/spa-routes.gen.json";
 import { assertSameOrigin } from "./cookies";
@@ -92,6 +93,9 @@ export async function createDashboardFetch(
       return new Response("Not found", { status: 404 });
     } catch (error) {
       if (error instanceof Response) return error;
+      if (error instanceof AuthorizationError) {
+        return Response.json({ code: error.code, message: error.message }, { status: error.status });
+      }
       if (error instanceof RouteNotFoundError) {
         return Response.json({ code: "NOT_FOUND", message: error.message }, { status: 404 });
       }

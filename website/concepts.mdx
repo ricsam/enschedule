@@ -74,6 +74,10 @@ The `eventId` field is what makes declarative `enschedule apply` workflows idemp
 
 When you create a schedule without an `eventId`, Enschedule computes a signature from the function ID, the run time or cron expression, and the payload. Submitting identical parameters a second time finds the existing schedule rather than creating a new one.
 
+## Access control
+
+Administrators assign users to groups. Worker and function declarations reference stable group keys to grant actions on workers, functions, schedules, runs, and logs. Non-admin access is default-deny, while administrators and the configured system API key are superusers. See [Access control](/guides/access-control) for configuration and inheritance rules.
+
 ## Function versions
 
 A schedule stores both `functionId` and `functionVersion`. A worker claims the schedule only when it has registered that exact version, or has registered a migration path from the stored version to one it supports.

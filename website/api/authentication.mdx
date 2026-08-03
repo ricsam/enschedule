@@ -50,7 +50,7 @@ Authorization: Jwt eyJ...
 ```
 
 <Info>
-  Access tokens expire after 15 minutes. Refresh tokens expire after seven days and rotate when used.
+  Access tokens expire after 15 minutes. Refresh tokens expire after seven days and rotate when used. User JWTs and user API keys are authorized from the user's current group memberships. See [Access control](/guides/access-control).
 </Info>
 
 ## Refresh a token
@@ -82,3 +82,18 @@ Set `allDevices` to `true` to invalidate every stored refresh session for that u
 ## Dashboard session
 
 The dashboard backend stores access and refresh tokens in a signed `HttpOnly`, `SameSite=Strict` cookie. Browser JavaScript cannot read the cookie. The backend automatically refreshes an expiring access token before forwarding API requests, so you do not need to manage token lifecycle when using the dashboard UI.
+
+For production:
+
+- Set `ENSCHEDULE_COOKIE_SESSION_SECRET` to a strong independent secret.
+- Set `ENSCHEDULE_HTTPS_ONLY_COOKIES=true`.
+- Serve the dashboard only over HTTPS.
+- Set `ENSCHEDULE_PUBLIC_ORIGIN` when a reverse proxy changes the public origin.
+
+## Authorization failures
+
+- `401 Unauthorized` means the credential is missing, expired, or invalid.
+- `403 Forbidden` means the authenticated identity lacks access to the requested action.
+- `404 Not Found` can also mean the identity cannot view the requested resource; this avoids revealing that the resource exists.
+
+Collection responses omit resources the identity cannot view. Bulk mutations validate every selected resource before applying changes.

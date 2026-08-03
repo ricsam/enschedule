@@ -14,6 +14,12 @@ export type {
   ScheduleAccess,
   RunAccess,
   WorkerAccess,
+  WorkerCapabilities,
+  FunctionCapabilities,
+  ScheduleCapabilities,
+  RunCapabilities,
+  Group,
+  AccessDiagnostic,
 } from "./types";
 
 export {
@@ -41,4 +47,18 @@ export {
   UserSchema,
   AuthHeader,
   UserAuthSchema,
+  GroupKeySchema,
+  GroupGrantSchema,
+  WorkerAccessSchema,
+  FunctionAccessSchema,
+  ScheduleAccessSchema,
+  RunAccessSchema,
+  WorkerCapabilitiesSchema,
+  FunctionCapabilitiesSchema,
+  ScheduleCapabilitiesSchema,
+  RunCapabilitiesSchema,
+  GroupSchema,
+  CreateGroupSchema,
+  UpdateGroupSchema,
+  AccessDiagnosticSchema,
 } from "./types";

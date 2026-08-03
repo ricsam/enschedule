@@ -15,5 +15,6 @@ function Run() {
   const remove = api.deleteRun.useMutation({ onSuccess: () => navigate({ to: "/runs", search: { page: 1, rowsPerPage: 25 } }) });
   if (query.isLoading) return <AppShell><Loading /></AppShell>;
   if (query.error || !query.data) return <AppShell><ErrorPanel error={query.error ?? "Run not found"} /></AppShell>;
-  return <AppShell title={`Run #${runId}`} breadcrumbs={[{ title: "Runs", href: "/runs" }, { title: `Run #${runId}`, href: `/runs/${runId}` }]} actions={<Button variant="outlined" color="inherit" data-testid="delete-run" onClick={() => remove.mutate({ params: { id: Number(runId) } })}>Delete</Button>}><RunDetails run={query.data.payload} /></AppShell>;
+  const run = query.data.payload;
+  return <AppShell title={`Run #${runId}`} breadcrumbs={[{ title: "Runs", href: "/runs" }, { title: `Run #${runId}`, href: `/runs/${runId}` }]} actions={run.capabilities.delete ? <Button variant="outlined" color="inherit" data-testid="delete-run" onClick={() => remove.mutate({ params: { id: Number(runId) } })}>Delete</Button> : undefined}><RunDetails run={run} /></AppShell>;
 }

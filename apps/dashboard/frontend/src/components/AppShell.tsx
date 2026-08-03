@@ -63,7 +63,7 @@ export function AppShell({ children, title, subtitle, actions, breadcrumbs, tabs
       </Toolbar>
       <Divider />
       <Box pt={2} px={2}>
-        <Button fullWidth variant="contained" endIcon={<Add />} component={RouteLink} to="/run">Run</Button>
+        <Button fullWidth variant="contained" endIcon={<Add />} component={RouteLink} to="/run">Schedule</Button>
       </Box>
       <ListSubheader>In database</ListSubheader>
       <List>{navItems(databaseNav)}</List>

@@ -74,88 +74,59 @@ export const serializedRunSchema = z.object({
 export type SerializedRun = z.output<typeof serializedRunSchema>;
 //#endregion
 
-//#region WorkerAccess
+//#region Access control
+export const GroupKeySchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-z0-9-]*$/, "Group keys must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens");
+export const GroupGrantSchema = z.object({
+  groups: z.array(GroupKeySchema).default([]),
+});
+
 export const WorkerAccessSchema = z.object({
-  view: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  delete: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
+  view: GroupGrantSchema.optional(),
+  delete: GroupGrantSchema.optional(),
 });
 export type WorkerAccess = z.output<typeof WorkerAccessSchema>;
-//#endregion
+export const WorkerCapabilitiesSchema = z.object({ view: z.boolean(), delete: z.boolean() });
+export type WorkerCapabilities = z.output<typeof WorkerCapabilitiesSchema>;
 
-//#region FunctionAccess
 export const FunctionAccessSchema = z.object({
-  view: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  createSchedule: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
+  view: GroupGrantSchema.optional(),
+  createSchedule: GroupGrantSchema.optional(),
 });
 export type FunctionAccess = z.output<typeof FunctionAccessSchema>;
-//#endregion
+export const FunctionCapabilitiesSchema = z.object({ view: z.boolean(), createSchedule: z.boolean() });
+export type FunctionCapabilities = z.output<typeof FunctionCapabilitiesSchema>;
 
-//#region ScheduleAccess
 export const ScheduleAccessSchema = z.object({
-  view: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  edit: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  delete: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
+  view: GroupGrantSchema.optional(),
+  edit: GroupGrantSchema.optional(),
+  run: GroupGrantSchema.optional(),
+  delete: GroupGrantSchema.optional(),
 });
 export type ScheduleAccess = z.output<typeof ScheduleAccessSchema>;
-//#endregion
+export const ScheduleCapabilitiesSchema = z.object({
+  view: z.boolean(),
+  edit: z.boolean(),
+  run: z.boolean(),
+  delete: z.boolean(),
+});
+export type ScheduleCapabilities = z.output<typeof ScheduleCapabilitiesSchema>;
 
-//#region RunAccess
 export const RunAccessSchema = z.object({
-  view: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  viewLogs: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
-  delete: z
-    .object({
-      users: z.array(z.number()).optional(),
-      groups: z.array(z.number()).optional(),
-    })
-    .optional(),
+  view: GroupGrantSchema.optional(),
+  viewLogs: GroupGrantSchema.optional(),
+  delete: GroupGrantSchema.optional(),
 });
 export type RunAccess = z.output<typeof RunAccessSchema>;
+export const RunCapabilitiesSchema = z.object({
+  view: z.boolean(),
+  viewLogs: z.boolean(),
+  delete: z.boolean(),
+});
+export type RunCapabilities = z.output<typeof RunCapabilitiesSchema>;
 //#endregion
 
 //#region PublicJobDefinition
@@ -170,6 +141,7 @@ export const publicJobDefinitionSchema = z.object({
   access: nullishToUndefined(FunctionAccessSchema),
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
+  capabilities: FunctionCapabilitiesSchema,
 });
 export type PublicJobDefinition = z.infer<typeof publicJobDefinitionSchema>;
 //#endregion
@@ -201,6 +173,7 @@ export const publicJobScheduleSchema = z.object({
    */
   eventId: z.string().optional(),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
+  capabilities: ScheduleCapabilitiesSchema,
 });
 export type PublicJobSchedule = z.infer<typeof publicJobScheduleSchema>;
 //#endregion
@@ -243,6 +216,7 @@ export const PublicWorkerSchema = z.object({
   defaultScheduleAccess: nullishToUndefined(ScheduleAccessSchema),
   defaultRunAccess: nullishToUndefined(RunAccessSchema),
   access: nullishToUndefined(WorkerAccessSchema),
+  capabilities: WorkerCapabilitiesSchema,
 });
 export type PublicWorker = z.infer<typeof PublicWorkerSchema>;
 //#endregion
@@ -253,6 +227,7 @@ export const publicJobRunSchema = serializedRunSchema.and(
     jobSchedule: z.union([publicJobScheduleSchema, z.string()]),
     jobDefinition: z.union([publicJobDefinitionSchema, z.string()]),
     worker: z.union([PublicWorkerSchema, z.string()]).optional(),
+    capabilities: RunCapabilitiesSchema,
   })
 );
 export type PublicJobRun = z.output<typeof publicJobRunSchema>;
@@ -414,7 +389,7 @@ export interface JobDefinition<T extends ZodType = ZodType> {
   example?: z.infer<T>;
   version: number;
   access?: FunctionAccess;
-  defaultScheduleAccess?: RunAccess;
+  defaultScheduleAccess?: ScheduleAccess;
   defaultRunAccess?: RunAccess;
 }
 export const JobDefinitionSchema = z.object({
@@ -456,6 +431,33 @@ export const UserSchema = z.object({
 
 export const UserAuthSchema = z.object({
   admin: z.boolean(),
-  groups: z.array(z.number()),
+  system: z.boolean().default(false),
+  groups: z.array(GroupKeySchema),
   userId: z.number().optional(),
 });
+
+export const GroupSchema = z.object({
+  id: z.number().int().positive(),
+  key: GroupKeySchema,
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  memberIds: z.array(z.number().int().positive()),
+  createdAt: DateSchema,
+});
+export type Group = z.output<typeof GroupSchema>;
+
+export const CreateGroupSchema = z.object({
+  key: GroupKeySchema,
+  title: z.string().min(1).max(255),
+  description: z.string().max(2000).optional(),
+  memberIds: z.array(z.number().int().positive()).default([]),
+});
+export const UpdateGroupSchema = CreateGroupSchema.omit({ key: true }).partial().extend({
+  memberIds: z.array(z.number().int().positive()).optional(),
+});
+
+export const AccessDiagnosticSchema = z.object({
+  key: z.string(),
+  references: z.array(z.string()),
+});
+export type AccessDiagnostic = z.output<typeof AccessDiagnosticSchema>;

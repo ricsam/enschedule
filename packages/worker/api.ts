@@ -1,5 +1,5 @@
 import { createRouter, RouteNotFoundError, Status, ValidationError } from "@richie-rpc/server";
-import type { PrivateBackend } from "@enschedule/pg-driver";
+import { AuthorizationError, type PrivateBackend } from "@enschedule/pg-driver";
 import type { WorkerAPI } from "@enschedule/worker-api";
 import { AuthHeader } from "@enschedule/types";
 import { API_BASE_PATH, enscheduleContract } from "@enschedule/types/contract";
@@ -94,6 +94,31 @@ export function createWorkerRouter(worker: WorkerBackend) {
           ? { status: Status.OK, body: user }
           : notFound("User not found");
       },
+      listGroups: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.getGroups(authHeader) };
+      },
+      createGroup: async ({ headers, body }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.Created, body: await worker.createGroup(authHeader, body) };
+      },
+      updateGroup: async ({ headers, params, body }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.updateGroup(authHeader, params.id, body) };
+      },
+      deleteGroup: async ({ headers, params }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.deleteGroup(authHeader, params.id) };
+      },
+      accessDiagnostics: async ({ headers }) => {
+        const authHeader = await requireAuth(headers);
+        if (!authHeader) return unauthorized();
+        return { status: Status.OK, body: await worker.getAccessDiagnostics(authHeader) };
+      },
       listWorkers: async ({ headers }) => {
         const authHeader = await requireAuth(headers);
         if (!authHeader) return unauthorized();
@@ -102,7 +127,7 @@ export function createWorkerRouter(worker: WorkerBackend) {
       deleteWorkers: async ({ body, headers }) => {
         const authHeader = await requireAuth(headers);
         if (!authHeader) return unauthorized();
-        return { status: Status.OK, body: await worker.deleteWorkers(body.ids) };
+        return { status: Status.OK, body: await worker.deleteWorkers(authHeader, body.ids) };
       },
       listDefinitions: async ({ headers }) => {
         const authHeader = await requireAuth(headers);
@@ -120,7 +145,8 @@ export function createWorkerRouter(worker: WorkerBackend) {
             status: Status.OK,
             body: await worker.getLatestHandler(params.id, authHeader),
           };
-        } catch {
+        } catch (error) {
+          if (error instanceof AuthorizationError) throw error;
           return notFound("Function not found");
         }
       },
@@ -173,15 +199,15 @@ export function createWorkerRouter(worker: WorkerBackend) {
       scheduleActions: async ({ body, headers }) => {
         const authHeader = await requireAuth(headers);
         if (!authHeader) return unauthorized();
-        if (body.action === "run") await worker.runSchedulesNow(body.ids);
-        if (body.action === "unschedule") await worker.unschedule(body.ids);
-        if (body.action === "delete") await worker.deleteSchedules(body.ids);
+        if (body.action === "run") await worker.runSchedulesNow(authHeader, body.ids);
+        if (body.action === "unschedule") await worker.unschedule(authHeader, body.ids);
+        if (body.action === "delete") await worker.deleteSchedules(authHeader, body.ids);
         return { status: Status.OK, body: { success: true } };
       },
       runSchedule: async ({ params, headers }) => {
         const authHeader = await requireAuth(headers);
         if (!authHeader) return unauthorized();
-        await worker.runScheduleNow(params.id);
+        await worker.runScheduleNow(authHeader, params.id);
         return { status: Status.OK, body: { success: true } };
       },
       listRuns: async ({ query, headers }) => {
@@ -215,7 +241,7 @@ export function createWorkerRouter(worker: WorkerBackend) {
       deleteRuns: async ({ body, headers }) => {
         const authHeader = await requireAuth(headers);
         if (!authHeader) return unauthorized();
-        return { status: Status.OK, body: await worker.deleteRuns(body.ids) };
+        return { status: Status.OK, body: await worker.deleteRuns(authHeader, body.ids) };
       },
       streamLogs: async ({ params, headers, stream }) => {
         const authHeader = await requireAuth(headers);
@@ -264,6 +290,12 @@ export async function handleWorkerRequest(
   try {
     return await createWorkerRouter(worker).fetch(request);
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return Response.json(
+        { code: error.code, message: error.message },
+        { status: error.status },
+      );
+    }
     if (error instanceof RouteNotFoundError) {
       return Response.json(
         { code: "NOT_FOUND", message: error.message },
